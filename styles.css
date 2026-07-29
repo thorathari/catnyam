@@ -283,6 +283,32 @@ canvas {
   margin-top: 12px;
 }
 
+.touch-controls {
+  display: none;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.touch-button {
+  min-height: 58px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ink);
+  background: rgba(119, 216, 186, 0.52);
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+  touch-action: none;
+  user-select: none;
+}
+
+.touch-button.pressed {
+  color: white;
+  background: var(--berry);
+  box-shadow: 0 10px 24px rgba(239, 111, 143, 0.22);
+}
+
 .side-column {
   display: grid;
   gap: 20px;
@@ -490,6 +516,12 @@ canvas {
 
 }
 
+@media (hover: none) and (pointer: coarse) {
+  .touch-controls {
+    display: grid;
+  }
+}
+
 @media (max-width: 560px) {
   .shell {
     width: min(100% - 20px, 1180px);
@@ -517,5 +549,10 @@ canvas {
   .auth-actions button,
   .control-row button {
     flex: 1 1 150px;
+  }
+
+  .touch-button {
+    min-height: 70px;
+    font-size: 2.4rem;
   }
 }

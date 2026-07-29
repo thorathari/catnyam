@@ -18,6 +18,8 @@ const signupButton = document.querySelector("#signupButton");
 const loginModeButton = document.querySelector("#loginModeButton");
 const logoutButton = document.querySelector("#logoutButton");
 const startButton = document.querySelector("#startButton");
+const touchLeftButton = document.querySelector("#touchLeftButton");
+const touchRightButton = document.querySelector("#touchRightButton");
 const rankingList = document.querySelector("#rankingList");
 const accountModal = document.querySelector("#accountModal");
 const closeAccountModalButton = document.querySelector("#closeAccountModalButton");
@@ -45,6 +47,7 @@ let currentUser = null;
 let animationId = null;
 let lastFrame = 0;
 let nextDropAt = 0;
+let touchDirection = 0;
 let game = createGameState();
 
 async function requestApi(path, options = {}) {
@@ -507,7 +510,8 @@ function update(delta) {
   game.timeLeft = Math.max(0, GAME_SECONDS - game.elapsed);
   timeText.textContent = Math.ceil(game.timeLeft);
 
-  const direction = (keys.has("ArrowRight") || keys.has("d") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("a") ? 1 : 0);
+  const keyboardDirection = (keys.has("ArrowRight") || keys.has("d") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("a") ? 1 : 0);
+  const direction = touchDirection || keyboardDirection;
   game.cat.x += direction * game.cat.speed * delta;
   game.cat.x = clamp(game.cat.x, game.cat.width / 2 + 12, canvas.width - game.cat.width / 2 - 12);
 
@@ -693,7 +697,7 @@ function drawCat(x, y, width, height) {
 function drawIntro() {
   drawWorld();
   drawCat(canvas.width / 2, canvas.height - 84, 104, 74);
-  drawCenterText("← → 또는 A D로 이동", "게임 시작을 눌러 츄르를 잡아보세요");
+  drawCenterText("← →, A D 또는 터치 버튼", "게임 시작을 눌러 츄르를 잡아보세요");
 }
 
 function drawFinish() {
@@ -748,6 +752,26 @@ function isTypingTarget(target) {
     || target?.isContentEditable;
 }
 
+function bindTouchControl(button, direction) {
+  const start = (event) => {
+    touchDirection = direction;
+    button.classList.add("pressed");
+    event.preventDefault();
+  };
+  const stop = () => {
+    if (touchDirection === direction) {
+      touchDirection = 0;
+    }
+    button.classList.remove("pressed");
+  };
+
+  button.addEventListener("pointerdown", start);
+  button.addEventListener("pointerup", stop);
+  button.addEventListener("pointercancel", stop);
+  button.addEventListener("pointerleave", stop);
+  button.addEventListener("lostpointercapture", stop);
+}
+
 window.addEventListener("keydown", (event) => {
   const controlKey = getControlKey(event.key);
 
@@ -777,6 +801,8 @@ passwordTabButton.addEventListener("click", () => setAccountTab("password"));
 adminTabButton.addEventListener("click", () => setAccountTab("admin"));
 startButton.addEventListener("click", startGame);
 changePasswordForm.addEventListener("submit", changePassword);
+bindTouchControl(touchLeftButton, -1);
+bindTouchControl(touchRightButton, 1);
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !accountModal.hidden) {
