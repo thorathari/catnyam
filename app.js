@@ -18,6 +18,8 @@ const signupButton = document.querySelector("#signupButton");
 const loginModeButton = document.querySelector("#loginModeButton");
 const logoutButton = document.querySelector("#logoutButton");
 const startButton = document.querySelector("#startButton");
+const gameOverlay = document.querySelector("#gameOverlay");
+const overlayResult = document.querySelector("#overlayResult");
 const touchLeftButton = document.querySelector("#touchLeftButton");
 const touchRightButton = document.querySelector("#touchRightButton");
 const rankingList = document.querySelector("#rankingList");
@@ -92,6 +94,10 @@ function createGameState() {
     timeLeft: GAME_SECONDS,
     elapsed: 0,
     drops: [],
+    reaction: {
+      type: "neutral",
+      until: 0,
+    },
     cat: {
       x: canvas.width / 2,
       y: canvas.height - 84,
@@ -159,6 +165,7 @@ function showGameFor(user) {
   setPasswordMessage("");
   setAdminMessage("");
   renderRanking();
+  showGameOverlay("게임 시작");
   drawIntro();
 }
 
@@ -453,9 +460,10 @@ function startGame() {
   stopGame();
   game = createGameState();
   game.running = true;
-  startButton.textContent = "다시 시작";
+  hideGameOverlay();
   scoreText.textContent = "0";
   timeText.textContent = GAME_SECONDS;
+  touchDirection = 0;
   lastFrame = performance.now();
   nextDropAt = 0;
   animationId = requestAnimationFrame(loop);
@@ -473,6 +481,7 @@ function finishGame() {
   const finalScore = game.score;
   stopGame();
   drawFinish();
+  showGameOverlay("다시하기", `${finalScore}점!`);
   submitScore(finalScore);
 }
 
@@ -490,8 +499,19 @@ async function submitScore(score) {
     bestText.textContent = currentUser.bestScore || 0;
     renderRanking();
   } catch {
-    drawCenterText(`${score}점!`, "점수 저장에 실패했습니다. 서버 설정을 확인해주세요");
+    showGameOverlay("다시하기", `${score}점 · 저장 실패`);
   }
+}
+
+function showGameOverlay(buttonText, resultText = "") {
+  startButton.textContent = buttonText;
+  overlayResult.textContent = resultText;
+  overlayResult.hidden = !resultText;
+  gameOverlay.hidden = false;
+}
+
+function hideGameOverlay() {
+  gameOverlay.hidden = true;
 }
 
 function loop(now) {
@@ -527,8 +547,10 @@ function update(delta) {
 
   game.drops = game.drops.filter((drop) => {
     if (collides(drop)) {
-      game.score += drop.kind === "gold" ? 5 : 2;
+      const scoreDelta = getDropScore(drop);
+      game.score = Math.max(0, game.score + scoreDelta);
       scoreText.textContent = game.score;
+      setCatReaction(scoreDelta < 0 ? "bad" : "good");
       return false;
     }
 
@@ -541,17 +563,39 @@ function update(delta) {
 }
 
 function spawnDrop() {
-  const isGold = Math.random() < 0.16;
+  const roll = Math.random();
+  const kind = roll < 0.15 ? "bomb" : roll < 0.31 ? "gold" : "normal";
+  const isGold = kind === "gold";
+  const isBomb = kind === "bomb";
   game.drops.push({
     x: 34 + Math.random() * (canvas.width - 68),
     y: -40,
-    width: isGold ? 34 : 28,
-    height: isGold ? 70 : 60,
+    width: isBomb ? 42 : isGold ? 34 : 28,
+    height: isBomb ? 42 : isGold ? 70 : 60,
     speed: 170 + Math.random() * 145 + game.elapsed * 2.3,
     rotation: Math.random() * Math.PI,
     spin: (Math.random() - 0.5) * 3,
-    kind: isGold ? "gold" : "normal",
+    kind,
   });
+}
+
+function getDropScore(drop) {
+  if (drop.kind === "bomb") {
+    return -3;
+  }
+
+  return drop.kind === "gold" ? 5 : 2;
+}
+
+function setCatReaction(type) {
+  game.reaction = {
+    type,
+    until: game.elapsed + 0.45,
+  };
+}
+
+function getCatReaction() {
+  return game.reaction?.until >= game.elapsed ? game.reaction.type : "neutral";
 }
 
 function collides(drop) {
@@ -570,7 +614,7 @@ function collides(drop) {
 function draw() {
   drawWorld();
   game.drops.forEach(drawChuru);
-  drawCat(game.cat.x, game.cat.y, game.cat.width, game.cat.height);
+  drawCat(game.cat.x, game.cat.y, game.cat.width, game.cat.height, getCatReaction());
 }
 
 function drawWorld() {
@@ -607,6 +651,12 @@ function drawChuru(drop) {
   ctx.translate(drop.x, drop.y);
   ctx.rotate(drop.rotation);
 
+  if (drop.kind === "bomb") {
+    drawBomb(drop);
+    ctx.restore();
+    return;
+  }
+
   ctx.fillStyle = drop.kind === "gold" ? "#ffd84f" : "#ff9f6e";
   roundRect(-drop.width / 2, -drop.height / 2, drop.width, drop.height, 9);
   ctx.fill();
@@ -621,7 +671,37 @@ function drawChuru(drop) {
   ctx.restore();
 }
 
-function drawCat(x, y, width, height) {
+function drawBomb(drop) {
+  const radius = drop.width / 2;
+
+  ctx.fillStyle = "#38302d";
+  ctx.beginPath();
+  ctx.arc(0, 5, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.28)";
+  ctx.beginPath();
+  ctx.arc(-radius * 0.35, -radius * 0.2, radius * 0.24, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#38302d";
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(0, -radius + 4);
+  ctx.quadraticCurveTo(9, -radius - 15, 23, -radius - 11);
+  ctx.stroke();
+
+  ctx.fillStyle = "#ffd84f";
+  ctx.beginPath();
+  ctx.moveTo(24, -radius - 16);
+  ctx.lineTo(31, -radius - 8);
+  ctx.lineTo(21, -radius - 5);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawCat(x, y, width, height, reaction = "neutral") {
   ctx.save();
   ctx.translate(x, y);
 
@@ -664,21 +744,30 @@ function drawCat(x, y, width, height) {
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = "#332923";
-  ctx.beginPath();
-  ctx.arc(-width * 0.16, -height * 0.03, 5, 0, Math.PI * 2);
-  ctx.arc(width * 0.16, -height * 0.03, 5, 0, Math.PI * 2);
-  ctx.fill();
-
   ctx.strokeStyle = "#332923";
   ctx.lineWidth = 3;
   ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(0, height * 0.05);
-  ctx.quadraticCurveTo(-8, height * 0.16, -18, height * 0.08);
-  ctx.moveTo(0, height * 0.05);
-  ctx.quadraticCurveTo(8, height * 0.16, 18, height * 0.08);
-  ctx.stroke();
+
+  if (reaction === "good") {
+    drawHappyEyes(width, height);
+    drawOpenMouth(height, "#ef6f8f");
+  } else if (reaction === "bad") {
+    drawXEyes(width, height);
+    drawOpenMouth(height, "#8ed7f5");
+  } else {
+    ctx.fillStyle = "#332923";
+    ctx.beginPath();
+    ctx.arc(-width * 0.16, -height * 0.03, 5, 0, Math.PI * 2);
+    ctx.arc(width * 0.16, -height * 0.03, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(0, height * 0.05);
+    ctx.quadraticCurveTo(-8, height * 0.16, -18, height * 0.08);
+    ctx.moveTo(0, height * 0.05);
+    ctx.quadraticCurveTo(8, height * 0.16, 18, height * 0.08);
+    ctx.stroke();
+  }
 
   ctx.strokeStyle = "rgba(51, 41, 35, 0.72)";
   ctx.lineWidth = 2;
@@ -694,31 +783,54 @@ function drawCat(x, y, width, height) {
   ctx.restore();
 }
 
+function drawHappyEyes(width, height) {
+  ctx.strokeStyle = "#332923";
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.24, -height * 0.03);
+  ctx.quadraticCurveTo(-width * 0.16, -height * 0.2, -width * 0.08, -height * 0.03);
+  ctx.moveTo(width * 0.08, -height * 0.03);
+  ctx.quadraticCurveTo(width * 0.16, -height * 0.2, width * 0.24, -height * 0.03);
+  ctx.stroke();
+}
+
+function drawXEyes(width, height) {
+  ctx.strokeStyle = "#332923";
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
+  [-1, 1].forEach((side) => {
+    const centerX = side * width * 0.16;
+    const centerY = -height * 0.04;
+    ctx.beginPath();
+    ctx.moveTo(centerX - 8, centerY - 8);
+    ctx.lineTo(centerX + 8, centerY + 8);
+    ctx.moveTo(centerX + 8, centerY - 8);
+    ctx.lineTo(centerX - 8, centerY + 8);
+    ctx.stroke();
+  });
+}
+
+function drawOpenMouth(height, tongueColor) {
+  ctx.fillStyle = "#332923";
+  ctx.beginPath();
+  ctx.ellipse(0, height * 0.12, 12, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = tongueColor;
+  ctx.beginPath();
+  ctx.ellipse(0, height * 0.18, 7, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function drawIntro() {
   drawWorld();
   drawCat(canvas.width / 2, canvas.height - 84, 104, 74);
-  drawCenterText("← →, A D 또는 터치 버튼", "게임 시작을 눌러 츄르를 잡아보세요");
 }
 
 function drawFinish() {
   drawWorld();
-  drawCat(game.cat.x, game.cat.y, game.cat.width, game.cat.height);
-  drawCenterText(`${game.score}점!`, "다시 시작해서 최고 기록을 노려보세요");
-}
-
-function drawCenterText(title, subtitle) {
-  ctx.save();
-  ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-  roundRect(canvas.width / 2 - 210, 180, 420, 110, 8);
-  ctx.fill();
-  ctx.fillStyle = "#25211d";
-  ctx.textAlign = "center";
-  ctx.font = "800 34px Nunito, sans-serif";
-  ctx.fillText(title, canvas.width / 2, 226);
-  ctx.font = "700 18px Nunito, sans-serif";
-  ctx.fillStyle = "#746b62";
-  ctx.fillText(subtitle, canvas.width / 2, 260);
-  ctx.restore();
+  drawCat(game.cat.x, game.cat.y, game.cat.width, game.cat.height, getCatReaction());
 }
 
 function roundRect(x, y, width, height, radius) {

@@ -68,9 +68,17 @@
             <strong id="bestText">0</strong>
           </div>
         </div>
-        <canvas id="gameCanvas" width="900" height="560" aria-label="고양이가 떨어지는 츄르를 잡는 게임"></canvas>
-        <div class="control-row">
-          <button class="primary-button" id="startButton" type="button">게임 시작</button>
+        <div class="canvas-wrap">
+          <canvas id="gameCanvas" width="900" height="560" aria-label="고양이가 떨어지는 츄르를 잡는 게임"></canvas>
+          <div class="game-overlay" id="gameOverlay">
+            <p class="overlay-result" id="overlayResult" hidden></p>
+            <button class="primary-button" id="startButton" type="button">게임 시작</button>
+            <div class="item-guide" aria-label="아이템별 점수">
+              <span><i class="guide-icon normal"></i>츄르 +2</span>
+              <span><i class="guide-icon gold"></i>황금 츄르 +5</span>
+              <span><i class="guide-icon bomb"></i>폭탄 -3</span>
+            </div>
+          </div>
         </div>
         <div class="touch-controls" aria-label="모바일 이동 조작">
           <button class="touch-button" id="touchLeftButton" type="button" aria-label="왼쪽으로 이동">‹</button>
