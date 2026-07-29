@@ -40,6 +40,9 @@ const adminMessage = document.querySelector("#adminMessage");
 const scoreText = document.querySelector("#scoreText");
 const timeText = document.querySelector("#timeText");
 const bestText = document.querySelector("#bestText");
+const speedModeBadge = document.querySelector("#speedModeBadge");
+const hideModeBadge = document.querySelector("#hideModeBadge");
+const purrModeBadge = document.querySelector("#purrModeBadge");
 const canvas = document.querySelector("#gameCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -97,6 +100,11 @@ function createGameState() {
     reaction: {
       type: "neutral",
       until: 0,
+    },
+    modes: {
+      speedUntil: 0,
+      hideUntil: 0,
+      purrUntil: 0,
     },
     cat: {
       x: canvas.width / 2,
@@ -165,6 +173,7 @@ function showGameFor(user) {
   setPasswordMessage("");
   setAdminMessage("");
   renderRanking();
+  updateModeBadges();
   showGameOverlay("게임 시작");
   drawIntro();
 }
@@ -464,6 +473,7 @@ function startGame() {
   scoreText.textContent = "0";
   timeText.textContent = GAME_SECONDS;
   touchDirection = 0;
+  updateModeBadges();
   lastFrame = performance.now();
   nextDropAt = 0;
   animationId = requestAnimationFrame(loop);
@@ -480,6 +490,7 @@ function stopGame() {
 function finishGame() {
   const finalScore = game.score;
   stopGame();
+  clearModes();
   drawFinish();
   showGameOverlay("다시하기", `${finalScore}점!`);
   submitScore(finalScore);
@@ -532,8 +543,10 @@ function update(delta) {
 
   const keyboardDirection = (keys.has("ArrowRight") || keys.has("d") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("a") ? 1 : 0);
   const direction = touchDirection || keyboardDirection;
-  game.cat.x += direction * game.cat.speed * delta;
+  const speedMultiplier = isSpeedModeActive() ? 1.75 : 1;
+  game.cat.x += direction * game.cat.speed * speedMultiplier * delta;
   game.cat.x = clamp(game.cat.x, game.cat.width / 2 + 12, canvas.width - game.cat.width / 2 - 12);
+  updateModeBadges();
 
   if (game.elapsed >= nextDropAt) {
     spawnDrop();
@@ -547,6 +560,14 @@ function update(delta) {
 
   game.drops = game.drops.filter((drop) => {
     if (collides(drop)) {
+      if (isHideModeActive()) {
+        return true;
+      }
+
+      if (applyModeItem(drop)) {
+        return false;
+      }
+
       const scoreDelta = getDropScore(drop);
       game.score = Math.max(0, game.score + scoreDelta);
       scoreText.textContent = game.score;
@@ -564,14 +585,17 @@ function update(delta) {
 
 function spawnDrop() {
   const roll = Math.random();
-  const kind = roll < 0.15 ? "bomb" : roll < 0.31 ? "gold" : "normal";
+  const kind = getRandomDropKind(roll);
   const isGold = kind === "gold";
   const isBomb = kind === "bomb";
+  const isToy = kind === "toy";
+  const isBox = kind === "box";
+  const isHand = kind === "hand";
   game.drops.push({
     x: 34 + Math.random() * (canvas.width - 68),
     y: -40,
-    width: isBomb ? 42 : isGold ? 34 : 28,
-    height: isBomb ? 42 : isGold ? 70 : 60,
+    width: isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 44 : isGold ? 34 : 28,
+    height: isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isGold ? 70 : 60,
     speed: 170 + Math.random() * 145 + game.elapsed * 2.3,
     rotation: Math.random() * Math.PI,
     spin: (Math.random() - 0.5) * 3,
@@ -579,12 +603,46 @@ function spawnDrop() {
   });
 }
 
+function getRandomDropKind(roll) {
+  if (roll < 0.04) return "box";
+  if (roll < 0.10) return "toy";
+  if (roll < 0.16) return "hand";
+  if (roll < 0.30) return "bomb";
+  if (roll < 0.46) return "gold";
+  return "normal";
+}
+
 function getDropScore(drop) {
   if (drop.kind === "bomb") {
     return -3;
   }
 
-  return drop.kind === "gold" ? 5 : 2;
+  const baseScore = drop.kind === "gold" ? 5 : 2;
+  return isPurrModeActive() ? baseScore * 2 : baseScore;
+}
+
+function applyModeItem(drop) {
+  if (drop.kind === "toy") {
+    game.modes.speedUntil = game.elapsed + 5;
+    setCatReaction("good");
+    updateModeBadges();
+    return true;
+  }
+
+  if (drop.kind === "box") {
+    game.modes.hideUntil = game.elapsed + 3;
+    updateModeBadges();
+    return true;
+  }
+
+  if (drop.kind === "hand") {
+    game.modes.purrUntil = game.elapsed + 5;
+    setCatReaction("good");
+    updateModeBadges();
+    return true;
+  }
+
+  return false;
 }
 
 function setCatReaction(type) {
@@ -595,7 +653,48 @@ function setCatReaction(type) {
 }
 
 function getCatReaction() {
+  if (isHideModeActive()) {
+    return "box";
+  }
+
   return game.reaction?.until >= game.elapsed ? game.reaction.type : "neutral";
+}
+
+function isSpeedModeActive() {
+  return game.modes.speedUntil > game.elapsed;
+}
+
+function isHideModeActive() {
+  return game.modes.hideUntil > game.elapsed;
+}
+
+function isPurrModeActive() {
+  return game.modes.purrUntil > game.elapsed;
+}
+
+function getModeSecondsLeft(until) {
+  return Math.max(0, Math.ceil(until - game.elapsed));
+}
+
+function updateModeBadges() {
+  updateModeBadge(speedModeBadge, isSpeedModeActive(), `우다다 ${getModeSecondsLeft(game.modes.speedUntil)}초`);
+  updateModeBadge(hideModeBadge, isHideModeActive(), `숨숨집 ${getModeSecondsLeft(game.modes.hideUntil)}초`);
+  updateModeBadge(purrModeBadge, isPurrModeActive(), `골골송 ${getModeSecondsLeft(game.modes.purrUntil)}초`);
+}
+
+function updateModeBadge(badge, isActive, text) {
+  badge.hidden = !isActive;
+
+  if (isActive) {
+    badge.textContent = text;
+  }
+}
+
+function clearModes() {
+  game.modes.speedUntil = 0;
+  game.modes.hideUntil = 0;
+  game.modes.purrUntil = 0;
+  updateModeBadges();
 }
 
 function collides(drop) {
@@ -657,6 +756,24 @@ function drawChuru(drop) {
     return;
   }
 
+  if (drop.kind === "toy") {
+    drawToy(drop);
+    ctx.restore();
+    return;
+  }
+
+  if (drop.kind === "box") {
+    drawBoxItem(drop);
+    ctx.restore();
+    return;
+  }
+
+  if (drop.kind === "hand") {
+    drawHandItem(drop);
+    ctx.restore();
+    return;
+  }
+
   ctx.fillStyle = drop.kind === "gold" ? "#ffd84f" : "#ff9f6e";
   roundRect(-drop.width / 2, -drop.height / 2, drop.width, drop.height, 9);
   ctx.fill();
@@ -701,9 +818,99 @@ function drawBomb(drop) {
   ctx.fill();
 }
 
+function drawToy(drop) {
+  const outer = drop.width / 2;
+  const inner = outer * 0.45;
+
+  ctx.fillStyle = "rgba(142, 215, 245, 0.26)";
+  ctx.beginPath();
+  ctx.arc(0, 0, outer + 7, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#8ed7f5";
+  ctx.beginPath();
+  for (let index = 0; index < 10; index += 1) {
+    const radius = index % 2 === 0 ? outer : inner;
+    const angle = -Math.PI / 2 + index * Math.PI / 5;
+    const px = Math.cos(angle) * radius;
+    const py = Math.sin(angle) * radius;
+
+    if (index === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#fffaf2";
+  ctx.beginPath();
+  ctx.arc(0, 0, 5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawBoxItem(drop) {
+  const width = drop.width;
+  const height = drop.height;
+
+  ctx.fillStyle = "#c58b51";
+  roundRect(-width / 2, -height / 2, width, height, 6);
+  ctx.fill();
+
+  ctx.fillStyle = "#e0aa68";
+  ctx.beginPath();
+  ctx.moveTo(-width / 2, -height / 2);
+  ctx.lineTo(0, -height / 2 - 10);
+  ctx.lineTo(width / 2, -height / 2);
+  ctx.lineTo(0, -height / 2 + 8);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(92, 56, 30, 0.45)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, -height / 2 + 4);
+  ctx.lineTo(0, height / 2 - 4);
+  ctx.stroke();
+}
+
+function drawHandItem(drop) {
+  const width = drop.width;
+  const height = drop.height;
+
+  ctx.fillStyle = "#ffc8a2";
+  ctx.beginPath();
+  ctx.ellipse(0, 8, width * 0.32, height * 0.35, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  [-0.3, -0.1, 0.1, 0.3].forEach((offset, index) => {
+    ctx.beginPath();
+    ctx.ellipse(width * offset, -height * 0.2, 6, 16 - index, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  ctx.beginPath();
+  ctx.ellipse(width * 0.38, 0, 7, 15, 0.7, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(142, 92, 66, 0.36)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-8, 5);
+  ctx.quadraticCurveTo(0, 14, 10, 5);
+  ctx.stroke();
+}
+
 function drawCat(x, y, width, height, reaction = "neutral") {
   ctx.save();
   ctx.translate(x, y);
+
+  if (reaction === "box") {
+    drawBoxCat(width, height);
+    ctx.restore();
+    return;
+  }
 
   ctx.fillStyle = "rgba(37, 33, 29, 0.14)";
   ctx.beginPath();
@@ -780,6 +987,57 @@ function drawCat(x, y, width, height, reaction = "neutral") {
     ctx.stroke();
   });
 
+  if (isPurrModeActive()) {
+    drawPurrBubble(width, height);
+  }
+
+  ctx.restore();
+}
+
+function drawBoxCat(width, height) {
+  ctx.fillStyle = "rgba(37, 33, 29, 0.14)";
+  ctx.beginPath();
+  ctx.ellipse(0, height / 2 + 9, width * 0.5, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#c58b51";
+  roundRect(-width * 0.42, -height * 0.22, width * 0.84, height * 0.68, 8);
+  ctx.fill();
+
+  ctx.fillStyle = "#e0aa68";
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.42, -height * 0.22);
+  ctx.lineTo(0, -height * 0.46);
+  ctx.lineTo(width * 0.42, -height * 0.22);
+  ctx.lineTo(0, -height * 0.08);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(92, 56, 30, 0.45)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, -height * 0.05);
+  ctx.lineTo(0, height * 0.38);
+  ctx.stroke();
+}
+
+function drawPurrBubble(width, height) {
+  ctx.save();
+  ctx.translate(width * 0.32, -height * 0.54);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+  roundRect(-12, -26, 112, 36, 8);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(5, 8);
+  ctx.lineTo(-7, 22);
+  ctx.lineTo(23, 8);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#ef6f8f";
+  ctx.textAlign = "center";
+  ctx.font = "800 16px Nunito, sans-serif";
+  ctx.fillText("골골골골~", 44, -3);
   ctx.restore();
 }
 

@@ -269,6 +269,38 @@ button:disabled {
   line-height: 1;
 }
 
+.mode-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 30px;
+  margin: -2px 0 10px;
+}
+
+.mode-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.76);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.mode-badge.speed {
+  background: rgba(255, 216, 79, 0.55);
+}
+
+.mode-badge.hide {
+  background: rgba(190, 139, 82, 0.28);
+}
+
+.mode-badge.purr {
+  background: rgba(239, 111, 143, 0.2);
+}
+
 .canvas-wrap {
   position: relative;
 }
@@ -312,7 +344,7 @@ canvas {
   justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
-  max-width: 420px;
+  max-width: 560px;
   color: var(--ink);
   font-size: 0.92rem;
   font-weight: 900;
@@ -346,6 +378,27 @@ canvas {
   height: 18px;
   border-radius: 999px;
   background: #38302d;
+}
+
+.guide-icon.toy {
+  width: 18px;
+  height: 18px;
+  clip-path: polygon(50% 0, 62% 34%, 98% 35%, 69% 56%, 80% 92%, 50% 70%, 20% 92%, 31% 56%, 2% 35%, 38% 34%);
+  background: #8ed7f5;
+}
+
+.guide-icon.box {
+  width: 18px;
+  height: 16px;
+  border-radius: 3px;
+  background: #c58b51;
+}
+
+.guide-icon.hand {
+  width: 17px;
+  height: 20px;
+  border-radius: 9px 9px 6px 6px;
+  background: #ffc8a2;
 }
 
 .touch-controls {
