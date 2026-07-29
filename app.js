@@ -37,6 +37,7 @@ const newPasswordConfirmInput = document.querySelector("#newPasswordConfirmInput
 const passwordMessage = document.querySelector("#passwordMessage");
 const adminList = document.querySelector("#adminList");
 const adminMessage = document.querySelector("#adminMessage");
+const resetRankingButton = document.querySelector("#resetRankingButton");
 const scoreText = document.querySelector("#scoreText");
 const timeText = document.querySelector("#timeText");
 const bestText = document.querySelector("#bestText");
@@ -462,6 +463,30 @@ async function deleteAccount(userId, username) {
     renderAdminList();
   } catch (error) {
     setAdminMessage(error.message);
+  }
+}
+
+async function resetRankings() {
+  if (!window.confirm("전체 츄르 랭킹과 플레이 기록을 초기화할까요?")) {
+    return;
+  }
+
+  resetRankingButton.disabled = true;
+
+  try {
+    await requestApi("/api/admin/reset-rankings", {
+      method: "POST",
+    });
+    currentUser.bestScore = 0;
+    currentUser.gamesPlayed = 0;
+    bestText.textContent = "0";
+    renderRanking();
+    await renderAdminList();
+    setAdminMessage("츄르 랭킹을 초기화했습니다.", true);
+  } catch (error) {
+    setAdminMessage(error.message);
+  } finally {
+    resetRankingButton.disabled = false;
   }
 }
 
@@ -1173,6 +1198,7 @@ startButton.addEventListener("click", startGame);
 changePasswordForm.addEventListener("submit", changePassword);
 bindTouchControl(touchLeftButton, -1);
 bindTouchControl(touchRightButton, 1);
+resetRankingButton.addEventListener("click", resetRankings);
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !accountModal.hidden) {

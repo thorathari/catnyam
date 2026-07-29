@@ -570,6 +570,11 @@ canvas {
   gap: 10px;
 }
 
+.admin-reset-rank-button {
+  width: 100%;
+  margin-bottom: 14px;
+}
+
 .admin-account {
   display: grid;
   gap: 10px;
