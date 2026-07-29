@@ -1,4 +1,3 @@
-const STORAGE_KEY = "catnyam_accounts_v1";
 const GAME_SECONDS = 45;
 
 const authPanel = document.querySelector("#authPanel");
@@ -48,32 +47,39 @@ let lastFrame = 0;
 let nextDropAt = 0;
 let game = createGameState();
 
-function readAccounts() {
+async function requestApi(path, options = {}) {
+  const init = {
+    method: options.method || "GET",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+    },
+  };
+
+  if (options.body !== undefined) {
+    init.headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(options.body);
+  }
+
+  let response;
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+    response = await fetch(path, init);
   } catch {
-    return [];
+    throw new Error("서버에 연결할 수 없습니다. Vercel 배포와 환경변수를 확인해주세요.");
   }
-}
 
-function writeAccounts(accounts) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
-}
-
-function ensureAccountRoles() {
-  const accounts = readAccounts();
-  let changed = false;
-
-  accounts.forEach((account) => {
-    if (!account.role) {
-      account.role = "user";
-      changed = true;
-    }
-  });
-
-  if (changed) {
-    writeAccounts(accounts);
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
   }
+
+  if (!response.ok) {
+    throw new Error(data.message || "요청 처리에 실패했습니다.");
+  }
+
+  return data;
 }
 
 function createGameState() {
@@ -97,20 +103,8 @@ function normalizeName(value) {
   return value.trim().replace(/\s+/g, " ");
 }
 
-function sameUsername(left, right) {
-  return String(left || "").toLowerCase() === String(right || "").toLowerCase();
-}
-
-function findAccount(username) {
-  return readAccounts().find((account) => sameUsername(account.username, username));
-}
-
-function hasAdminAccount(accounts = readAccounts()) {
-  return accounts.some((account) => isAdmin(account));
-}
-
-function isAdmin(account) {
-  return account?.role === "admin";
+function isAdmin(user) {
+  return user?.role === "admin";
 }
 
 function setFieldMessage(element, message, isGood = false) {
@@ -137,7 +131,7 @@ function setAuthMode(mode) {
   authTitle.textContent = isSignup ? "새 계정을 만들어 시작하세요" : "로그인하고 츄르 랭킹에 도전하세요";
   authDescription.textContent = isSignup
     ? "아이디, 비밀번호, 비밀번호 확인을 입력하면 바로 게임을 시작할 수 있습니다."
-    : "아이디와 비밀번호를 입력해 시작합니다. 기록은 이 브라우저에 저장됩니다.";
+    : "아이디와 비밀번호를 입력해 시작합니다. 기록은 서버에 저장됩니다.";
   confirmPasswordField.hidden = !isSignup;
   confirmPasswordInput.required = isSignup;
   passwordInput.autocomplete = isSignup ? "new-password" : "current-password";
@@ -149,12 +143,8 @@ function setAuthMode(mode) {
   usernameInput.focus();
 }
 
-function showGameFor(username) {
-  currentUser = findAccount(username);
-  if (!currentUser) {
-    return;
-  }
-
+function showGameFor(user) {
+  currentUser = user;
   authPanel.hidden = true;
   gamePanel.hidden = false;
   profileBox.hidden = false;
@@ -166,7 +156,6 @@ function showGameFor(username) {
   setPasswordMessage("");
   setAdminMessage("");
   renderRanking();
-  renderAdminList();
   drawIntro();
 }
 
@@ -183,22 +172,21 @@ function showAuth() {
   setAuthMode("login");
 }
 
-function handleAuthSubmit(event) {
+async function handleAuthSubmit(event) {
   event.preventDefault();
 
   if (authMode === "signup") {
-    signup();
+    await signup();
     return;
   }
 
-  login();
+  await login();
 }
 
-function signup() {
+async function signup() {
   const username = normalizeName(usernameInput.value);
   const password = passwordInput.value;
   const confirmPassword = confirmPasswordInput.value;
-  const accounts = readAccounts();
 
   if (username.length < 2) {
     setMessage("아이디는 2글자 이상 입력해주세요.");
@@ -215,39 +203,44 @@ function signup() {
     return;
   }
 
-  if (findAccount(username)) {
-    setMessage("이미 사용 중인 아이디입니다.");
-    return;
+  try {
+    const data = await requestApi("/api/signup", {
+      method: "POST",
+      body: { username, password },
+    });
+    setMessage(data.user.role === "admin" ? "첫 관리자 계정으로 가입되었습니다." : "가입 완료! 바로 시작해볼까요?", true);
+    showGameFor(data.user);
+  } catch (error) {
+    setMessage(error.message);
   }
-
-  const shouldCreateAdmin = !hasAdminAccount(accounts);
-  accounts.push({
-    username,
-    password,
-    role: shouldCreateAdmin ? "admin" : "user",
-    bestScore: 0,
-    gamesPlayed: 0,
-    createdAt: new Date().toISOString(),
-  });
-  writeAccounts(accounts);
-  setMessage(shouldCreateAdmin ? "첫 관리자 계정으로 가입되었습니다." : "가입 완료! 바로 시작해볼까요?", true);
-  showGameFor(username);
 }
 
-function login() {
+async function login() {
   const username = normalizeName(usernameInput.value);
   const password = passwordInput.value;
-  const account = findAccount(username);
 
-  if (!account || account.password !== password) {
-    setMessage("아이디 또는 비밀번호를 확인해주세요.");
-    return;
+  try {
+    const data = await requestApi("/api/login", {
+      method: "POST",
+      body: { username, password },
+    });
+    showGameFor(data.user);
+  } catch (error) {
+    setMessage(error.message);
   }
-
-  showGameFor(account.username);
 }
 
-function changePassword(event) {
+async function logout() {
+  try {
+    await requestApi("/api/logout", { method: "POST" });
+  } catch {
+    // The local screen can still return to auth even if the server session is already gone.
+  }
+
+  showAuth();
+}
+
+async function changePassword(event) {
   event.preventDefault();
 
   if (!currentUser) {
@@ -257,11 +250,6 @@ function changePassword(event) {
   const currentPassword = currentPasswordInput.value;
   const newPassword = newPasswordInput.value;
   const confirmPassword = newPasswordConfirmInput.value;
-
-  if (currentPassword !== currentUser.password) {
-    setPasswordMessage("현재 비밀번호를 확인해주세요.");
-    return;
-  }
 
   if (newPassword.length < 4) {
     setPasswordMessage("새 비밀번호는 4글자 이상 입력해주세요.");
@@ -273,21 +261,16 @@ function changePassword(event) {
     return;
   }
 
-  const accounts = readAccounts();
-  const account = accounts.find((item) => sameUsername(item.username, currentUser.username));
-
-  if (!account) {
-    setPasswordMessage("계정을 찾을 수 없습니다.");
-    return;
+  try {
+    await requestApi("/api/change-password", {
+      method: "POST",
+      body: { currentPassword, newPassword },
+    });
+    changePasswordForm.reset();
+    setPasswordMessage("비밀번호가 변경되었습니다.", true);
+  } catch (error) {
+    setPasswordMessage(error.message);
   }
-
-  account.password = newPassword;
-  account.updatedAt = new Date().toISOString();
-  writeAccounts(accounts);
-  currentUser = account;
-  changePasswordForm.reset();
-  setPasswordMessage("비밀번호가 변경되었습니다.", true);
-  renderAdminList();
 }
 
 function openAccountModal() {
@@ -302,7 +285,6 @@ function openAccountModal() {
   changePasswordForm.reset();
   setPasswordMessage("");
   setAdminMessage("");
-  renderAdminList();
   accountModal.hidden = false;
   currentPasswordInput.focus();
 }
@@ -330,154 +312,138 @@ function setAccountTab(tabName) {
   }
 }
 
-function renderRanking() {
-  const ranking = readAccounts()
-    .slice()
-    .sort((a, b) => (b.bestScore || 0) - (a.bestScore || 0) || a.username.localeCompare(b.username))
-    .slice(0, 10);
-
+async function renderRanking() {
   rankingList.innerHTML = "";
 
-  if (ranking.length === 0) {
-    const item = document.createElement("li");
-    const rank = document.createElement("span");
-    const name = document.createElement("span");
-    const score = document.createElement("span");
-    name.className = "name";
-    score.className = "score";
-    rank.textContent = "-";
-    name.textContent = "아직 기록이 없습니다";
-    score.textContent = "0";
-    item.append(rank, name, score);
-    rankingList.append(item);
-    return;
-  }
+  try {
+    const data = await requestApi("/api/rankings");
+    const ranking = data.rankings || [];
 
-  ranking.forEach((account, index) => {
-    const item = document.createElement("li");
-    const rank = document.createElement("span");
-    const name = document.createElement("span");
-    const score = document.createElement("span");
-    name.className = "name";
-    score.className = "score";
-    rank.textContent = index + 1;
-    name.textContent = account.username;
-    score.textContent = account.bestScore || 0;
-    item.append(rank, name, score);
-    rankingList.append(item);
-  });
+    if (ranking.length === 0) {
+      appendRankingItem("-", "아직 기록이 없습니다", 0);
+      return;
+    }
+
+    ranking.forEach((account, index) => {
+      appendRankingItem(index + 1, account.username, account.bestScore || 0);
+    });
+  } catch {
+    appendRankingItem("-", "랭킹 서버 연결 필요", 0);
+  }
 }
 
-function renderAdminList() {
+function appendRankingItem(rankValue, username, scoreValue) {
+  const item = document.createElement("li");
+  const rank = document.createElement("span");
+  const name = document.createElement("span");
+  const score = document.createElement("span");
+  name.className = "name";
+  score.className = "score";
+  rank.textContent = rankValue;
+  name.textContent = username;
+  score.textContent = scoreValue;
+  item.append(rank, name, score);
+  rankingList.append(item);
+}
+
+async function renderAdminList() {
   if (!isAdmin(currentUser)) {
     adminList.innerHTML = "";
     return;
   }
 
-  const accounts = readAccounts()
-    .slice()
-    .sort((a, b) => {
-      if (isAdmin(a) !== isAdmin(b)) {
-        return isAdmin(a) ? -1 : 1;
-      }
-
-      return a.username.localeCompare(b.username);
-    });
-
   adminList.innerHTML = "";
+  setAdminMessage("");
 
-  accounts.forEach((account) => {
-    const item = document.createElement("div");
-    const main = document.createElement("div");
-    const name = document.createElement("span");
-    const meta = document.createElement("span");
-    const actions = document.createElement("div");
-    const resetButton = document.createElement("button");
-    const deleteButton = document.createElement("button");
+  try {
+    const data = await requestApi("/api/admin/users");
+    const accounts = data.users || [];
 
-    item.className = "admin-account";
-    main.className = "admin-account-main";
-    name.className = "admin-account-name";
-    meta.className = "admin-account-meta";
-    actions.className = "admin-actions";
-    resetButton.className = "secondary-button";
-    deleteButton.className = "danger-button";
-
-    name.textContent = account.username;
-    meta.textContent = `최고 ${account.bestScore || 0}점 · ${account.gamesPlayed || 0}회`;
-    resetButton.type = "button";
-    deleteButton.type = "button";
-    resetButton.textContent = "비밀번호 초기화";
-    deleteButton.textContent = "계정 삭제";
-
-    if (isAdmin(account)) {
-      const badge = document.createElement("span");
-      badge.className = "admin-badge";
-      badge.textContent = "관리자";
-      main.append(name, badge);
-      resetButton.disabled = true;
-      deleteButton.disabled = true;
-    } else {
-      main.append(name);
-      resetButton.addEventListener("click", () => resetAccountPassword(account.username));
-      deleteButton.addEventListener("click", () => deleteAccount(account.username));
+    if (accounts.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "admin-note";
+      empty.textContent = "관리할 계정이 없습니다.";
+      adminList.append(empty);
+      return;
     }
 
-    actions.append(resetButton, deleteButton);
-    item.append(main, meta, actions);
-    adminList.append(item);
-  });
-}
-
-function resetAccountPassword(username) {
-  const accounts = readAccounts();
-  const account = accounts.find((item) => sameUsername(item.username, username));
-
-  if (!account || isAdmin(account)) {
-    setAdminMessage("관리자 계정은 여기서 초기화할 수 없습니다.");
-    return;
+    accounts.forEach(renderAdminAccount);
+  } catch (error) {
+    setAdminMessage(error.message);
   }
-
-  const temporaryPassword = generateTemporaryPassword();
-  account.password = temporaryPassword;
-  account.updatedAt = new Date().toISOString();
-  writeAccounts(accounts);
-  setAdminMessage(`${account.username} 임시 비밀번호: ${temporaryPassword}`, true);
-  renderAdminList();
 }
 
-function generateTemporaryPassword() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  const values = new Uint32Array(10);
+function renderAdminAccount(account) {
+  const item = document.createElement("div");
+  const main = document.createElement("div");
+  const name = document.createElement("span");
+  const meta = document.createElement("span");
+  const actions = document.createElement("div");
+  const resetButton = document.createElement("button");
+  const deleteButton = document.createElement("button");
 
-  if (window.crypto?.getRandomValues) {
-    window.crypto.getRandomValues(values);
+  item.className = "admin-account";
+  main.className = "admin-account-main";
+  name.className = "admin-account-name";
+  meta.className = "admin-account-meta";
+  actions.className = "admin-actions";
+  resetButton.className = "secondary-button";
+  deleteButton.className = "danger-button";
+
+  name.textContent = account.username;
+  meta.textContent = `최고 ${account.bestScore || 0}점 · ${account.gamesPlayed || 0}회`;
+  resetButton.type = "button";
+  deleteButton.type = "button";
+  resetButton.textContent = "비밀번호 초기화";
+  deleteButton.textContent = "계정 삭제";
+
+  if (isAdmin(account)) {
+    const badge = document.createElement("span");
+    badge.className = "admin-badge";
+    badge.textContent = "관리자";
+    main.append(name, badge);
+    resetButton.disabled = true;
+    deleteButton.disabled = true;
   } else {
-    values.forEach((_, index) => {
-      values[index] = Math.floor(Math.random() * chars.length);
-    });
+    main.append(name);
+    resetButton.addEventListener("click", () => resetAccountPassword(account.id, account.username));
+    deleteButton.addEventListener("click", () => deleteAccount(account.id, account.username));
   }
 
-  return Array.from(values, (value) => chars[value % chars.length]).join("");
+  actions.append(resetButton, deleteButton);
+  item.append(main, meta, actions);
+  adminList.append(item);
 }
 
-function deleteAccount(username) {
-  const account = findAccount(username);
+async function resetAccountPassword(userId, username) {
+  try {
+    const data = await requestApi("/api/admin/reset-password", {
+      method: "POST",
+      body: { userId },
+    });
+    setAdminMessage(`${username} 임시 비밀번호: ${data.temporaryPassword}`, true);
+    renderAdminList();
+  } catch (error) {
+    setAdminMessage(error.message);
+  }
+}
 
-  if (!account || isAdmin(account)) {
-    setAdminMessage("관리자 계정은 삭제할 수 없습니다.");
+async function deleteAccount(userId, username) {
+  if (!window.confirm(`${username} 계정을 삭제할까요?`)) {
     return;
   }
 
-  if (!window.confirm(`${account.username} 계정을 삭제할까요?`)) {
-    return;
+  try {
+    await requestApi("/api/admin/delete-user", {
+      method: "POST",
+      body: { userId },
+    });
+    setAdminMessage(`${username} 계정을 삭제했습니다.`, true);
+    renderRanking();
+    renderAdminList();
+  } catch (error) {
+    setAdminMessage(error.message);
   }
-
-  const accounts = readAccounts().filter((item) => !sameUsername(item.username, username));
-  writeAccounts(accounts);
-  setAdminMessage(`${account.username} 계정을 삭제했습니다.`, true);
-  renderRanking();
-  renderAdminList();
 }
 
 function startGame() {
@@ -501,23 +467,28 @@ function stopGame() {
 }
 
 function finishGame() {
+  const finalScore = game.score;
   stopGame();
-  const accounts = readAccounts();
-  const account = accounts.find((item) => sameUsername(item.username, currentUser.username));
+  drawFinish();
+  submitScore(finalScore);
+}
 
-  if (account) {
-    account.gamesPlayed = (account.gamesPlayed || 0) + 1;
-    account.bestScore = Math.max(account.bestScore || 0, game.score);
-    account.lastScore = game.score;
-    account.updatedAt = new Date().toISOString();
-    writeAccounts(accounts);
-    currentUser = account;
+async function submitScore(score) {
+  if (!currentUser) {
+    return;
   }
 
-  bestText.textContent = currentUser.bestScore || 0;
-  renderRanking();
-  renderAdminList();
-  drawFinish();
+  try {
+    const data = await requestApi("/api/scores", {
+      method: "POST",
+      body: { score },
+    });
+    currentUser = data.user;
+    bestText.textContent = currentUser.bestScore || 0;
+    renderRanking();
+  } catch {
+    drawCenterText(`${score}점!`, "점수 저장에 실패했습니다. 서버 설정을 확인해주세요");
+  }
 }
 
 function loop(now) {
@@ -794,7 +765,7 @@ window.addEventListener("keyup", (event) => {
 authForm.addEventListener("submit", handleAuthSubmit);
 signupButton.addEventListener("click", () => setAuthMode("signup"));
 loginModeButton.addEventListener("click", () => setAuthMode("login"));
-logoutButton.addEventListener("click", showAuth);
+logoutButton.addEventListener("click", logout);
 profileButton.addEventListener("click", openAccountModal);
 closeAccountModalButton.addEventListener("click", closeAccountModal);
 accountModal.addEventListener("click", (event) => {
@@ -813,5 +784,5 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
-ensureAccountRoles();
 showAuth();
+renderRanking();

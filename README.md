@@ -4,7 +4,7 @@
 
 ## 실행
 
-`index.html`을 브라우저로 열면 바로 실행됩니다.
+Vercel에 배포하면 서버 API와 함께 실행됩니다. 로컬 파일로 직접 열면 서버 랭킹과 로그인 API는 동작하지 않습니다.
 
 ## 기능
 
@@ -19,6 +19,20 @@
 ## 관리자
 
 처음 가입한 계정이 관리자 권한을 받습니다. 관리자가 일반 계정 비밀번호를 초기화하면 임시 비밀번호가 화면에 표시됩니다.
+
+## 서버 설정
+
+1. Supabase 무료 프로젝트를 만듭니다.
+2. Supabase SQL Editor에서 `supabase/schema.sql` 내용을 실행합니다.
+3. Vercel Project Settings > Environment Variables에 아래 값을 추가합니다.
+
+```text
+SUPABASE_URL
+SUPABASE_SECRET_KEY
+SESSION_SECRET
+```
+
+`SUPABASE_SECRET_KEY`는 브라우저에 넣지 말고 Vercel 환경변수에만 저장해야 합니다.
 
 ## 조작
 
