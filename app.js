@@ -4,6 +4,7 @@ const GAME_SECONDS = 45;
 const authPanel = document.querySelector("#authPanel");
 const gamePanel = document.querySelector("#gamePanel");
 const profileBox = document.querySelector("#profileBox");
+const profileButton = document.querySelector("#profileButton");
 const currentUserName = document.querySelector("#currentUserName");
 const authTitle = document.querySelector("#authTitle");
 const authDescription = document.querySelector("#authDescription");
@@ -19,12 +20,18 @@ const loginModeButton = document.querySelector("#loginModeButton");
 const logoutButton = document.querySelector("#logoutButton");
 const startButton = document.querySelector("#startButton");
 const rankingList = document.querySelector("#rankingList");
+const accountModal = document.querySelector("#accountModal");
+const closeAccountModalButton = document.querySelector("#closeAccountModalButton");
+const passwordTabButton = document.querySelector("#passwordTabButton");
+const adminTabButton = document.querySelector("#adminTabButton");
+const passwordTabPanel = document.querySelector("#passwordTabPanel");
+const adminTabPanel = document.querySelector("#adminTabPanel");
+const tabList = document.querySelector(".tab-list");
 const changePasswordForm = document.querySelector("#changePasswordForm");
 const currentPasswordInput = document.querySelector("#currentPasswordInput");
 const newPasswordInput = document.querySelector("#newPasswordInput");
 const newPasswordConfirmInput = document.querySelector("#newPasswordConfirmInput");
 const passwordMessage = document.querySelector("#passwordMessage");
-const adminPanel = document.querySelector("#adminPanel");
 const adminList = document.querySelector("#adminList");
 const adminMessage = document.querySelector("#adminMessage");
 const scoreText = document.querySelector("#scoreText");
@@ -151,7 +158,6 @@ function showGameFor(username) {
   authPanel.hidden = true;
   gamePanel.hidden = false;
   profileBox.hidden = false;
-  adminPanel.hidden = !isAdmin(currentUser);
   currentUserName.textContent = isAdmin(currentUser) ? `${currentUser.username} 관리자` : currentUser.username;
   scoreText.textContent = "0";
   timeText.textContent = GAME_SECONDS;
@@ -170,7 +176,7 @@ function showAuth() {
   authPanel.hidden = false;
   gamePanel.hidden = true;
   profileBox.hidden = true;
-  adminPanel.hidden = true;
+  closeAccountModal();
   changePasswordForm.reset();
   setPasswordMessage("");
   setAdminMessage("");
@@ -282,6 +288,46 @@ function changePassword(event) {
   changePasswordForm.reset();
   setPasswordMessage("비밀번호가 변경되었습니다.", true);
   renderAdminList();
+}
+
+function openAccountModal() {
+  if (!currentUser) {
+    return;
+  }
+
+  const canManageAccounts = isAdmin(currentUser);
+  adminTabButton.hidden = !canManageAccounts;
+  tabList.classList.toggle("single-tab", !canManageAccounts);
+  setAccountTab("password");
+  changePasswordForm.reset();
+  setPasswordMessage("");
+  setAdminMessage("");
+  renderAdminList();
+  accountModal.hidden = false;
+  currentPasswordInput.focus();
+}
+
+function closeAccountModal() {
+  accountModal.hidden = true;
+}
+
+function setAccountTab(tabName) {
+  const isAdminTab = tabName === "admin";
+
+  if (isAdminTab && !isAdmin(currentUser)) {
+    return;
+  }
+
+  passwordTabButton.classList.toggle("active", !isAdminTab);
+  adminTabButton.classList.toggle("active", isAdminTab);
+  passwordTabButton.setAttribute("aria-selected", String(!isAdminTab));
+  adminTabButton.setAttribute("aria-selected", String(isAdminTab));
+  passwordTabPanel.hidden = isAdminTab;
+  adminTabPanel.hidden = !isAdminTab;
+
+  if (isAdminTab) {
+    renderAdminList();
+  }
 }
 
 function renderRanking() {
@@ -715,23 +761,57 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
+function getControlKey(key) {
+  if (key === "ArrowLeft" || key === "ArrowRight") {
+    return key;
+  }
+
+  const lowerKey = key.toLowerCase();
+  return lowerKey === "a" || lowerKey === "d" ? lowerKey : "";
+}
+
+function isTypingTarget(target) {
+  return target instanceof HTMLInputElement
+    || target instanceof HTMLTextAreaElement
+    || target instanceof HTMLSelectElement
+    || target?.isContentEditable;
+}
+
 window.addEventListener("keydown", (event) => {
-  if (["ArrowLeft", "ArrowRight", "a", "d"].includes(event.key)) {
-    keys.add(event.key);
+  const controlKey = getControlKey(event.key);
+
+  if (controlKey && game.running && accountModal.hidden && !isTypingTarget(event.target)) {
+    keys.add(controlKey);
     event.preventDefault();
   }
 });
 
 window.addEventListener("keyup", (event) => {
-  keys.delete(event.key);
+  const controlKey = getControlKey(event.key);
+  keys.delete(controlKey);
 });
 
 authForm.addEventListener("submit", handleAuthSubmit);
 signupButton.addEventListener("click", () => setAuthMode("signup"));
 loginModeButton.addEventListener("click", () => setAuthMode("login"));
 logoutButton.addEventListener("click", showAuth);
+profileButton.addEventListener("click", openAccountModal);
+closeAccountModalButton.addEventListener("click", closeAccountModal);
+accountModal.addEventListener("click", (event) => {
+  if (event.target === accountModal) {
+    closeAccountModal();
+  }
+});
+passwordTabButton.addEventListener("click", () => setAccountTab("password"));
+adminTabButton.addEventListener("click", () => setAccountTab("admin"));
 startButton.addEventListener("click", startGame);
 changePasswordForm.addEventListener("submit", changePassword);
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !accountModal.hidden) {
+    closeAccountModal();
+  }
+});
 
 ensureAccountRoles();
 showAuth();

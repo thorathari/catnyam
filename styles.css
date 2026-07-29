@@ -94,10 +94,21 @@ h2 {
   box-shadow: var(--shadow);
 }
 
-.profile span {
+.profile-button {
+  max-width: 180px;
+  min-height: 38px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 12px;
+  color: var(--ink);
+  background: rgba(119, 216, 186, 0.3);
+  font-weight: 900;
+}
+
+.profile-button span {
+  display: block;
   max-width: 140px;
   overflow: hidden;
-  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -213,15 +224,13 @@ button:disabled {
 
 .game-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 350px;
+  grid-template-columns: minmax(0, 1fr) 330px;
   gap: 20px;
   align-items: start;
 }
 
 .game-stage,
-.ranking-panel,
-.account-panel,
-.admin-panel {
+.ranking-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -279,9 +288,7 @@ canvas {
   gap: 20px;
 }
 
-.ranking-panel,
-.account-panel,
-.admin-panel {
+.ranking-panel {
   padding: 18px;
 }
 
@@ -302,6 +309,77 @@ canvas {
 
 .account-form button {
   width: 100%;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(37, 33, 29, 0.42);
+}
+
+.modal {
+  width: min(520px, 100%);
+  max-height: min(760px, calc(100vh - 40px));
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffaf2;
+  box-shadow: 0 28px 90px rgba(37, 33, 29, 0.32);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 20px 12px;
+}
+
+.modal-close-button {
+  flex: 0 0 auto;
+  width: 42px;
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ink);
+  background: rgba(37, 33, 29, 0.08);
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.tab-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 20px 16px;
+}
+
+.tab-list.single-tab {
+  grid-template-columns: 1fr;
+}
+
+.tab-button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.72);
+  font-weight: 900;
+}
+
+.tab-button.active {
+  color: white;
+  border-color: transparent;
+  background: var(--berry);
+}
+
+.tab-panel {
+  padding: 0 20px 20px;
 }
 
 .ranking-list {
