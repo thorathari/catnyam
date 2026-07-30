@@ -7,6 +7,7 @@ const {
 
 const MAX_RANKINGS = 10;
 const MAX_HISTORY = 30;
+const MAX_DAILY_SCORES = 2000;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 function getRequestUrl(req) {
@@ -72,6 +73,7 @@ async function sendPlayerHistory(req, res, userId) {
 function buildDailyRankings(scores, users) {
   const usersById = new Map(users.map((user) => [user.id, user]));
   const bestByUser = new Map();
+  const playCountsByUser = new Map();
 
   scores.forEach((scoreRow) => {
     const user = usersById.get(scoreRow.user_id);
@@ -79,6 +81,8 @@ function buildDailyRankings(scores, users) {
     if (!user) {
       return;
     }
+
+    playCountsByUser.set(scoreRow.user_id, (playCountsByUser.get(scoreRow.user_id) || 0) + 1);
 
     const score = scoreRow.score || 0;
     const previous = bestByUser.get(scoreRow.user_id);
@@ -90,7 +94,6 @@ function buildDailyRankings(scores, users) {
         role: user.role,
         score,
         bestScore: score,
-        gamesPlayed: user.games_played || 0,
         createdAt: scoreRow.created_at,
       });
     }
@@ -99,7 +102,10 @@ function buildDailyRankings(scores, users) {
   return Array.from(bestByUser.values())
     .sort((left, right) => right.score - left.score || left.username.localeCompare(right.username, "ko"))
     .slice(0, MAX_RANKINGS)
-    .map(({ createdAt, ...ranking }) => ranking);
+    .map(({ createdAt, ...ranking }) => ({
+      ...ranking,
+      gamesPlayed: playCountsByUser.get(ranking.id) || 0,
+    }));
 }
 
 module.exports = async function handler(req, res) {
@@ -118,7 +124,7 @@ module.exports = async function handler(req, res) {
     const users = await supabaseRequest("users?select=id,username,role,best_score,games_played&order=best_score.desc,username.asc", {
       prefer: "",
     });
-    const scores = await supabaseRequest(`scores?select=user_id,score,created_at&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&order=score.desc,created_at.asc&limit=200`, {
+    const scores = await supabaseRequest(`scores?select=user_id,score,created_at&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&order=score.desc,created_at.asc&limit=${MAX_DAILY_SCORES}`, {
       prefer: "",
     });
     const dailyRankings = buildDailyRankings(scores, users);
