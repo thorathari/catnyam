@@ -538,10 +538,12 @@ canvas {
 
 .guide-group.good {
   justify-content: flex-end;
+  max-width: 360px;
 }
 
 .guide-group.bad {
   justify-content: flex-start;
+  max-width: 220px;
   padding-left: 14px;
   border-left: 1px solid rgba(37, 33, 29, 0.14);
 }
@@ -1203,17 +1205,31 @@ canvas {
   }
 
   .item-guide {
+    flex-direction: column;
+    align-items: center;
     flex-wrap: wrap;
     gap: 5px 6px;
     font-size: 0.72rem;
   }
 
   .guide-group {
+    justify-content: center;
     gap: 5px;
+    width: auto;
+    max-width: min(290px, 100%);
+  }
+
+  .guide-group.good {
+    max-width: min(290px, 100%);
   }
 
   .guide-group.bad {
-    padding-left: 8px;
+    flex-direction: column;
+    max-width: min(150px, 100%);
+    padding-top: 2px;
+    padding-left: 0;
+    border-top: 1px solid rgba(37, 33, 29, 0.14);
+    border-left: 0;
   }
 
   .guide-item {
