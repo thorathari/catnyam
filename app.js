@@ -89,6 +89,10 @@ let rankingData = {
   daily: [],
   allTime: [],
 };
+let rankingChanges = {
+  daily: new Map(),
+  allTime: new Map(),
+};
 let game = createGameState();
 
 async function requestApi(path, options = {}) {
@@ -635,10 +639,15 @@ async function renderRanking() {
 
   try {
     const data = await requestApi("/api/rankings");
-    rankingData = {
+    const nextRankingData = {
       daily: data.dailyRankings || [],
       allTime: data.allTimeRankings || data.rankings || [],
     };
+    rankingChanges = {
+      daily: buildRankingChangeMap(rankingData.daily, nextRankingData.daily),
+      allTime: buildRankingChangeMap(rankingData.allTime, nextRankingData.allTime),
+    };
+    rankingData = nextRankingData;
     renderRankingList();
   } catch {
     appendRankingItem("-", "랭킹 서버 연결 필요", 0);
@@ -658,6 +667,7 @@ function setRankingMode(mode) {
 function renderRankingList() {
   rankingList.innerHTML = "";
   const ranking = rankingMode === "daily" ? rankingData.daily : rankingData.allTime;
+  const changes = rankingMode === "daily" ? rankingChanges.daily : rankingChanges.allTime;
   const emptyMessage = rankingMode === "daily" ? "오늘 기록이 없습니다" : "아직 기록이 없습니다";
 
   if (ranking.length === 0) {
@@ -666,20 +676,69 @@ function renderRankingList() {
   }
 
   ranking.forEach((account, index) => {
-    appendRankingItem(index + 1, account, account.score ?? account.bestScore ?? 0);
+    appendRankingItem(index + 1, account, account.score ?? account.bestScore ?? 0, changes.get(getRankingKey(account)) || 0);
   });
 }
 
-function appendRankingItem(rankValue, accountInfo, scoreValue) {
+function getRankingKey(account) {
+  return account?.id || account?.username || account?.nickname || "";
+}
+
+function buildRankingChangeMap(previousRanking, nextRanking) {
+  const previousRanks = new Map();
+  const changes = new Map();
+
+  previousRanking.forEach((account, index) => {
+    const key = getRankingKey(account);
+
+    if (key) {
+      previousRanks.set(key, index + 1);
+    }
+  });
+
+  nextRanking.forEach((account, index) => {
+    const key = getRankingKey(account);
+    const previousRank = previousRanks.get(key);
+    const nextRank = index + 1;
+
+    if (previousRank && previousRank !== nextRank) {
+      changes.set(key, previousRank - nextRank);
+    }
+  });
+
+  return changes;
+}
+
+function renderRankChange(element, delta) {
+  element.textContent = "";
+  element.classList.remove("up", "down");
+  element.removeAttribute("title");
+  element.removeAttribute("aria-label");
+
+  if (!delta) {
+    element.setAttribute("aria-hidden", "true");
+    return;
+  }
+
+  const movedUp = delta > 0;
+  const amount = Math.abs(delta);
+  element.classList.add(movedUp ? "up" : "down");
+  element.textContent = movedUp ? "▲" : "▼";
+  element.title = movedUp ? `${amount}등 상승` : `${amount}등 하락`;
+  element.setAttribute("aria-label", element.title);
+  element.removeAttribute("aria-hidden");
+}
+
+function appendRankingItem(rankValue, accountInfo, scoreValue, rankDelta = 0) {
   const item = document.createElement("li");
   const rank = document.createElement("span");
   const name = document.createElement("span");
-  const plays = document.createElement("span");
+  const rankChange = document.createElement("span");
   const score = document.createElement("span");
   const account = typeof accountInfo === "object" && accountInfo !== null ? accountInfo : null;
   const displayName = account ? getUserDisplayName(account) : accountInfo;
   name.className = "name";
-  plays.className = "plays";
+  rankChange.className = "rank-change";
   score.className = "score";
   rank.textContent = rankValue;
 
@@ -696,9 +755,9 @@ function appendRankingItem(rankValue, accountInfo, scoreValue) {
     name.textContent = displayName;
   }
 
-  plays.textContent = account ? `(${account.gamesPlayed || 0}회)` : "";
+  renderRankChange(rankChange, account ? rankDelta : 0);
   score.textContent = scoreValue;
-  item.append(rank, name, plays, score);
+  item.append(rank, name, rankChange, score);
   rankingList.append(item);
 }
 
@@ -723,12 +782,45 @@ function closePlayerHistoryModal() {
   playerHistoryModal.hidden = true;
 }
 
+function appendPlayerHistoryDetail(list, label, value) {
+  const item = document.createElement("div");
+  const term = document.createElement("dt");
+  const description = document.createElement("dd");
+  term.textContent = label;
+  description.textContent = value || "-";
+  item.append(term, description);
+  list.append(item);
+}
+
+function getRoleLabel(role) {
+  return role === "admin" ? "관리자" : "일반 사용자";
+}
+
+function renderPlayerHistorySummary(user, stats, history) {
+  const details = document.createElement("dl");
+  const totalGames = stats.totalGamesPlayed ?? user.gamesPlayed ?? 0;
+  const todayGames = stats.todayGamesPlayed ?? 0;
+  const historyCount = stats.recentHistoryCount ?? history.length;
+  const historyLimit = stats.recentHistoryLimit || history.length;
+  details.className = "player-history-info";
+
+  appendPlayerHistoryDetail(details, "아이디", user.username);
+  appendPlayerHistoryDetail(details, "닉네임", getUserDisplayName(user));
+  appendPlayerHistoryDetail(details, "권한", getRoleLabel(user.role));
+  appendPlayerHistoryDetail(details, "가입일", formatPlayDate(user.createdAt));
+  appendPlayerHistoryDetail(details, "최고 기록", `${user.bestScore || 0}점`);
+  appendPlayerHistoryDetail(details, "전체 횟수", `${totalGames}회`);
+  appendPlayerHistoryDetail(details, "오늘 횟수", `${todayGames}회`);
+  appendPlayerHistoryDetail(details, "최근 기록", `${historyCount}/${historyLimit}개`);
+  playerHistorySummary.replaceChildren(details);
+}
+
 async function openPlayerHistory(account) {
   if (!account?.id) {
     return;
   }
 
-  playerHistoryTitle.textContent = `${getUserDisplayName(account)} 플레이 기록`;
+  playerHistoryTitle.textContent = `${getUserDisplayName(account)} 정보`;
   playerHistorySummary.textContent = "기록을 불러오는 중입니다.";
   playerHistoryList.innerHTML = "";
   setPlayerHistoryMessage("");
@@ -745,9 +837,10 @@ async function openPlayerHistory(account) {
 
 function renderPlayerHistory(data) {
   const user = data.user || {};
+  const stats = data.stats || {};
   const history = data.history || [];
-  playerHistoryTitle.textContent = `${getUserDisplayName(user) || "플레이어"} 플레이 기록`;
-  playerHistorySummary.textContent = `최고 ${user.bestScore || 0}점 · ${user.gamesPlayed || 0}회 플레이`;
+  playerHistoryTitle.textContent = `${getUserDisplayName(user) || "플레이어"} 정보`;
+  renderPlayerHistorySummary(user, stats, history);
   playerHistoryList.innerHTML = "";
   setPlayerHistoryMessage("");
 

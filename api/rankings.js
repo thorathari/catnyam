@@ -35,7 +35,6 @@ function mapAllTimeRanking(user) {
     nickname: getDisplayName(user),
     role: user.role,
     bestScore: user.best_score || 0,
-    gamesPlayed: user.games_played || 0,
   };
 }
 
@@ -64,13 +63,28 @@ async function sendPlayerHistory(req, res, userId) {
   const scores = await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(user.id)}&select=score,created_at&order=created_at.desc&limit=${MAX_HISTORY}`, {
     prefer: "",
   });
+  const { start, end } = getKstDayRange();
+  const todayScores = await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(user.id)}&select=id&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&limit=${MAX_DAILY_SCORES}`, {
+    prefer: "",
+  });
   const history = scores.map((scoreRow) => ({
     score: scoreRow.score || 0,
     createdAt: scoreRow.created_at,
   }));
 
   sendJson(res, 200, {
-    user: mapAllTimeRanking(user),
+    user: {
+      ...mapAllTimeRanking(user),
+      gamesPlayed: user.games_played || 0,
+      createdAt: user.created_at,
+      updatedAt: user.updated_at,
+    },
+    stats: {
+      totalGamesPlayed: user.games_played || 0,
+      todayGamesPlayed: todayScores.length,
+      recentHistoryCount: history.length,
+      recentHistoryLimit: MAX_HISTORY,
+    },
     history,
   });
 }
@@ -78,7 +92,6 @@ async function sendPlayerHistory(req, res, userId) {
 function buildDailyRankings(scores, users) {
   const usersById = new Map(users.map((user) => [user.id, user]));
   const bestByUser = new Map();
-  const playCountsByUser = new Map();
 
   scores.forEach((scoreRow) => {
     const user = usersById.get(scoreRow.user_id);
@@ -86,8 +99,6 @@ function buildDailyRankings(scores, users) {
     if (!user) {
       return;
     }
-
-    playCountsByUser.set(scoreRow.user_id, (playCountsByUser.get(scoreRow.user_id) || 0) + 1);
 
     const score = scoreRow.score || 0;
     const previous = bestByUser.get(scoreRow.user_id);
@@ -107,10 +118,7 @@ function buildDailyRankings(scores, users) {
 
   return Array.from(bestByUser.values())
     .sort((left, right) => right.score - left.score || left.nickname.localeCompare(right.nickname, "ko"))
-    .map(({ createdAt, ...ranking }) => ({
-      ...ranking,
-      gamesPlayed: playCountsByUser.get(ranking.id) || 0,
-    }));
+    .map(({ createdAt, ...ranking }) => ranking);
 }
 
 module.exports = async function handler(req, res) {
