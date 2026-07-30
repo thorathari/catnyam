@@ -171,6 +171,22 @@ input:focus {
   border-color: var(--mint);
 }
 
+.remember-login {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.remember-login input {
+  flex: 0 0 auto;
+  width: 20px;
+  min-height: 20px;
+  accent-color: var(--berry);
+}
+
 .form-message {
   min-height: 22px;
   margin: 0;
@@ -305,6 +321,35 @@ button:disabled {
   position: relative;
 }
 
+.pause-button {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 4;
+  display: inline-grid;
+  grid-template-columns: repeat(2, 6px);
+  align-content: center;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid rgba(37, 33, 29, 0.16);
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.86);
+  box-shadow: 0 10px 24px rgba(37, 33, 29, 0.12);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pause-button span {
+  display: block;
+  width: 6px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--ink);
+}
+
 canvas {
   display: block;
   width: 100%;
@@ -332,6 +377,17 @@ canvas {
   min-width: 150px;
 }
 
+.pause-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(110px, 1fr));
+  gap: 10px;
+  width: min(460px, 100%);
+}
+
+.pause-actions button {
+  min-height: 44px;
+}
+
 .overlay-result {
   margin: 0;
   color: var(--ink);
@@ -340,11 +396,10 @@ canvas {
 }
 
 .item-guide {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  flex-wrap: wrap;
-  max-width: 560px;
+  width: min(560px, 100%);
   color: var(--ink);
   font-size: 0.92rem;
   font-weight: 900;
@@ -353,12 +408,15 @@ canvas {
 .item-guide span {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  min-width: 0;
   min-height: 34px;
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.82);
+  white-space: nowrap;
 }
 
 .guide-icon {
@@ -431,6 +489,9 @@ canvas {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-top: 12px;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .touch-button {
@@ -443,6 +504,9 @@ canvas {
   font-weight: 900;
   line-height: 1;
   touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -745,6 +809,14 @@ canvas {
   .touch-button {
     min-height: 70px;
     font-size: 2.4rem;
+  }
+
+  .item-guide {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pause-actions {
+    grid-template-columns: 1fr;
   }
 
   .admin-rename-row {

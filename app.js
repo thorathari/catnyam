@@ -10,6 +10,8 @@ const authDescription = document.querySelector("#authDescription");
 const authForm = document.querySelector("#authForm");
 const usernameInput = document.querySelector("#usernameInput");
 const passwordInput = document.querySelector("#passwordInput");
+const rememberLoginField = document.querySelector("#rememberLoginField");
+const rememberLoginInput = document.querySelector("#rememberLoginInput");
 const confirmPasswordField = document.querySelector("#confirmPasswordField");
 const confirmPasswordInput = document.querySelector("#confirmPasswordInput");
 const authMessage = document.querySelector("#authMessage");
@@ -20,6 +22,12 @@ const logoutButton = document.querySelector("#logoutButton");
 const startButton = document.querySelector("#startButton");
 const gameOverlay = document.querySelector("#gameOverlay");
 const overlayResult = document.querySelector("#overlayResult");
+const pauseButton = document.querySelector("#pauseButton");
+const pauseActions = document.querySelector("#pauseActions");
+const pauseRestartButton = document.querySelector("#pauseRestartButton");
+const pauseHomeButton = document.querySelector("#pauseHomeButton");
+const resumeButton = document.querySelector("#resumeButton");
+const itemGuide = document.querySelector("#itemGuide");
 const touchLeftButton = document.querySelector("#touchLeftButton");
 const touchRightButton = document.querySelector("#touchRightButton");
 const rankingList = document.querySelector("#rankingList");
@@ -52,6 +60,7 @@ const purrModeBadge = document.querySelector("#purrModeBadge");
 const canvas = document.querySelector("#gameCanvas");
 const ctx = canvas.getContext("2d");
 
+const REMEMBER_LOGIN_KEY = "catnyam_auto_login";
 const keys = new Set();
 let authMode = "login";
 let currentUser = null;
@@ -104,10 +113,12 @@ async function requestApi(path, options = {}) {
 function createGameState() {
   return {
     running: false,
+    paused: false,
     score: 0,
     timeLeft: GAME_SECONDS,
     elapsed: 0,
     drops: [],
+    scorePopups: [],
     reaction: {
       type: "neutral",
       until: 0,
@@ -133,6 +144,48 @@ function createGameState() {
 
 function normalizeName(value) {
   return value.trim().replace(/\s+/g, " ");
+}
+
+function getRememberedLogin() {
+  try {
+    const value = JSON.parse(localStorage.getItem(REMEMBER_LOGIN_KEY));
+
+    if (value?.username && value?.password) {
+      return value;
+    }
+  } catch {
+    // Login can continue normally if browser storage is unavailable.
+  }
+
+  return null;
+}
+
+function saveRememberedLogin(username, password) {
+  try {
+    localStorage.setItem(REMEMBER_LOGIN_KEY, JSON.stringify({ username, password }));
+  } catch {
+    // The active session still works even if credentials cannot be saved.
+  }
+}
+
+function clearRememberedLogin() {
+  try {
+    localStorage.removeItem(REMEMBER_LOGIN_KEY);
+  } catch {
+    // Nothing else is required if browser storage is unavailable.
+  }
+}
+
+function fillRememberedLogin() {
+  const remembered = getRememberedLogin();
+
+  if (!remembered) {
+    return;
+  }
+
+  usernameInput.value = remembered.username;
+  passwordInput.value = remembered.password;
+  rememberLoginInput.checked = true;
 }
 
 function isAdmin(user) {
@@ -174,11 +227,16 @@ function setAuthMode(mode) {
     : "아이디와 비밀번호를 입력해 시작합니다. 기록은 서버에 저장됩니다.";
   confirmPasswordField.hidden = !isSignup;
   confirmPasswordInput.required = isSignup;
+  rememberLoginField.hidden = isSignup;
+  rememberLoginInput.disabled = isSignup;
   passwordInput.autocomplete = isSignup ? "new-password" : "current-password";
   authSubmitButton.textContent = isSignup ? "가입 완료" : "로그인";
   signupButton.hidden = isSignup;
   loginModeButton.hidden = !isSignup;
   authForm.reset();
+  if (!isSignup) {
+    fillRememberedLogin();
+  }
   setMessage("");
   usernameInput.focus();
 }
@@ -271,6 +329,11 @@ async function login() {
       method: "POST",
       body: { username, password },
     });
+    if (rememberLoginInput.checked) {
+      saveRememberedLogin(username, password);
+    } else {
+      clearRememberedLogin();
+    }
     showGameFor(data.user);
   } catch (error) {
     setMessage(error.message);
@@ -284,7 +347,55 @@ async function logout() {
     // The local screen can still return to auth even if the server session is already gone.
   }
 
+  clearRememberedLogin();
   showAuth();
+}
+
+async function restoreSession() {
+  try {
+    const data = await requestApi("/api/me");
+    showGameFor(data.user);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function loginWithRememberedCredentials() {
+  const remembered = getRememberedLogin();
+
+  if (!remembered) {
+    return false;
+  }
+
+  usernameInput.value = remembered.username;
+  passwordInput.value = remembered.password;
+  rememberLoginInput.checked = true;
+
+  try {
+    const data = await requestApi("/api/login", {
+      method: "POST",
+      body: remembered,
+    });
+    showGameFor(data.user);
+    return true;
+  } catch {
+    clearRememberedLogin();
+    authForm.reset();
+    setMessage("자동로그인에 실패했습니다. 다시 로그인해주세요.");
+    return false;
+  }
+}
+
+async function initializeApp() {
+  showAuth();
+  renderRanking();
+
+  if (await restoreSession()) {
+    return;
+  }
+
+  await loginWithRememberedCredentials();
 }
 
 async function changeUsername(event) {
@@ -313,6 +424,12 @@ async function changeUsername(event) {
     });
     currentUser = data.user;
     newUsernameInput.value = currentUser.username;
+    const remembered = getRememberedLogin();
+
+    if (remembered) {
+      saveRememberedLogin(currentUser.username, remembered.password);
+    }
+
     updateProfileName();
     setUsernameMessage("아이디가 변경되었습니다.", true);
     renderRanking();
@@ -352,6 +469,12 @@ async function changePassword(event) {
       body: { currentPassword, newPassword },
     });
     changePasswordForm.reset();
+    const remembered = getRememberedLogin();
+
+    if (remembered) {
+      saveRememberedLogin(currentUser.username, newPassword);
+    }
+
     setPasswordMessage("비밀번호가 변경되었습니다.", true);
   } catch (error) {
     setPasswordMessage(error.message);
@@ -557,6 +680,12 @@ async function renameAccount(userId, currentUsername, nextUsername) {
     if (currentUser?.id === data.user.id) {
       currentUser = data.user;
       newUsernameInput.value = currentUser.username;
+      const remembered = getRememberedLogin();
+
+      if (remembered) {
+        saveRememberedLogin(currentUser.username, remembered.password);
+      }
+
       updateProfileName();
     }
 
@@ -627,22 +756,30 @@ function startGame() {
   stopGame();
   game = createGameState();
   game.running = true;
+  game.paused = false;
   hideGameOverlay();
   scoreText.textContent = "0";
   timeText.textContent = GAME_SECONDS;
-  touchDirection = 0;
+  clearMovementInput();
   updateModeBadges();
   lastFrame = performance.now();
   nextDropAt = 0;
   animationId = requestAnimationFrame(loop);
 }
 
-function stopGame() {
+function cancelAnimation() {
   if (animationId) {
     cancelAnimationFrame(animationId);
     animationId = null;
   }
+}
+
+function stopGame() {
+  cancelAnimation();
   game.running = false;
+  game.paused = false;
+  pauseButton.hidden = true;
+  clearMovementInput();
 }
 
 function finishGame() {
@@ -672,15 +809,63 @@ async function submitScore(score) {
   }
 }
 
-function showGameOverlay(buttonText, resultText = "") {
+function pauseGame() {
+  if (!game.running) {
+    return;
+  }
+
+  cancelAnimation();
+  game.running = false;
+  game.paused = true;
+  clearMovementInput();
+  draw();
+  showPauseOverlay();
+}
+
+function resumeGame() {
+  if (!game.paused) {
+    return;
+  }
+
+  game.running = true;
+  game.paused = false;
+  hideGameOverlay();
+  lastFrame = performance.now();
+  animationId = requestAnimationFrame(loop);
+}
+
+function returnToGameHome() {
+  stopGame();
+  game = createGameState();
+  scoreText.textContent = "0";
+  timeText.textContent = GAME_SECONDS;
+  updateModeBadges();
+  showGameOverlay("게임 시작");
+  drawIntro();
+}
+
+function showPauseOverlay() {
+  showGameOverlay("", "일시정지", "pause");
+}
+
+function showGameOverlay(buttonText, resultText = "", mode = "default") {
+  const isPaused = mode === "pause";
   startButton.textContent = buttonText;
+  startButton.hidden = isPaused;
+  pauseActions.hidden = !isPaused;
+  itemGuide.hidden = isPaused;
   overlayResult.textContent = resultText;
   overlayResult.hidden = !resultText;
+  pauseButton.hidden = true;
   gameOverlay.hidden = false;
 }
 
 function hideGameOverlay() {
   gameOverlay.hidden = true;
+  pauseActions.hidden = true;
+  startButton.hidden = false;
+  itemGuide.hidden = false;
+  pauseButton.hidden = !game.running;
 }
 
 function loop(now) {
@@ -716,6 +901,12 @@ function update(delta) {
     drop.rotation += drop.spin * delta;
   });
 
+  game.scorePopups.forEach((popup) => {
+    popup.age += delta;
+    popup.y -= 46 * delta;
+  });
+  game.scorePopups = game.scorePopups.filter((popup) => popup.age < popup.duration);
+
   game.drops = game.drops.filter((drop) => {
     if (collides(drop)) {
       if (isHideModeActive()) {
@@ -730,6 +921,7 @@ function update(delta) {
       game.score = Math.max(0, game.score + scoreDelta);
       scoreText.textContent = game.score;
       setCatReaction(scoreDelta < 0 ? "bad" : "good");
+      addScorePopup(scoreDelta);
       return false;
     }
 
@@ -819,6 +1011,17 @@ function setCatBubble(text, duration) {
   };
 }
 
+function addScorePopup(scoreDelta) {
+  game.scorePopups.push({
+    text: scoreDelta > 0 ? `+${scoreDelta}` : String(scoreDelta),
+    x: game.cat.x,
+    y: game.cat.y - game.cat.height * 0.72,
+    age: 0,
+    duration: 0.82,
+    color: scoreDelta > 0 ? "#ef6f8f" : "#288466",
+  });
+}
+
 function getCatBubbleText() {
   if (game.bubble?.text && game.bubble.until >= game.elapsed) {
     return game.bubble.text;
@@ -893,6 +1096,7 @@ function draw() {
   drawWorld();
   game.drops.forEach(drawChuru);
   drawCat(game.cat.x, game.cat.y, game.cat.width, game.cat.height, getCatReaction());
+  game.scorePopups.forEach(drawScorePopup);
 }
 
 function drawWorld() {
@@ -922,6 +1126,22 @@ function drawCloud(x, y, scale) {
   ctx.ellipse(x + 40 * scale, y + 4 * scale, 32 * scale, 21 * scale, 0, 0, Math.PI * 2);
   ctx.ellipse(x - 38 * scale, y + 6 * scale, 28 * scale, 18 * scale, 0, 0, Math.PI * 2);
   ctx.fill();
+}
+
+function drawScorePopup(popup) {
+  const progress = popup.age / popup.duration;
+
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, 1 - progress);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "900 34px Jua, Nunito, sans-serif";
+  ctx.lineWidth = 7;
+  ctx.strokeStyle = "rgba(255, 250, 242, 0.94)";
+  ctx.fillStyle = popup.color;
+  ctx.strokeText(popup.text, popup.x, popup.y);
+  ctx.fillText(popup.text, popup.x, popup.y);
+  ctx.restore();
 }
 
 function drawChuru(drop) {
@@ -1326,10 +1546,22 @@ function isTypingTarget(target) {
     || target?.isContentEditable;
 }
 
+function clearMovementInput() {
+  keys.clear();
+  touchDirection = 0;
+  touchLeftButton.classList.remove("pressed");
+  touchRightButton.classList.remove("pressed");
+}
+
 function bindTouchControl(button, direction) {
   const start = (event) => {
     touchDirection = direction;
     button.classList.add("pressed");
+
+    if (button.setPointerCapture && event.pointerId !== undefined) {
+      button.setPointerCapture(event.pointerId);
+    }
+
     event.preventDefault();
   };
   const stop = () => {
@@ -1344,6 +1576,8 @@ function bindTouchControl(button, direction) {
   button.addEventListener("pointercancel", stop);
   button.addEventListener("pointerleave", stop);
   button.addEventListener("lostpointercapture", stop);
+  button.addEventListener("selectstart", (event) => event.preventDefault());
+  button.addEventListener("contextmenu", (event) => event.preventDefault());
 }
 
 window.addEventListener("keydown", (event) => {
@@ -1376,6 +1610,10 @@ adminTabButton.addEventListener("click", () => setAccountTab("admin"));
 dailyRankingButton.addEventListener("click", () => setRankingMode("daily"));
 allTimeRankingButton.addEventListener("click", () => setRankingMode("allTime"));
 startButton.addEventListener("click", startGame);
+pauseButton.addEventListener("click", pauseGame);
+pauseRestartButton.addEventListener("click", startGame);
+pauseHomeButton.addEventListener("click", returnToGameHome);
+resumeButton.addEventListener("click", resumeGame);
 changeUsernameForm.addEventListener("submit", changeUsername);
 changePasswordForm.addEventListener("submit", changePassword);
 bindTouchControl(touchLeftButton, -1);
@@ -1388,5 +1626,4 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
-showAuth();
-renderRanking();
+initializeApp();
