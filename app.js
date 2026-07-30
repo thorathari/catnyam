@@ -623,7 +623,7 @@ function appendRankingItem(rankValue, accountInfo, scoreValue) {
     name.textContent = username;
   }
 
-  plays.textContent = account ? `${account.gamesPlayed || 0}회` : "";
+  plays.textContent = account ? `(${account.gamesPlayed || 0}회)` : "";
   score.textContent = scoreValue;
   item.append(rank, name, plays, score);
   rankingList.append(item);

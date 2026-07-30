@@ -899,7 +899,7 @@ canvas {
 .ranking-list .plays {
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 400;
   white-space: nowrap;
 }
 
