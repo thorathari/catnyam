@@ -707,6 +707,20 @@ canvas {
   width: 100%;
 }
 
+.account-danger-zone {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.account-danger-zone .form-message {
+  grid-column: 1 / -1;
+  min-height: 20px;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -869,7 +883,7 @@ canvas {
 
 .admin-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   gap: 8px;
 }
 

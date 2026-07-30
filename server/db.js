@@ -197,6 +197,24 @@ async function getUserById(id) {
   return users?.[0] || null;
 }
 
+async function resetScoresForUser(userId) {
+  await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+  });
+
+  const updated = await supabaseRequest(`users?id=eq.${encodeURIComponent(userId)}`, {
+    method: "PATCH",
+    body: {
+      best_score: 0,
+      games_played: 0,
+      updated_at: new Date().toISOString(),
+    },
+  });
+
+  return updated[0] || null;
+}
+
 async function requireUser(req, res) {
   const session = readSession(req);
 
@@ -248,6 +266,7 @@ module.exports = {
   requireAdmin,
   requireMethod,
   requireUser,
+  resetScoresForUser,
   sanitizeUser,
   sendJson,
   setSessionCookie,

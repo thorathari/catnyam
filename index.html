@@ -137,7 +137,7 @@
         </div>
 
         <div class="tab-list" role="tablist" aria-label="계정 설정 메뉴">
-          <button class="tab-button active" id="passwordTabButton" type="button" role="tab" aria-controls="passwordTabPanel" aria-selected="true">비밀번호 변경</button>
+          <button class="tab-button active" id="passwordTabButton" type="button" role="tab" aria-controls="passwordTabPanel" aria-selected="true">내 정보</button>
           <button class="tab-button" id="adminTabButton" type="button" role="tab" aria-controls="adminTabPanel" aria-selected="false" hidden>계정 관리</button>
         </div>
 
@@ -167,6 +167,12 @@
             <p class="form-message" id="passwordMessage" role="status"></p>
             <button class="secondary-button" type="submit">변경하기</button>
           </form>
+
+          <div class="account-danger-zone">
+            <button class="secondary-button" id="resetMyScoreButton" type="button">내 점수 초기화</button>
+            <button class="danger-button" id="deleteMyAccountButton" type="button">탈퇴</button>
+            <p class="form-message" id="accountActionMessage" role="status"></p>
+          </div>
         </section>
 
         <section class="tab-panel" id="adminTabPanel" role="tabpanel" aria-labelledby="adminTabButton" hidden>

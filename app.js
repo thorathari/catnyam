@@ -51,6 +51,9 @@ const passwordMessage = document.querySelector("#passwordMessage");
 const adminList = document.querySelector("#adminList");
 const adminMessage = document.querySelector("#adminMessage");
 const resetRankingButton = document.querySelector("#resetRankingButton");
+const resetMyScoreButton = document.querySelector("#resetMyScoreButton");
+const deleteMyAccountButton = document.querySelector("#deleteMyAccountButton");
+const accountActionMessage = document.querySelector("#accountActionMessage");
 const scoreText = document.querySelector("#scoreText");
 const timeText = document.querySelector("#timeText");
 const bestText = document.querySelector("#bestText");
@@ -212,12 +215,26 @@ function setPasswordMessage(message, isGood = false) {
   setFieldMessage(passwordMessage, message, isGood);
 }
 
+function setAccountActionMessage(message, isGood = false) {
+  setFieldMessage(accountActionMessage, message, isGood);
+}
+
 function setAdminMessage(message, isGood = false) {
   setFieldMessage(adminMessage, message, isGood);
 }
 
 function updateProfileName() {
   currentUserName.textContent = isAdmin(currentUser) ? `${currentUser.username} 관리자` : currentUser.username;
+}
+
+function syncCurrentUser(user) {
+  if (!user || currentUser?.id !== user.id) {
+    return;
+  }
+
+  currentUser = user;
+  updateProfileName();
+  bestText.textContent = currentUser.bestScore || 0;
 }
 
 function setAuthMode(mode) {
@@ -258,6 +275,7 @@ function showGameFor(user) {
   newUsernameInput.value = currentUser.username;
   setUsernameMessage("");
   setPasswordMessage("");
+  setAccountActionMessage("");
   setAdminMessage("");
   renderRanking();
   updateModeBadges();
@@ -276,6 +294,7 @@ function showAuth() {
   changePasswordForm.reset();
   setUsernameMessage("");
   setPasswordMessage("");
+  setAccountActionMessage("");
   setAdminMessage("");
   setAuthMode("login");
 }
@@ -498,6 +517,7 @@ function openAccountModal() {
   newUsernameInput.value = currentUser.username;
   setUsernameMessage("");
   setPasswordMessage("");
+  setAccountActionMessage("");
   setAdminMessage("");
   accountModal.hidden = false;
   newUsernameInput.focus();
@@ -616,6 +636,7 @@ function renderAdminAccount(account) {
   const renameInput = document.createElement("input");
   const renameButton = document.createElement("button");
   const actions = document.createElement("div");
+  const scoreResetButton = document.createElement("button");
   const resetButton = document.createElement("button");
   const deleteButton = document.createElement("button");
 
@@ -626,6 +647,7 @@ function renderAdminAccount(account) {
   renameForm.className = "admin-rename-row";
   actions.className = "admin-actions";
   renameButton.className = "secondary-button";
+  scoreResetButton.className = "secondary-button";
   resetButton.className = "secondary-button";
   deleteButton.className = "danger-button";
 
@@ -637,10 +659,13 @@ function renderAdminAccount(account) {
   renameInput.setAttribute("aria-label", `${account.username} 새 아이디`);
   renameButton.type = "submit";
   renameButton.textContent = "아이디 변경";
+  scoreResetButton.type = "button";
   resetButton.type = "button";
   deleteButton.type = "button";
+  scoreResetButton.textContent = "점수 초기화";
   resetButton.textContent = "비밀번호 초기화";
   deleteButton.textContent = "계정 삭제";
+  scoreResetButton.addEventListener("click", () => resetAccountScore(account.id, account.username));
 
   if (isAdmin(account)) {
     const badge = document.createElement("span");
@@ -661,7 +686,7 @@ function renderAdminAccount(account) {
   });
 
   renameForm.append(renameInput, renameButton);
-  actions.append(resetButton, deleteButton);
+  actions.append(scoreResetButton, resetButton, deleteButton);
   item.append(main, meta, renameForm, actions);
   adminList.append(item);
 }
@@ -713,6 +738,28 @@ async function resetAccountPassword(userId, username) {
   }
 }
 
+async function resetAccountScore(userId, username) {
+  if (!window.confirm(`${username} 점수와 플레이 기록을 초기화할까요?`)) {
+    return;
+  }
+
+  try {
+    const data = await requestApi("/api/admin/users", {
+      method: "POST",
+      body: {
+        action: "reset-score",
+        userId,
+      },
+    });
+    syncCurrentUser(data.user);
+    renderRanking();
+    await renderAdminList();
+    setAdminMessage(`${data.user.username} 점수를 초기화했습니다.`, true);
+  } catch (error) {
+    setAdminMessage(error.message);
+  }
+}
+
 async function deleteAccount(userId, username) {
   if (!window.confirm(`${username} 계정을 삭제할까요?`)) {
     return;
@@ -728,6 +775,69 @@ async function deleteAccount(userId, username) {
     renderAdminList();
   } catch (error) {
     setAdminMessage(error.message);
+  }
+}
+
+async function resetMyScore() {
+  if (!currentUser || !window.confirm("내 점수와 플레이 기록을 초기화할까요?")) {
+    return;
+  }
+
+  resetMyScoreButton.disabled = true;
+
+  try {
+    const data = await requestApi("/api/scores", {
+      method: "DELETE",
+    });
+    syncCurrentUser(data.user);
+    renderRanking();
+
+    if (!adminTabPanel.hidden) {
+      await renderAdminList();
+    }
+
+    setAccountActionMessage("내 점수를 초기화했습니다.", true);
+  } catch (error) {
+    setAccountActionMessage(error.message);
+  } finally {
+    resetMyScoreButton.disabled = false;
+  }
+}
+
+async function deleteMyAccount() {
+  if (!currentUser) {
+    return;
+  }
+
+  if (isAdmin(currentUser)) {
+    setAccountActionMessage("관리자 계정은 탈퇴할 수 없습니다.");
+    return;
+  }
+
+  if (!window.confirm("계정과 점수 기록을 모두 삭제할까요?")) {
+    return;
+  }
+
+  if (!window.confirm("삭제한 계정은 복구할 수 없습니다. 정말 탈퇴할까요?")) {
+    return;
+  }
+
+  deleteMyAccountButton.disabled = true;
+  resetMyScoreButton.disabled = true;
+
+  try {
+    const deletedUsername = currentUser.username;
+    await requestApi("/api/logout", {
+      method: "DELETE",
+    });
+    clearRememberedLogin();
+    showAuth();
+    setMessage(`${deletedUsername} 계정 탈퇴가 완료되었습니다.`, true);
+    renderRanking();
+  } catch (error) {
+    setAccountActionMessage(error.message);
+    deleteMyAccountButton.disabled = false;
+    resetMyScoreButton.disabled = false;
   }
 }
 
@@ -929,8 +1039,8 @@ function update(delta) {
         return true;
       }
 
-      if (isCatnipModeActive() && drop.kind === "bomb") {
-        knockAwayBomb(drop);
+      if (isCatnipModeActive() && isDebuffDrop(drop)) {
+        knockAwayDrop(drop);
         setCatReaction("good");
         return true;
       }
@@ -1079,7 +1189,11 @@ function addScorePopup(scoreDelta) {
   });
 }
 
-function knockAwayBomb(drop) {
+function isDebuffDrop(drop) {
+  return drop.kind === "bomb" || drop.kind === "box";
+}
+
+function knockAwayDrop(drop) {
   const direction = drop.x >= game.cat.x ? 1 : -1;
   drop.knocked = true;
   drop.vx = direction * (380 + Math.random() * 130);
@@ -1808,6 +1922,8 @@ pauseHomeButton.addEventListener("click", returnToGameHome);
 resumeButton.addEventListener("click", resumeGame);
 changeUsernameForm.addEventListener("submit", changeUsername);
 changePasswordForm.addEventListener("submit", changePassword);
+resetMyScoreButton.addEventListener("click", resetMyScore);
+deleteMyAccountButton.addEventListener("click", deleteMyAccount);
 bindTouchControl(touchLeftButton, -1);
 bindTouchControl(touchRightButton, 1);
 resetRankingButton.addEventListener("click", resetRankings);

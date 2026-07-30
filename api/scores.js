@@ -1,7 +1,7 @@
 const {
   readJson,
-  requireMethod,
   requireUser,
+  resetScoresForUser,
   sanitizeUser,
   sendJson,
   supabaseRequest,
@@ -9,10 +9,20 @@ const {
 
 module.exports = async function handler(req, res) {
   try {
-    if (!requireMethod(req, res, "POST")) return;
+    if (req.method !== "POST" && req.method !== "DELETE") {
+      res.setHeader("Allow", "POST, DELETE");
+      sendJson(res, 405, { message: "허용되지 않은 요청입니다." });
+      return;
+    }
 
     const user = await requireUser(req, res);
     if (!user) return;
+
+    if (req.method === "DELETE") {
+      const updated = await resetScoresForUser(user.id);
+      sendJson(res, 200, { user: sanitizeUser(updated) });
+      return;
+    }
 
     const { score } = await readJson(req);
     const numericScore = Number(score);
