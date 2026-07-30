@@ -5,9 +5,9 @@ const {
   supabaseRequest,
 } = require("../server/db");
 
-const MAX_RANKINGS = 10;
 const MAX_HISTORY = 30;
-const MAX_DAILY_SCORES = 2000;
+const MAX_DAILY_SCORES = 10000;
+const MAX_RANKING_ROWS = 10000;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 function getDisplayName(user) {
@@ -107,7 +107,6 @@ function buildDailyRankings(scores, users) {
 
   return Array.from(bestByUser.values())
     .sort((left, right) => right.score - left.score || left.nickname.localeCompare(right.nickname, "ko"))
-    .slice(0, MAX_RANKINGS)
     .map(({ createdAt, ...ranking }) => ({
       ...ranking,
       gamesPlayed: playCountsByUser.get(ranking.id) || 0,
@@ -127,14 +126,14 @@ module.exports = async function handler(req, res) {
     }
 
     const { start, end } = getKstDayRange();
-    const users = await supabaseRequest("users?select=*&order=best_score.desc,username.asc", {
+    const users = await supabaseRequest(`users?select=*&order=best_score.desc,username.asc&limit=${MAX_RANKING_ROWS}`, {
       prefer: "",
     });
     const scores = await supabaseRequest(`scores?select=user_id,score,created_at&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&order=score.desc,created_at.asc&limit=${MAX_DAILY_SCORES}`, {
       prefer: "",
     });
     const dailyRankings = buildDailyRankings(scores, users);
-    const allTimeRankings = users.slice(0, MAX_RANKINGS).map(mapAllTimeRanking);
+    const allTimeRankings = users.map(mapAllTimeRanking);
 
     sendJson(res, 200, { dailyRankings, allTimeRankings });
   } catch (error) {
