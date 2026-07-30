@@ -33,6 +33,12 @@ const touchRightButton = document.querySelector("#touchRightButton");
 const rankingList = document.querySelector("#rankingList");
 const dailyRankingButton = document.querySelector("#dailyRankingButton");
 const allTimeRankingButton = document.querySelector("#allTimeRankingButton");
+const playerHistoryModal = document.querySelector("#playerHistoryModal");
+const closePlayerHistoryButton = document.querySelector("#closePlayerHistoryButton");
+const playerHistoryTitle = document.querySelector("#playerHistoryTitle");
+const playerHistorySummary = document.querySelector("#playerHistorySummary");
+const playerHistoryList = document.querySelector("#playerHistoryList");
+const playerHistoryMessage = document.querySelector("#playerHistoryMessage");
 const accountModal = document.querySelector("#accountModal");
 const closeAccountModalButton = document.querySelector("#closeAccountModalButton");
 const passwordTabButton = document.querySelector("#passwordTabButton");
@@ -219,6 +225,10 @@ function setAccountActionMessage(message, isGood = false) {
   setFieldMessage(accountActionMessage, message, isGood);
 }
 
+function setPlayerHistoryMessage(message, isGood = false) {
+  setFieldMessage(playerHistoryMessage, message, isGood);
+}
+
 function setAdminMessage(message, isGood = false) {
   setFieldMessage(adminMessage, message, isGood);
 }
@@ -290,6 +300,7 @@ function showAuth() {
   gamePanel.hidden = true;
   profileBox.hidden = true;
   closeAccountModal();
+  closePlayerHistoryModal();
   changeUsernameForm.reset();
   changePasswordForm.reset();
   setUsernameMessage("");
@@ -582,22 +593,104 @@ function renderRankingList() {
   }
 
   ranking.forEach((account, index) => {
-    appendRankingItem(index + 1, account.username, account.score ?? account.bestScore ?? 0);
+    appendRankingItem(index + 1, account, account.score ?? account.bestScore ?? 0);
   });
 }
 
-function appendRankingItem(rankValue, username, scoreValue) {
+function appendRankingItem(rankValue, accountInfo, scoreValue) {
   const item = document.createElement("li");
   const rank = document.createElement("span");
   const name = document.createElement("span");
   const score = document.createElement("span");
+  const account = typeof accountInfo === "object" && accountInfo !== null ? accountInfo : null;
+  const username = account?.username || accountInfo;
   name.className = "name";
   score.className = "score";
   rank.textContent = rankValue;
-  name.textContent = username;
+
+  if (account?.id) {
+    const nameButton = document.createElement("button");
+    nameButton.className = "ranking-name-button";
+    nameButton.type = "button";
+    nameButton.textContent = username;
+    nameButton.title = `${username} 플레이 기록`;
+    nameButton.setAttribute("aria-label", `${username} 플레이 기록 보기`);
+    nameButton.addEventListener("click", () => openPlayerHistory(account));
+    name.append(nameButton);
+  } else {
+    name.textContent = username;
+  }
+
   score.textContent = scoreValue;
   item.append(rank, name, score);
   rankingList.append(item);
+}
+
+function formatPlayDate(value) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "날짜 없음";
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function closePlayerHistoryModal() {
+  playerHistoryModal.hidden = true;
+}
+
+async function openPlayerHistory(account) {
+  if (!account?.id) {
+    return;
+  }
+
+  playerHistoryTitle.textContent = `${account.username} 플레이 기록`;
+  playerHistorySummary.textContent = "기록을 불러오는 중입니다.";
+  playerHistoryList.innerHTML = "";
+  setPlayerHistoryMessage("");
+  playerHistoryModal.hidden = false;
+
+  try {
+    const data = await requestApi(`/api/rankings?userId=${encodeURIComponent(account.id)}`);
+    renderPlayerHistory(data);
+  } catch (error) {
+    playerHistorySummary.textContent = "";
+    setPlayerHistoryMessage(error.message);
+  }
+}
+
+function renderPlayerHistory(data) {
+  const user = data.user || {};
+  const history = data.history || [];
+  playerHistoryTitle.textContent = `${user.username || "플레이어"} 플레이 기록`;
+  playerHistorySummary.textContent = `최고 ${user.bestScore || 0}점 · ${user.gamesPlayed || 0}회 플레이`;
+  playerHistoryList.innerHTML = "";
+  setPlayerHistoryMessage("");
+
+  if (history.length === 0) {
+    setPlayerHistoryMessage("아직 플레이 기록이 없습니다.", true);
+    return;
+  }
+
+  history.forEach((play) => {
+    const item = document.createElement("li");
+    const date = document.createElement("span");
+    const score = document.createElement("span");
+    date.className = "player-history-date";
+    score.className = "player-history-score";
+    date.textContent = formatPlayDate(play.createdAt);
+    score.textContent = `${play.score || 0}점`;
+    item.append(date, score);
+    playerHistoryList.append(item);
+  });
 }
 
 async function renderAdminList() {
@@ -1906,9 +1999,15 @@ loginModeButton.addEventListener("click", () => setAuthMode("login"));
 logoutButton.addEventListener("click", logout);
 profileButton.addEventListener("click", openAccountModal);
 closeAccountModalButton.addEventListener("click", closeAccountModal);
+closePlayerHistoryButton.addEventListener("click", closePlayerHistoryModal);
 accountModal.addEventListener("click", (event) => {
   if (event.target === accountModal) {
     closeAccountModal();
+  }
+});
+playerHistoryModal.addEventListener("click", (event) => {
+  if (event.target === playerHistoryModal) {
+    closePlayerHistoryModal();
   }
 });
 passwordTabButton.addEventListener("click", () => setAccountTab("password"));
@@ -1938,7 +2037,16 @@ document.addEventListener("selectionchange", () => {
 });
 
 window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !accountModal.hidden) {
+  if (event.key !== "Escape") {
+    return;
+  }
+
+  if (!playerHistoryModal.hidden) {
+    closePlayerHistoryModal();
+    return;
+  }
+
+  if (!accountModal.hidden) {
     closeAccountModal();
   }
 });

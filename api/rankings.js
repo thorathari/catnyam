@@ -1,7 +1,12 @@
 const { requireMethod, sendJson, supabaseRequest } = require("../server/db");
 
 const MAX_RANKINGS = 10;
+const MAX_HISTORY = 30;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+function getRequestUrl(req) {
+  return new URL(req.url || "/api/rankings", `http://${req.headers.host || "localhost"}`);
+}
 
 function getKstDayRange(now = new Date()) {
   const kstNow = new Date(now.getTime() + KST_OFFSET_MS);
@@ -21,6 +26,36 @@ function mapAllTimeRanking(user) {
     bestScore: user.best_score || 0,
     gamesPlayed: user.games_played || 0,
   };
+}
+
+async function sendPlayerHistory(res, userId) {
+  if (!userId) {
+    sendJson(res, 400, { message: "플레이어 정보가 올바르지 않습니다." });
+    return;
+  }
+
+  const users = await supabaseRequest(`users?id=eq.${encodeURIComponent(userId)}&select=id,username,role,best_score,games_played&limit=1`, {
+    prefer: "",
+  });
+  const user = users?.[0];
+
+  if (!user) {
+    sendJson(res, 404, { message: "플레이어를 찾을 수 없습니다." });
+    return;
+  }
+
+  const scores = await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(user.id)}&select=score,created_at&order=created_at.desc&limit=${MAX_HISTORY}`, {
+    prefer: "",
+  });
+  const history = scores.map((scoreRow) => ({
+    score: scoreRow.score || 0,
+    createdAt: scoreRow.created_at,
+  }));
+
+  sendJson(res, 200, {
+    user: mapAllTimeRanking(user),
+    history,
+  });
 }
 
 function buildDailyRankings(scores, users) {
@@ -58,6 +93,14 @@ function buildDailyRankings(scores, users) {
 module.exports = async function handler(req, res) {
   try {
     if (!requireMethod(req, res, "GET")) return;
+
+    const url = getRequestUrl(req);
+    const userId = url.searchParams.get("userId");
+
+    if (userId) {
+      await sendPlayerHistory(res, userId);
+      return;
+    }
 
     const { start, end } = getKstDayRange();
     const users = await supabaseRequest("users?select=id,username,role,best_score,games_played&order=best_score.desc,username.asc", {

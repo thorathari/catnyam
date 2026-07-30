@@ -183,6 +183,23 @@
         </section>
       </div>
     </section>
+
+    <section class="modal-backdrop" id="playerHistoryModal" hidden>
+      <div class="modal player-history-modal" role="dialog" aria-modal="true" aria-labelledby="playerHistoryTitle">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">play log</p>
+            <h2 id="playerHistoryTitle">플레이 기록</h2>
+          </div>
+          <button class="modal-close-button" id="closePlayerHistoryButton" type="button" aria-label="플레이 기록 닫기">×</button>
+        </div>
+        <div class="player-history-body">
+          <p class="player-history-summary" id="playerHistorySummary"></p>
+          <ol class="player-history-list" id="playerHistoryList"></ol>
+          <p class="form-message" id="playerHistoryMessage" role="status"></p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <script src="./app.js"></script>

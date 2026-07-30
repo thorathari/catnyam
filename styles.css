@@ -741,6 +741,10 @@ canvas {
   box-shadow: 0 28px 90px rgba(37, 33, 29, 0.32);
 }
 
+.player-history-modal {
+  width: min(460px, 100%);
+}
+
 .modal-header {
   display: flex;
   align-items: center;
@@ -792,6 +796,54 @@ canvas {
   padding: 0 20px 20px;
 }
 
+.player-history-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 20px 20px;
+}
+
+.player-history-summary {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.player-history-list {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.player-history-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  font-weight: 800;
+}
+
+.player-history-date {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-history-score {
+  color: var(--berry);
+  font-weight: 900;
+}
+
 .ranking-list {
   display: grid;
   gap: 10px;
@@ -817,6 +869,27 @@ canvas {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.ranking-name-button {
+  width: 100%;
+  min-height: 32px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 8px;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-name-button:hover,
+.ranking-name-button:focus-visible {
+  background: rgba(119, 216, 186, 0.22);
+  outline: none;
 }
 
 .ranking-list .score {
