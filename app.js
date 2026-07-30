@@ -73,6 +73,8 @@ const speedModeBadge = document.querySelector("#speedModeBadge");
 const hideModeBadge = document.querySelector("#hideModeBadge");
 const purrModeBadge = document.querySelector("#purrModeBadge");
 const catnipModeBadge = document.querySelector("#catnipModeBadge");
+const tunaModeBadge = document.querySelector("#tunaModeBadge");
+const clipperModeBadge = document.querySelector("#clipperModeBadge");
 const canvasWrap = document.querySelector("#canvasWrap");
 const canvas = document.querySelector("#gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -160,6 +162,16 @@ function createGameState() {
       hideUntil: 0,
       purrUntil: 0,
       catnipUntil: 0,
+      tunaUntil: 0,
+      clipperUntil: 0,
+    },
+    specialSpawns: {
+      tuna: 0,
+      clipper: 0,
+    },
+    specialSpawnLimits: {
+      tuna: Math.floor(Math.random() * 4),
+      clipper: Math.floor(Math.random() * 4),
     },
     cat: {
       x: canvas.width / 2,
@@ -1412,10 +1424,8 @@ function update(delta) {
       }
 
       const scoreDelta = getDropScore(drop);
-      game.score = Math.max(0, game.score + scoreDelta);
-      scoreText.textContent = game.score;
       setCatReaction(scoreDelta < 0 ? "bad" : "good");
-      addScorePopup(scoreDelta);
+      applyScoreDelta(scoreDelta);
       return false;
     }
 
@@ -1428,19 +1438,21 @@ function update(delta) {
 }
 
 function spawnDrop() {
-  const roll = Math.random();
-  const kind = getRandomDropKind(roll);
+  const kind = getRandomDropKind();
   const isGold = kind === "gold";
   const isBomb = kind === "bomb";
   const isToy = kind === "toy";
   const isBox = kind === "box";
   const isHand = kind === "hand";
   const isCatnip = kind === "catnip";
+  const isTuna = kind === "tuna";
+  const isClipper = kind === "clipper";
+  noteDropSpawned(kind);
   game.drops.push({
     x: 34 + Math.random() * (canvas.width - 68),
     y: -40,
-    width: isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 44 : isCatnip ? 46 : isGold ? 34 : 28,
-    height: isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isGold ? 70 : 60,
+    width: isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 44 : isCatnip ? 46 : isTuna ? 44 : isClipper ? 48 : isGold ? 34 : 28,
+    height: isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 42 : isClipper ? 34 : isGold ? 70 : 60,
     speed: 170 + Math.random() * 145 + game.elapsed * 2.3,
     rotation: Math.random() * Math.PI,
     spin: (Math.random() - 0.5) * 3,
@@ -1448,14 +1460,43 @@ function spawnDrop() {
   });
 }
 
-function getRandomDropKind(roll) {
-  if (roll < 0.035) return "catnip";
-  if (roll < 0.075) return "box";
-  if (roll < 0.135) return "toy";
-  if (roll < 0.195) return "hand";
-  if (roll < 0.33) return "bomb";
-  if (roll < 0.49) return "gold";
+function canSpawnLimitedDrop(kind) {
+  return game.specialSpawns[kind] < game.specialSpawnLimits[kind];
+}
+
+function noteDropSpawned(kind) {
+  if (kind === "tuna" || kind === "clipper") {
+    game.specialSpawns[kind] += 1;
+  }
+}
+
+function pickWeightedKind(entries) {
+  const totalWeight = entries.reduce((total, [, weight]) => total + weight, 0);
+  let roll = Math.random() * totalWeight;
+
+  for (const [kind, weight] of entries) {
+    roll -= weight;
+
+    if (roll <= 0) {
+      return kind;
+    }
+  }
+
   return "normal";
+}
+
+function getRandomDropKind() {
+  return pickWeightedKind([
+    ["catnip", 0.035],
+    ["box", 0.04],
+    ["toy", 0.06],
+    ["hand", 0.06],
+    ["tuna", canSpawnLimitedDrop("tuna") ? 0.045 : 0],
+    ["clipper", canSpawnLimitedDrop("clipper") ? 0.045 : 0],
+    ["bomb", isClipperModeActive() ? 0.34 : 0.135],
+    ["gold", isTunaModeActive() ? 0.38 : 0.16],
+    ["normal", 0.51],
+  ]);
 }
 
 function getDropScore(drop) {
@@ -1479,6 +1520,12 @@ function getScoreMultiplier() {
   }
 
   return multiplier;
+}
+
+function applyScoreDelta(scoreDelta) {
+  game.score = Math.max(0, game.score + scoreDelta);
+  scoreText.textContent = game.score;
+  addScorePopup(scoreDelta);
 }
 
 function applyModeItem(drop) {
@@ -1514,6 +1561,26 @@ function applyModeItem(drop) {
     setMultiplierBubble();
     setCatBubble("캣닢파워!", 1.6);
     triggerCanvasHighlight("catnip");
+    updateModeBadges();
+    return true;
+  }
+
+  if (drop.kind === "tuna") {
+    game.modes.tunaUntil = game.elapsed + 5;
+    applyScoreDelta(1);
+    setCatReaction("good");
+    setCatBubble("애교모드!", 1.6);
+    triggerCanvasHighlight("mode");
+    updateModeBadges();
+    return true;
+  }
+
+  if (drop.kind === "clipper") {
+    game.modes.clipperUntil = game.elapsed + 5;
+    applyScoreDelta(-1);
+    setCatReaction("bad");
+    setCatBubble("위이이잉!!!", 1.6);
+    triggerCanvasHighlight("danger");
     updateModeBadges();
     return true;
   }
@@ -1571,7 +1638,7 @@ function addScorePopup(scoreDelta) {
 }
 
 function isDebuffDrop(drop) {
-  return drop.kind === "bomb" || drop.kind === "box";
+  return drop.kind === "bomb" || drop.kind === "box" || drop.kind === "clipper";
 }
 
 function knockAwayDrop(drop) {
@@ -1623,6 +1690,14 @@ function isCatnipModeActive() {
   return game.modes.catnipUntil > game.elapsed;
 }
 
+function isTunaModeActive() {
+  return game.modes.tunaUntil > game.elapsed;
+}
+
+function isClipperModeActive() {
+  return game.modes.clipperUntil > game.elapsed;
+}
+
 function getCatScale() {
   return isCatnipModeActive() ? 2 : 1;
 }
@@ -1648,6 +1723,8 @@ function updateModeBadges() {
   updateModeBadge(hideModeBadge, isHideModeActive(), `숨숨집 ${getModeSecondsLeft(game.modes.hideUntil)}초`);
   updateModeBadge(purrModeBadge, isPurrModeActive(), `골골송 ${getModeSecondsLeft(game.modes.purrUntil)}초`);
   updateModeBadge(catnipModeBadge, isCatnipModeActive(), `캣닢 ${getModeSecondsLeft(game.modes.catnipUntil)}초`);
+  updateModeBadge(tunaModeBadge, isTunaModeActive(), `애교 ${getModeSecondsLeft(game.modes.tunaUntil)}초`);
+  updateModeBadge(clipperModeBadge, isClipperModeActive(), `위이잉 ${getModeSecondsLeft(game.modes.clipperUntil)}초`);
   updateCanvasHighlight();
 }
 
@@ -1664,6 +1741,8 @@ function clearModes() {
   game.modes.hideUntil = 0;
   game.modes.purrUntil = 0;
   game.modes.catnipUntil = 0;
+  game.modes.tunaUntil = 0;
+  game.modes.clipperUntil = 0;
   game.bubble = {
     text: "",
     until: 0,
@@ -1677,8 +1756,8 @@ function clearModes() {
 
 function updateCanvasHighlight() {
   const catnipActive = isCatnipModeActive();
-  const dangerActive = !catnipActive && isHideModeActive();
-  const modeActive = !catnipActive && !dangerActive && (isSpeedModeActive() || isPurrModeActive());
+  const dangerActive = !catnipActive && (isHideModeActive() || isClipperModeActive());
+  const modeActive = !catnipActive && !dangerActive && (isSpeedModeActive() || isPurrModeActive() || isTunaModeActive());
   canvasWrap.classList.toggle("catnip-highlight", catnipActive);
   canvasWrap.classList.toggle("danger-highlight", dangerActive);
   canvasWrap.classList.toggle("mode-highlight", modeActive);
@@ -1784,6 +1863,18 @@ function drawChuru(drop) {
     return;
   }
 
+  if (drop.kind === "tuna") {
+    drawTunaCanItem(drop);
+    ctx.restore();
+    return;
+  }
+
+  if (drop.kind === "clipper") {
+    drawClipperItem(drop);
+    ctx.restore();
+    return;
+  }
+
   ctx.fillStyle = drop.kind === "gold" ? "#ffd84f" : "#ff9f6e";
   roundRect(-drop.width / 2, -drop.height / 2, drop.width, drop.height, 9);
   ctx.fill();
@@ -1864,6 +1955,83 @@ function drawCatnipItem(drop) {
   ctx.beginPath();
   ctx.arc(-3, -3, radius * 0.64, Math.PI * 0.78, Math.PI * 1.56);
   ctx.stroke();
+}
+
+function drawTunaCanItem(drop) {
+  const width = drop.width;
+  const height = drop.height;
+  const bodyGradient = ctx.createLinearGradient(-width / 2, 0, width / 2, 0);
+  bodyGradient.addColorStop(0, "#80d5d3");
+  bodyGradient.addColorStop(0.5, "#f5fbff");
+  bodyGradient.addColorStop(1, "#57b9bd");
+
+  ctx.fillStyle = "rgba(87, 185, 189, 0.2)";
+  ctx.beginPath();
+  ctx.ellipse(0, height * 0.12, width * 0.6, height * 0.44, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = bodyGradient;
+  roundRect(-width / 2, -height * 0.26, width, height * 0.58, 8);
+  ctx.fill();
+
+  ctx.fillStyle = "#d7edf1";
+  ctx.beginPath();
+  ctx.ellipse(0, -height * 0.26, width * 0.5, height * 0.16, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#4a9ba1";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.ellipse(0, -height * 0.26, width * 0.5, height * 0.16, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.fillStyle = "#ef6f8f";
+  ctx.beginPath();
+  ctx.moveTo(-9, 1);
+  ctx.quadraticCurveTo(-1, -7, 10, -2);
+  ctx.quadraticCurveTo(2, 7, -9, 1);
+  ctx.fill();
+
+  ctx.fillStyle = "#fffaf2";
+  ctx.beginPath();
+  ctx.arc(8, -2, 2, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawClipperItem(drop) {
+  const width = drop.width;
+  const height = drop.height;
+
+  ctx.fillStyle = "rgba(70, 84, 100, 0.18)";
+  ctx.beginPath();
+  ctx.ellipse(0, 3, width * 0.58, height * 0.48, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#9aa7b6";
+  roundRect(-width * 0.42, -height * 0.28, width * 0.72, height * 0.56, 8);
+  ctx.fill();
+
+  ctx.fillStyle = "#5d6876";
+  roundRect(-width * 0.3, -height * 0.18, width * 0.42, height * 0.36, 5);
+  ctx.fill();
+
+  ctx.fillStyle = "#dce5ee";
+  roundRect(width * 0.16, -height * 0.22, width * 0.3, height * 0.44, 4);
+  ctx.fill();
+
+  ctx.strokeStyle = "#5d6876";
+  ctx.lineWidth = 2;
+  [-0.12, 0, 0.12].forEach((offset) => {
+    ctx.beginPath();
+    ctx.moveTo(width * 0.24, height * offset);
+    ctx.lineTo(width * 0.43, height * offset);
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = "#ffd84f";
+  ctx.beginPath();
+  ctx.arc(-width * 0.28, 0, 3, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawToy(drop) {

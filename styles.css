@@ -335,6 +335,15 @@ button:disabled {
   background: #4d7b35;
 }
 
+.mode-badge.tuna {
+  background: rgba(142, 215, 245, 0.46);
+}
+
+.mode-badge.clipper {
+  color: white;
+  background: #5d6876;
+}
+
 .canvas-wrap {
   position: relative;
   touch-action: none;
@@ -551,7 +560,7 @@ canvas {
   align-content: flex-start;
   align-items: flex-start;
   justify-content: flex-start;
-  max-width: 220px;
+  max-width: 300px;
   min-height: 76px;
   padding-left: 14px;
   border-left: 1px solid rgba(37, 33, 29, 0.14);
@@ -726,6 +735,56 @@ canvas {
     radial-gradient(circle at 45% 72%, rgba(178, 218, 122, 0.55) 0 1px, transparent 2px),
     #4d7b35;
   box-shadow: inset -3px -4px 0 rgba(29, 58, 24, 0.2);
+}
+
+.guide-icon.tuna {
+  position: relative;
+  width: 20px;
+  height: 17px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #58b9bd, #f5fbff 52%, #80d5d3);
+  box-shadow: inset 0 2px 0 #d7edf1;
+}
+
+.guide-icon.tuna::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  width: 11px;
+  height: 7px;
+  border-radius: 50% 45% 45% 50%;
+  background: #ef6f8f;
+}
+
+.guide-icon.clipper {
+  position: relative;
+  width: 21px;
+  height: 15px;
+  border-radius: 6px;
+  background: #9aa7b6;
+}
+
+.guide-icon.clipper::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  right: -4px;
+  width: 8px;
+  height: 9px;
+  border-radius: 2px;
+  background: #dce5ee;
+}
+
+.guide-icon.clipper::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  width: 8px;
+  height: 3px;
+  border-radius: 999px;
+  background: #5d6876;
 }
 
 .touch-controls {
@@ -1351,14 +1410,14 @@ canvas {
   }
 
   .guide-group.good {
-    max-width: min(290px, 100%);
+    max-width: min(270px, 100%);
   }
 
   .guide-group.bad {
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    max-width: min(220px, 100%);
+    max-width: min(260px, 100%);
     min-height: 0;
     padding-top: 4px;
     padding-left: 0;
@@ -1386,7 +1445,8 @@ canvas {
 
   .guide-icon.bomb,
   .guide-icon.box,
-  .guide-icon.catnip {
+  .guide-icon.catnip,
+  .guide-icon.tuna {
     width: 14px;
     height: 14px;
   }
@@ -1399,6 +1459,11 @@ canvas {
   .guide-icon.hand {
     width: 14px;
     height: 16px;
+  }
+
+  .guide-icon.clipper {
+    width: 16px;
+    height: 12px;
   }
 
   .pause-actions {
