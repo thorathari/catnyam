@@ -91,6 +91,10 @@ function normalizeUsername(username) {
   return String(username || "").trim().replace(/\s+/g, " ");
 }
 
+function normalizeNickname(nickname) {
+  return String(nickname || "").trim().replace(/\s+/g, " ");
+}
+
 function usernameKey(username) {
   return normalizeUsername(username).toLowerCase();
 }
@@ -113,9 +117,12 @@ function sanitizeUser(user) {
     return null;
   }
 
+  const nickname = normalizeNickname(user.nickname) || user.username;
+
   return {
     id: user.id,
     username: user.username,
+    nickname,
     role: user.role,
     bestScore: user.best_score || 0,
     gamesPlayed: user.games_played || 0,
@@ -261,6 +268,7 @@ module.exports = {
   getUserById,
   getUserByUsername,
   hashPassword,
+  normalizeNickname,
   normalizeUsername,
   readJson,
   requireAdmin,

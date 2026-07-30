@@ -1,6 +1,7 @@
 const {
   getUserByUsername,
   hashPassword,
+  normalizeNickname,
   normalizeUsername,
   readJson,
   requireMethod,
@@ -11,15 +12,25 @@ const {
   usernameKey,
 } = require("../server/db");
 
+function isMissingNicknameColumn(error) {
+  return /nickname/i.test(error.message || "") && /column|schema cache/i.test(error.message || "");
+}
+
 module.exports = async function handler(req, res) {
   try {
     if (!requireMethod(req, res, "POST")) return;
 
-    const { username: rawUsername, password } = await readJson(req);
+    const { username: rawUsername, nickname: rawNickname, password } = await readJson(req);
     const username = normalizeUsername(rawUsername);
+    const nickname = normalizeNickname(rawNickname || username);
 
     if (username.length < 2) {
       sendJson(res, 400, { message: "아이디는 2글자 이상 입력해주세요." });
+      return;
+    }
+
+    if (nickname.length < 2) {
+      sendJson(res, 400, { message: "닉네임은 2글자 이상 입력해주세요." });
       return;
     }
 
@@ -36,16 +47,33 @@ module.exports = async function handler(req, res) {
     const users = await supabaseRequest("users?select=id", { prefer: "" });
     const role = users.length === 0 ? "admin" : "user";
     const { salt, hash } = hashPassword(password);
-    const created = await supabaseRequest("users", {
-      method: "POST",
-      body: {
-        username,
-        username_key: usernameKey(username),
-        password_hash: hash,
-        password_salt: salt,
-        role,
-      },
-    });
+    const body = {
+      username,
+      nickname,
+      username_key: usernameKey(username),
+      password_hash: hash,
+      password_salt: salt,
+      role,
+    };
+    let created;
+
+    try {
+      created = await supabaseRequest("users", {
+        method: "POST",
+        body,
+      });
+    } catch (error) {
+      if (!isMissingNicknameColumn(error)) {
+        throw error;
+      }
+
+      const fallbackBody = { ...body };
+      delete fallbackBody.nickname;
+      created = await supabaseRequest("users", {
+        method: "POST",
+        body: fallbackBody,
+      });
+    }
     const user = created[0];
 
     setSessionCookie(res, user);

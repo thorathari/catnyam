@@ -39,12 +39,13 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const rows = await supabaseRequest("users?select=id,username,role,best_score,games_played,created_at&order=username.asc", {
+    const rows = await supabaseRequest("users?select=*&order=username.asc", {
       prefer: "",
     });
     const users = rows.map((user) => ({
       id: user.id,
       username: user.username,
+      nickname: String(user.nickname || "").trim() || user.username,
       role: user.role,
       bestScore: user.best_score || 0,
       gamesPlayed: user.games_played || 0,

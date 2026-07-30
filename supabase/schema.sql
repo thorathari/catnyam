@@ -4,6 +4,7 @@ create table if not exists public.users (
   id uuid primary key default gen_random_uuid(),
   username text not null,
   username_key text not null unique,
+  nickname text not null default '',
   password_hash text not null,
   password_salt text not null,
   role text not null default 'user' check (role in ('user', 'admin')),
@@ -12,6 +13,17 @@ create table if not exists public.users (
   created_at timestamptz not null default now(),
   updated_at timestamptz
 );
+
+alter table public.users
+  add column if not exists nickname text;
+
+update public.users
+set nickname = username
+where nickname is null or btrim(nickname) = '';
+
+alter table public.users
+  alter column nickname set default '',
+  alter column nickname set not null;
 
 create table if not exists public.scores (
   id bigint generated always as identity primary key,

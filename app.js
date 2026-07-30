@@ -9,6 +9,8 @@ const authTitle = document.querySelector("#authTitle");
 const authDescription = document.querySelector("#authDescription");
 const authForm = document.querySelector("#authForm");
 const usernameInput = document.querySelector("#usernameInput");
+const nicknameField = document.querySelector("#nicknameField");
+const nicknameInput = document.querySelector("#nicknameInput");
 const passwordInput = document.querySelector("#passwordInput");
 const rememberLoginField = document.querySelector("#rememberLoginField");
 const rememberLoginInput = document.querySelector("#rememberLoginInput");
@@ -48,11 +50,14 @@ const adminTabPanel = document.querySelector("#adminTabPanel");
 const tabList = document.querySelector(".tab-list");
 const changeUsernameForm = document.querySelector("#changeUsernameForm");
 const newUsernameInput = document.querySelector("#newUsernameInput");
+const changeNicknameForm = document.querySelector("#changeNicknameForm");
+const newNicknameInput = document.querySelector("#newNicknameInput");
 const changePasswordForm = document.querySelector("#changePasswordForm");
 const currentPasswordInput = document.querySelector("#currentPasswordInput");
 const newPasswordInput = document.querySelector("#newPasswordInput");
 const newPasswordConfirmInput = document.querySelector("#newPasswordConfirmInput");
 const usernameMessage = document.querySelector("#usernameMessage");
+const nicknameMessage = document.querySelector("#nicknameMessage");
 const passwordMessage = document.querySelector("#passwordMessage");
 const adminList = document.querySelector("#adminList");
 const adminMessage = document.querySelector("#adminMessage");
@@ -204,6 +209,10 @@ function isAdmin(user) {
   return user?.role === "admin";
 }
 
+function getUserDisplayName(user) {
+  return user?.nickname || user?.username || "";
+}
+
 function setFieldMessage(element, message, isGood = false) {
   element.textContent = message;
   element.style.color = isGood ? "#288466" : "";
@@ -215,6 +224,10 @@ function setMessage(message, isGood = false) {
 
 function setUsernameMessage(message, isGood = false) {
   setFieldMessage(usernameMessage, message, isGood);
+}
+
+function setNicknameMessage(message, isGood = false) {
+  setFieldMessage(nicknameMessage, message, isGood);
 }
 
 function setPasswordMessage(message, isGood = false) {
@@ -234,7 +247,8 @@ function setAdminMessage(message, isGood = false) {
 }
 
 function updateProfileName() {
-  currentUserName.textContent = isAdmin(currentUser) ? `${currentUser.username} 관리자` : currentUser.username;
+  const displayName = getUserDisplayName(currentUser);
+  currentUserName.textContent = isAdmin(currentUser) ? `${displayName} 관리자` : displayName;
 }
 
 function syncCurrentUser(user) {
@@ -253,8 +267,10 @@ function setAuthMode(mode) {
 
   authTitle.textContent = isSignup ? "새 계정을 만들어 시작하세요" : "로그인하고 츄르 랭킹에 도전하세요";
   authDescription.textContent = isSignup
-    ? "아이디, 비밀번호, 비밀번호 확인을 입력하면 바로 게임을 시작할 수 있습니다."
+    ? "아이디, 닉네임, 비밀번호와 비밀번호 확인을 입력하면 바로 게임을 시작할 수 있습니다."
     : "아이디와 비밀번호를 입력해 시작합니다. 기록은 서버에 저장됩니다.";
+  nicknameField.hidden = !isSignup;
+  nicknameInput.required = isSignup;
   confirmPasswordField.hidden = !isSignup;
   confirmPasswordInput.required = isSignup;
   rememberLoginField.hidden = isSignup;
@@ -281,9 +297,12 @@ function showGameFor(user) {
   timeText.textContent = GAME_SECONDS;
   bestText.textContent = currentUser.bestScore || 0;
   changeUsernameForm.reset();
+  changeNicknameForm.reset();
   changePasswordForm.reset();
   newUsernameInput.value = currentUser.username;
+  newNicknameInput.value = getUserDisplayName(currentUser);
   setUsernameMessage("");
+  setNicknameMessage("");
   setPasswordMessage("");
   setAccountActionMessage("");
   setAdminMessage("");
@@ -302,8 +321,10 @@ function showAuth() {
   closeAccountModal();
   closePlayerHistoryModal();
   changeUsernameForm.reset();
+  changeNicknameForm.reset();
   changePasswordForm.reset();
   setUsernameMessage("");
+  setNicknameMessage("");
   setPasswordMessage("");
   setAccountActionMessage("");
   setAdminMessage("");
@@ -323,11 +344,17 @@ async function handleAuthSubmit(event) {
 
 async function signup() {
   const username = normalizeName(usernameInput.value);
+  const nickname = normalizeName(nicknameInput.value);
   const password = passwordInput.value;
   const confirmPassword = confirmPasswordInput.value;
 
   if (username.length < 2) {
     setMessage("아이디는 2글자 이상 입력해주세요.");
+    return;
+  }
+
+  if (nickname.length < 2) {
+    setMessage("닉네임은 2글자 이상 입력해주세요.");
     return;
   }
 
@@ -344,7 +371,7 @@ async function signup() {
   try {
     const data = await requestApi("/api/signup", {
       method: "POST",
-      body: { username, password },
+      body: { username, nickname, password },
     });
     setMessage(data.user.role === "admin" ? "첫 관리자 계정으로 가입되었습니다." : "가입 완료! 바로 시작해볼까요?", true);
     showGameFor(data.user);
@@ -457,6 +484,7 @@ async function changeUsername(event) {
     });
     currentUser = data.user;
     newUsernameInput.value = currentUser.username;
+    newNicknameInput.value = getUserDisplayName(currentUser);
     const remembered = getRememberedLogin();
 
     if (remembered) {
@@ -472,6 +500,44 @@ async function changeUsername(event) {
     }
   } catch (error) {
     setUsernameMessage(error.message);
+  }
+}
+
+async function changeNickname(event) {
+  event.preventDefault();
+
+  if (!currentUser) {
+    return;
+  }
+
+  const nickname = normalizeName(newNicknameInput.value);
+
+  if (nickname.length < 2) {
+    setNicknameMessage("닉네임은 2글자 이상 입력해주세요.");
+    return;
+  }
+
+  if (nickname === getUserDisplayName(currentUser)) {
+    setNicknameMessage("현재 닉네임과 같습니다.", true);
+    return;
+  }
+
+  try {
+    const data = await requestApi("/api/change-username", {
+      method: "POST",
+      body: { nickname },
+    });
+    currentUser = data.user;
+    newNicknameInput.value = getUserDisplayName(currentUser);
+    updateProfileName();
+    setNicknameMessage("닉네임이 변경되었습니다.", true);
+    renderRanking();
+
+    if (!adminTabPanel.hidden) {
+      renderAdminList();
+    }
+  } catch (error) {
+    setNicknameMessage(error.message);
   }
 }
 
@@ -524,9 +590,12 @@ function openAccountModal() {
   tabList.classList.toggle("single-tab", !canManageAccounts);
   setAccountTab("password");
   changeUsernameForm.reset();
+  changeNicknameForm.reset();
   changePasswordForm.reset();
   newUsernameInput.value = currentUser.username;
+  newNicknameInput.value = getUserDisplayName(currentUser);
   setUsernameMessage("");
+  setNicknameMessage("");
   setPasswordMessage("");
   setAccountActionMessage("");
   setAdminMessage("");
@@ -604,7 +673,7 @@ function appendRankingItem(rankValue, accountInfo, scoreValue) {
   const plays = document.createElement("span");
   const score = document.createElement("span");
   const account = typeof accountInfo === "object" && accountInfo !== null ? accountInfo : null;
-  const username = account?.username || accountInfo;
+  const displayName = account ? getUserDisplayName(account) : accountInfo;
   name.className = "name";
   plays.className = "plays";
   score.className = "score";
@@ -614,13 +683,13 @@ function appendRankingItem(rankValue, accountInfo, scoreValue) {
     const nameButton = document.createElement("button");
     nameButton.className = "ranking-name-button";
     nameButton.type = "button";
-    nameButton.textContent = username;
-    nameButton.title = `${username} 플레이 기록`;
-    nameButton.setAttribute("aria-label", `${username} 플레이 기록 보기`);
+    nameButton.textContent = displayName;
+    nameButton.title = `${displayName} 플레이 기록`;
+    nameButton.setAttribute("aria-label", `${displayName} 플레이 기록 보기`);
     nameButton.addEventListener("click", () => openPlayerHistory(account));
     name.append(nameButton);
   } else {
-    name.textContent = username;
+    name.textContent = displayName;
   }
 
   plays.textContent = account ? `(${account.gamesPlayed || 0}회)` : "";
@@ -655,7 +724,7 @@ async function openPlayerHistory(account) {
     return;
   }
 
-  playerHistoryTitle.textContent = `${account.username} 플레이 기록`;
+  playerHistoryTitle.textContent = `${getUserDisplayName(account)} 플레이 기록`;
   playerHistorySummary.textContent = "기록을 불러오는 중입니다.";
   playerHistoryList.innerHTML = "";
   setPlayerHistoryMessage("");
@@ -673,7 +742,7 @@ async function openPlayerHistory(account) {
 function renderPlayerHistory(data) {
   const user = data.user || {};
   const history = data.history || [];
-  playerHistoryTitle.textContent = `${user.username || "플레이어"} 플레이 기록`;
+  playerHistoryTitle.textContent = `${getUserDisplayName(user) || "플레이어"} 플레이 기록`;
   playerHistorySummary.textContent = `최고 ${user.bestScore || 0}점 · ${user.gamesPlayed || 0}회 플레이`;
   playerHistoryList.innerHTML = "";
   setPlayerHistoryMessage("");
@@ -747,8 +816,9 @@ function renderAdminAccount(account) {
   resetButton.className = "secondary-button";
   deleteButton.className = "danger-button";
 
-  name.textContent = account.username;
-  meta.textContent = `최고 ${account.bestScore || 0}점 · ${account.gamesPlayed || 0}회`;
+  const displayName = getUserDisplayName(account);
+  name.textContent = displayName;
+  meta.textContent = `아이디 ${account.username} · 최고 ${account.bestScore || 0}점 · ${account.gamesPlayed || 0}회`;
   renameInput.type = "text";
   renameInput.maxLength = 16;
   renameInput.value = account.username;
@@ -761,7 +831,7 @@ function renderAdminAccount(account) {
   scoreResetButton.textContent = "점수 초기화";
   resetButton.textContent = "비밀번호 초기화";
   deleteButton.textContent = "계정 삭제";
-  scoreResetButton.addEventListener("click", () => resetAccountScore(account.id, account.username));
+  scoreResetButton.addEventListener("click", () => resetAccountScore(account.id, displayName));
 
   if (isAdmin(account)) {
     const badge = document.createElement("span");
@@ -850,7 +920,7 @@ async function resetAccountScore(userId, username) {
     syncCurrentUser(data.user);
     renderRanking();
     await renderAdminList();
-    setAdminMessage(`${data.user.username} 점수를 초기화했습니다.`, true);
+    setAdminMessage(`${getUserDisplayName(data.user)} 점수를 초기화했습니다.`, true);
   } catch (error) {
     setAdminMessage(error.message);
   }
@@ -922,13 +992,13 @@ async function deleteMyAccount() {
   resetMyScoreButton.disabled = true;
 
   try {
-    const deletedUsername = currentUser.username;
+    const deletedName = getUserDisplayName(currentUser);
     await requestApi("/api/logout", {
       method: "DELETE",
     });
     clearRememberedLogin();
     showAuth();
-    setMessage(`${deletedUsername} 계정 탈퇴가 완료되었습니다.`, true);
+    setMessage(`${deletedName} 계정 탈퇴가 완료되었습니다.`, true);
     renderRanking();
   } catch (error) {
     setAccountActionMessage(error.message);
@@ -2023,6 +2093,7 @@ pauseRestartButton.addEventListener("click", startGame);
 pauseHomeButton.addEventListener("click", returnToGameHome);
 resumeButton.addEventListener("click", resumeGame);
 changeUsernameForm.addEventListener("submit", changeUsername);
+changeNicknameForm.addEventListener("submit", changeNickname);
 changePasswordForm.addEventListener("submit", changePassword);
 resetMyScoreButton.addEventListener("click", resetMyScore);
 deleteMyAccountButton.addEventListener("click", deleteMyAccount);

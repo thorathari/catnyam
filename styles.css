@@ -693,6 +693,7 @@ canvas {
   gap: 12px;
 }
 
+.nickname-form,
 .password-form {
   margin-top: 16px;
   padding-top: 16px;

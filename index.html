@@ -36,6 +36,10 @@
           <span>아이디</span>
           <input id="usernameInput" name="username" type="text" autocomplete="username" maxlength="16" required>
         </label>
+        <label id="nicknameField" hidden>
+          <span>닉네임</span>
+          <input id="nicknameInput" name="nickname" type="text" autocomplete="nickname" maxlength="16">
+        </label>
         <label>
           <span>비밀번호</span>
           <input id="passwordInput" name="password" type="password" autocomplete="current-password" maxlength="24" required>
@@ -150,6 +154,15 @@
             </label>
             <p class="form-message" id="usernameMessage" role="status"></p>
             <button class="secondary-button" type="submit">아이디 변경</button>
+          </form>
+
+          <form class="account-form nickname-form" id="changeNicknameForm">
+            <label>
+              <span>새 닉네임</span>
+              <input id="newNicknameInput" name="newNickname" type="text" autocomplete="nickname" maxlength="16" required>
+            </label>
+            <p class="form-message" id="nicknameMessage" role="status"></p>
+            <button class="secondary-button" type="submit">닉네임 변경</button>
           </form>
 
           <form class="account-form password-form" id="changePasswordForm">

@@ -10,6 +10,10 @@ const MAX_HISTORY = 30;
 const MAX_DAILY_SCORES = 2000;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
+function getDisplayName(user) {
+  return String(user.nickname || "").trim() || user.username;
+}
+
 function getRequestUrl(req) {
   return new URL(req.url || "/api/rankings", `http://${req.headers.host || "localhost"}`);
 }
@@ -28,6 +32,7 @@ function mapAllTimeRanking(user) {
   return {
     id: user.id,
     username: user.username,
+    nickname: getDisplayName(user),
     role: user.role,
     bestScore: user.best_score || 0,
     gamesPlayed: user.games_played || 0,
@@ -46,7 +51,7 @@ async function sendPlayerHistory(req, res, userId) {
     return;
   }
 
-  const users = await supabaseRequest(`users?id=eq.${encodeURIComponent(userId)}&select=id,username,role,best_score,games_played&limit=1`, {
+  const users = await supabaseRequest(`users?id=eq.${encodeURIComponent(userId)}&select=*&limit=1`, {
     prefer: "",
   });
   const user = users?.[0];
@@ -91,6 +96,7 @@ function buildDailyRankings(scores, users) {
       bestByUser.set(scoreRow.user_id, {
         id: user.id,
         username: user.username,
+        nickname: getDisplayName(user),
         role: user.role,
         score,
         bestScore: score,
@@ -100,7 +106,7 @@ function buildDailyRankings(scores, users) {
   });
 
   return Array.from(bestByUser.values())
-    .sort((left, right) => right.score - left.score || left.username.localeCompare(right.username, "ko"))
+    .sort((left, right) => right.score - left.score || left.nickname.localeCompare(right.nickname, "ko"))
     .slice(0, MAX_RANKINGS)
     .map(({ createdAt, ...ranking }) => ({
       ...ranking,
@@ -121,7 +127,7 @@ module.exports = async function handler(req, res) {
     }
 
     const { start, end } = getKstDayRange();
-    const users = await supabaseRequest("users?select=id,username,role,best_score,games_played&order=best_score.desc,username.asc", {
+    const users = await supabaseRequest("users?select=*&order=best_score.desc,username.asc", {
       prefer: "",
     });
     const scores = await supabaseRequest(`scores?select=user_id,score,created_at&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&order=score.desc,created_at.asc&limit=${MAX_DAILY_SCORES}`, {
