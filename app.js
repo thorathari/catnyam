@@ -1731,6 +1731,47 @@ function bindTouchControl(button, direction) {
   button.addEventListener("contextmenu", (event) => event.preventDefault());
 }
 
+function getSelectionElement(node) {
+  if (!node) {
+    return null;
+  }
+
+  return node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+}
+
+function clearGameSelection(onlyGamePanel = false) {
+  const selection = window.getSelection?.();
+
+  if (selection && !selection.isCollapsed) {
+    if (onlyGamePanel) {
+      const anchorElement = getSelectionElement(selection.anchorNode);
+      const focusElement = getSelectionElement(selection.focusNode);
+      const selectionInGame = (anchorElement && gamePanel.contains(anchorElement))
+        || (focusElement && gamePanel.contains(focusElement));
+
+      if (!selectionInGame) {
+        return;
+      }
+    }
+
+    selection.removeAllRanges();
+  }
+}
+
+function preventGameSelection(event) {
+  if (!isTypingTarget(event.target)) {
+    event.preventDefault();
+    clearGameSelection();
+  }
+}
+
+function preventGameTouchMove(event) {
+  if (game.running && !isTypingTarget(event.target)) {
+    event.preventDefault();
+    clearGameSelection();
+  }
+}
+
 window.addEventListener("keydown", (event) => {
   const controlKey = getControlKey(event.key);
 
@@ -1770,6 +1811,15 @@ changePasswordForm.addEventListener("submit", changePassword);
 bindTouchControl(touchLeftButton, -1);
 bindTouchControl(touchRightButton, 1);
 resetRankingButton.addEventListener("click", resetRankings);
+gamePanel.addEventListener("selectstart", preventGameSelection);
+gamePanel.addEventListener("dragstart", preventGameSelection);
+gamePanel.addEventListener("contextmenu", preventGameSelection);
+gamePanel.addEventListener("touchmove", preventGameTouchMove, { passive: false });
+document.addEventListener("selectionchange", () => {
+  if (game.running && !gamePanel.hidden) {
+    clearGameSelection(true);
+  }
+});
 
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !accountModal.hidden) {
