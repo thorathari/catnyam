@@ -57,6 +57,8 @@ const bestText = document.querySelector("#bestText");
 const speedModeBadge = document.querySelector("#speedModeBadge");
 const hideModeBadge = document.querySelector("#hideModeBadge");
 const purrModeBadge = document.querySelector("#purrModeBadge");
+const catnipModeBadge = document.querySelector("#catnipModeBadge");
+const canvasWrap = document.querySelector("#canvasWrap");
 const canvas = document.querySelector("#gameCanvas");
 const ctx = canvas.getContext("2d");
 
@@ -131,6 +133,7 @@ function createGameState() {
       speedUntil: 0,
       hideUntil: 0,
       purrUntil: 0,
+      catnipUntil: 0,
     },
     cat: {
       x: canvas.width / 2,
@@ -779,6 +782,7 @@ function stopGame() {
   game.running = false;
   game.paused = false;
   pauseButton.hidden = true;
+  canvasWrap.classList.remove("mode-highlight", "catnip-highlight");
   clearMovementInput();
 }
 
@@ -888,7 +892,7 @@ function update(delta) {
   const direction = touchDirection || keyboardDirection;
   const speedMultiplier = isSpeedModeActive() ? 1.75 : 1;
   game.cat.x += direction * game.cat.speed * speedMultiplier * delta;
-  game.cat.x = clamp(game.cat.x, game.cat.width / 2 + 12, canvas.width - game.cat.width / 2 - 12);
+  game.cat.x = clamp(game.cat.x, getCatWidth() / 2 + 12, canvas.width - getCatWidth() / 2 - 12);
   updateModeBadges();
 
   if (game.elapsed >= nextDropAt) {
@@ -897,6 +901,14 @@ function update(delta) {
   }
 
   game.drops.forEach((drop) => {
+    if (drop.knocked) {
+      drop.x += drop.vx * delta;
+      drop.y += drop.vy * delta;
+      drop.vy += 620 * delta;
+      drop.rotation += drop.spin * delta * 2.8;
+      return;
+    }
+
     drop.y += drop.speed * delta;
     drop.rotation += drop.spin * delta;
   });
@@ -908,8 +920,18 @@ function update(delta) {
   game.scorePopups = game.scorePopups.filter((popup) => popup.age < popup.duration);
 
   game.drops = game.drops.filter((drop) => {
+    if (drop.knocked) {
+      return isDropVisible(drop);
+    }
+
     if (collides(drop)) {
-      if (isHideModeActive()) {
+      if (isHideModeActive() && !isCatnipModeActive()) {
+        return true;
+      }
+
+      if (isCatnipModeActive() && drop.kind === "bomb") {
+        knockAwayBomb(drop);
+        setCatReaction("good");
         return true;
       }
 
@@ -925,7 +947,7 @@ function update(delta) {
       return false;
     }
 
-    return drop.y < canvas.height + 60;
+    return isDropVisible(drop);
   });
 
   if (game.timeLeft <= 0) {
@@ -941,11 +963,12 @@ function spawnDrop() {
   const isToy = kind === "toy";
   const isBox = kind === "box";
   const isHand = kind === "hand";
+  const isCatnip = kind === "catnip";
   game.drops.push({
     x: 34 + Math.random() * (canvas.width - 68),
     y: -40,
-    width: isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 44 : isGold ? 34 : 28,
-    height: isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isGold ? 70 : 60,
+    width: isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 44 : isCatnip ? 46 : isGold ? 34 : 28,
+    height: isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isGold ? 70 : 60,
     speed: 170 + Math.random() * 145 + game.elapsed * 2.3,
     rotation: Math.random() * Math.PI,
     spin: (Math.random() - 0.5) * 3,
@@ -954,11 +977,12 @@ function spawnDrop() {
 }
 
 function getRandomDropKind(roll) {
-  if (roll < 0.04) return "box";
-  if (roll < 0.10) return "toy";
-  if (roll < 0.16) return "hand";
-  if (roll < 0.30) return "bomb";
-  if (roll < 0.46) return "gold";
+  if (roll < 0.035) return "catnip";
+  if (roll < 0.075) return "box";
+  if (roll < 0.135) return "toy";
+  if (roll < 0.195) return "hand";
+  if (roll < 0.33) return "bomb";
+  if (roll < 0.49) return "gold";
   return "normal";
 }
 
@@ -968,7 +992,17 @@ function getDropScore(drop) {
   }
 
   const baseScore = drop.kind === "gold" ? 5 : 2;
-  return isPurrModeActive() ? baseScore * 2 : baseScore;
+  let multiplier = 1;
+
+  if (isPurrModeActive()) {
+    multiplier *= 2;
+  }
+
+  if (isCatnipModeActive()) {
+    multiplier *= 2;
+  }
+
+  return baseScore * multiplier;
 }
 
 function applyModeItem(drop) {
@@ -976,6 +1010,7 @@ function applyModeItem(drop) {
     game.modes.speedUntil = game.elapsed + 5;
     setCatReaction("good");
     setCatBubble("우다다모드!", 1.5);
+    triggerCanvasHighlight("mode");
     updateModeBadges();
     return true;
   }
@@ -983,6 +1018,7 @@ function applyModeItem(drop) {
   if (drop.kind === "box") {
     game.modes.hideUntil = game.elapsed + 3;
     setCatBubble("건들지마라냥!", 3);
+    triggerCanvasHighlight("mode");
     updateModeBadges();
     return true;
   }
@@ -990,6 +1026,16 @@ function applyModeItem(drop) {
   if (drop.kind === "hand") {
     game.modes.purrUntil = game.elapsed + 5;
     setCatReaction("good");
+    triggerCanvasHighlight("mode");
+    updateModeBadges();
+    return true;
+  }
+
+  if (drop.kind === "catnip") {
+    game.modes.catnipUntil = game.elapsed + 5;
+    setCatReaction("good");
+    setCatBubble("캣닢파워!", 1.6);
+    triggerCanvasHighlight("catnip");
     updateModeBadges();
     return true;
   }
@@ -1011,15 +1057,34 @@ function setCatBubble(text, duration) {
   };
 }
 
+function triggerCanvasHighlight(type) {
+  canvasWrap.classList.remove("mode-highlight", "catnip-highlight");
+  void canvasWrap.offsetWidth;
+  canvasWrap.classList.add(type === "catnip" ? "catnip-highlight" : "mode-highlight");
+}
+
 function addScorePopup(scoreDelta) {
   game.scorePopups.push({
     text: scoreDelta > 0 ? `+${scoreDelta}` : String(scoreDelta),
     x: game.cat.x,
-    y: game.cat.y - game.cat.height * 0.72,
+    y: game.cat.y - getCatHeight() * 0.62,
     age: 0,
     duration: 0.82,
     color: scoreDelta > 0 ? "#ef6f8f" : "#288466",
   });
+}
+
+function knockAwayBomb(drop) {
+  const direction = drop.x >= game.cat.x ? 1 : -1;
+  drop.knocked = true;
+  drop.vx = direction * (380 + Math.random() * 130);
+  drop.vy = -360 - Math.random() * 120;
+  drop.spin = direction * (7 + Math.random() * 4);
+  setCatBubble("통통!", 0.9);
+}
+
+function isDropVisible(drop) {
+  return drop.y < canvas.height + 90 && drop.x > -90 && drop.x < canvas.width + 90;
 }
 
 function getCatBubbleText() {
@@ -1031,7 +1096,7 @@ function getCatBubbleText() {
 }
 
 function getCatReaction() {
-  if (isHideModeActive()) {
+  if (isHideModeActive() && !isCatnipModeActive()) {
     return "box";
   }
 
@@ -1050,6 +1115,26 @@ function isPurrModeActive() {
   return game.modes.purrUntil > game.elapsed;
 }
 
+function isCatnipModeActive() {
+  return game.modes.catnipUntil > game.elapsed;
+}
+
+function getCatScale() {
+  return isCatnipModeActive() ? 2 : 1;
+}
+
+function getCatWidth() {
+  return game.cat.width * getCatScale();
+}
+
+function getCatHeight() {
+  return game.cat.height * getCatScale();
+}
+
+function getCatRotation() {
+  return isCatnipModeActive() ? game.elapsed * 7.5 : 0;
+}
+
 function getModeSecondsLeft(until) {
   return Math.max(0, Math.ceil(until - game.elapsed));
 }
@@ -1058,6 +1143,8 @@ function updateModeBadges() {
   updateModeBadge(speedModeBadge, isSpeedModeActive(), `우다다 ${getModeSecondsLeft(game.modes.speedUntil)}초`);
   updateModeBadge(hideModeBadge, isHideModeActive(), `숨숨집 ${getModeSecondsLeft(game.modes.hideUntil)}초`);
   updateModeBadge(purrModeBadge, isPurrModeActive(), `골골송 ${getModeSecondsLeft(game.modes.purrUntil)}초`);
+  updateModeBadge(catnipModeBadge, isCatnipModeActive(), `캣닢 ${getModeSecondsLeft(game.modes.catnipUntil)}초`);
+  updateCanvasHighlight();
 }
 
 function updateModeBadge(badge, isActive, text) {
@@ -1072,6 +1159,7 @@ function clearModes() {
   game.modes.speedUntil = 0;
   game.modes.hideUntil = 0;
   game.modes.purrUntil = 0;
+  game.modes.catnipUntil = 0;
   game.bubble = {
     text: "",
     until: 0,
@@ -1079,11 +1167,18 @@ function clearModes() {
   updateModeBadges();
 }
 
+function updateCanvasHighlight() {
+  const catnipActive = isCatnipModeActive();
+  const modeActive = !catnipActive && (isSpeedModeActive() || isHideModeActive() || isPurrModeActive());
+  canvasWrap.classList.toggle("catnip-highlight", catnipActive);
+  canvasWrap.classList.toggle("mode-highlight", modeActive);
+}
+
 function collides(drop) {
-  const catLeft = game.cat.x - game.cat.width / 2;
-  const catRight = game.cat.x + game.cat.width / 2;
-  const catTop = game.cat.y - game.cat.height / 2;
-  const catBottom = game.cat.y + game.cat.height / 2;
+  const catLeft = game.cat.x - getCatWidth() / 2;
+  const catRight = game.cat.x + getCatWidth() / 2;
+  const catTop = game.cat.y - getCatHeight() / 2;
+  const catBottom = game.cat.y + getCatHeight() / 2;
   const dropLeft = drop.x - drop.width / 2;
   const dropRight = drop.x + drop.width / 2;
   const dropTop = drop.y - drop.height / 2;
@@ -1095,7 +1190,7 @@ function collides(drop) {
 function draw() {
   drawWorld();
   game.drops.forEach(drawChuru);
-  drawCat(game.cat.x, game.cat.y, game.cat.width, game.cat.height, getCatReaction());
+  drawCat(game.cat.x, game.cat.y, getCatWidth(), getCatHeight(), getCatReaction(), getCatRotation());
   game.scorePopups.forEach(drawScorePopup);
 }
 
@@ -1173,6 +1268,12 @@ function drawChuru(drop) {
     return;
   }
 
+  if (drop.kind === "catnip") {
+    drawCatnipItem(drop);
+    ctx.restore();
+    return;
+  }
+
   ctx.fillStyle = drop.kind === "gold" ? "#ffd84f" : "#ff9f6e";
   roundRect(-drop.width / 2, -drop.height / 2, drop.width, drop.height, 9);
   ctx.fill();
@@ -1215,6 +1316,44 @@ function drawBomb(drop) {
   ctx.lineTo(21, -radius - 5);
   ctx.closePath();
   ctx.fill();
+}
+
+function drawCatnipItem(drop) {
+  const radius = drop.width / 2;
+  const gradient = ctx.createRadialGradient(-radius * 0.28, -radius * 0.35, 3, 0, 0, radius);
+  gradient.addColorStop(0, "#98bd63");
+  gradient.addColorStop(0.7, "#4d7b35");
+  gradient.addColorStop(1, "#2f4f2a");
+
+  ctx.fillStyle = "rgba(77, 123, 53, 0.2)";
+  ctx.beginPath();
+  ctx.arc(0, 3, radius + 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(245, 255, 207, 0.72)";
+  [
+    [-7, -9, 2.2],
+    [5, -8, 1.7],
+    [9, 1, 1.8],
+    [-4, 7, 1.9],
+    [-10, 3, 1.4],
+    [1, 10, 1.5],
+  ].forEach(([x, y, size]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  ctx.strokeStyle = "rgba(255, 250, 242, 0.38)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(-3, -3, radius * 0.64, Math.PI * 0.78, Math.PI * 1.56);
+  ctx.stroke();
 }
 
 function drawToy(drop) {
@@ -1314,7 +1453,7 @@ function drawHandItem(drop) {
   ctx.stroke();
 }
 
-function drawCat(x, y, width, height, reaction = "neutral") {
+function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
   ctx.save();
   ctx.translate(x, y);
 
@@ -1334,6 +1473,9 @@ function drawCat(x, y, width, height, reaction = "neutral") {
   ctx.beginPath();
   ctx.ellipse(0, height / 2 + 9, width * 0.55, 13, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  ctx.save();
+  ctx.rotate(rotation);
 
   ctx.fillStyle = "#ffcf8a";
   ctx.beginPath();
@@ -1404,6 +1546,8 @@ function drawCat(x, y, width, height, reaction = "neutral") {
     ctx.lineTo(side * 43, 14);
     ctx.stroke();
   });
+
+  ctx.restore();
 
   const bubbleText = getCatBubbleText();
 

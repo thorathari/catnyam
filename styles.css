@@ -317,8 +317,67 @@ button:disabled {
   background: rgba(239, 111, 143, 0.2);
 }
 
+.mode-badge.catnip {
+  color: #fffaf2;
+  background: #4d7b35;
+}
+
 .canvas-wrap {
   position: relative;
+}
+
+.canvas-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border: 3px solid transparent;
+  border-radius: 10px;
+  pointer-events: none;
+}
+
+.canvas-wrap.mode-highlight::after {
+  border-color: rgba(255, 216, 79, 0.86);
+  box-shadow:
+    0 0 0 3px rgba(255, 250, 242, 0.7),
+    0 0 20px rgba(255, 216, 79, 0.92),
+    inset 0 0 18px rgba(255, 216, 79, 0.48);
+  animation: borderSparkle 0.7s ease-in-out infinite alternate;
+}
+
+.canvas-wrap.catnip-highlight::after {
+  border-color: rgba(96, 154, 60, 0.95);
+  box-shadow:
+    0 0 0 4px rgba(255, 250, 242, 0.75),
+    0 0 28px rgba(111, 188, 76, 0.98),
+    inset 0 0 24px rgba(111, 188, 76, 0.55);
+  animation: catnipSparkle 0.54s ease-in-out infinite alternate;
+}
+
+@keyframes borderSparkle {
+  from {
+    opacity: 0.72;
+    transform: scale(0.996);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.006);
+  }
+}
+
+@keyframes catnipSparkle {
+  from {
+    opacity: 0.82;
+    filter: saturate(1);
+    transform: scale(0.995);
+  }
+
+  to {
+    opacity: 1;
+    filter: saturate(1.45);
+    transform: scale(1.009);
+  }
 }
 
 .pause-button {
@@ -423,9 +482,10 @@ canvas {
 
 .item-guide {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, max-content);
+  justify-content: center;
   gap: 10px;
-  width: min(560px, 100%);
+  max-width: min(620px, 100%);
   color: var(--ink);
   font-size: 0.92rem;
   font-weight: 900;
@@ -508,6 +568,18 @@ canvas {
   height: 20px;
   border-radius: 9px 9px 6px 6px;
   background: #ffc8a2;
+}
+
+.guide-icon.catnip {
+  width: 19px;
+  height: 19px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(245, 255, 207, 0.75) 0 2px, transparent 3px),
+    radial-gradient(circle at 68% 62%, rgba(245, 255, 207, 0.72) 0 1px, transparent 2px),
+    radial-gradient(circle at 45% 72%, rgba(178, 218, 122, 0.55) 0 1px, transparent 2px),
+    #4d7b35;
+  box-shadow: inset -3px -4px 0 rgba(29, 58, 24, 0.2);
 }
 
 .touch-controls {
@@ -838,7 +910,7 @@ canvas {
   }
 
   .item-guide {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, max-content);
   }
 
   .pause-actions {
