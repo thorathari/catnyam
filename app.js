@@ -1466,6 +1466,18 @@ function update(delta) {
 
 function spawnDrop() {
   const kind = getRandomDropKind();
+  addDrop(kind);
+
+  if (isTunaModeActive()) {
+    addDrop("gold");
+  }
+
+  if (isClipperModeActive()) {
+    addDrop("bomb");
+  }
+}
+
+function addDrop(kind) {
   const isGold = kind === "gold";
   const isBomb = kind === "bomb";
   const isToy = kind === "toy";
@@ -1520,8 +1532,8 @@ function getRandomDropKind() {
     ["hand", 0.06],
     ["tuna", canSpawnLimitedDrop("tuna") ? 0.045 : 0],
     ["clipper", canSpawnLimitedDrop("clipper") ? 0.045 : 0],
-    ["bomb", isClipperModeActive() ? 0.34 : 0.135],
-    ["gold", isTunaModeActive() ? 0.38 : 0.16],
+    ["bomb", 0.135],
+    ["gold", 0.16],
     ["normal", 0.51],
   ]);
 }
