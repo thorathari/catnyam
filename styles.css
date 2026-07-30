@@ -380,16 +380,16 @@ canvas {
 .pause-actions {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 12px;
-  width: 66px;
+  gap: 8px;
+  width: 48px;
 }
 
 .pause-action-button {
   position: relative;
   display: grid;
   place-items: center;
-  width: 66px;
-  min-height: 58px;
+  width: 48px;
+  min-height: 44px;
   overflow: hidden;
   border: 2px solid rgba(37, 33, 29, 0.12);
   border-radius: 8px;
@@ -401,7 +401,7 @@ canvas {
 .pause-action-button::before {
   content: "";
   position: absolute;
-  inset: 9px;
+  inset: 7px;
   border-radius: 999px;
   background: rgba(255, 250, 242, 0.82);
 }
@@ -423,112 +423,85 @@ canvas {
   position: relative;
   display: block;
   z-index: 1;
-  width: 34px;
-  height: 34px;
+  width: 24px;
+  height: 24px;
 }
 
 .pause-icon.restart {
-  width: 31px;
-  height: 31px;
-  border: 5px solid #288466;
-  border-right-color: transparent;
+  width: 23px;
+  height: 23px;
+  border: 3px solid #288466;
+  border-left-color: transparent;
   border-radius: 999px;
-  transform: rotate(-18deg);
+  transform: rotate(-34deg);
 }
 
 .pause-icon.restart::before {
-  content: "";
-  position: absolute;
-  left: 8px;
-  top: 13px;
-  width: 5px;
-  height: 5px;
-  border-radius: 999px;
-  background: #fffaf2;
-  box-shadow:
-    -7px -5px 0 #fffaf2,
-    0 -8px 0 #fffaf2,
-    7px -5px 0 #fffaf2,
-    0 5px 0 3px #fffaf2;
+  content: none;
 }
 
 .pause-icon.restart::after {
   content: "";
   position: absolute;
-  top: -7px;
-  right: -4px;
+  top: -5px;
+  left: -2px;
   width: 0;
   height: 0;
-  border-top: 8px solid transparent;
-  border-bottom: 8px solid transparent;
-  border-left: 12px solid #288466;
-  transform: rotate(-18deg);
+  border-top: 6px solid transparent;
+  border-bottom: 6px solid transparent;
+  border-right: 8px solid #288466;
+  transform: rotate(18deg);
 }
 
 .pause-icon.home {
-  width: 32px;
-  height: 31px;
-  border-radius: 8px 8px 6px 6px;
+  isolation: isolate;
+  width: 24px;
+  height: 18px;
+  border-radius: 5px 5px 4px 4px;
   background: #fffaf2;
-  transform: translateY(3px);
+  transform: translateY(4px);
 }
 
 .pause-icon.home::before {
   content: "";
   position: absolute;
-  left: 1px;
-  top: -9px;
-  width: 30px;
-  height: 30px;
-  border-radius: 5px 3px 5px 3px;
+  left: 3px;
+  top: -10px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
   background: #ff9f6e;
   transform: rotate(45deg);
-  clip-path: polygon(50% 0, 100% 50%, 78% 50%, 78% 100%, 22% 100%, 22% 50%, 0 50%);
+  z-index: -1;
 }
 
 .pause-icon.home::after {
   content: "";
   position: absolute;
-  left: 12px;
+  left: 9px;
   bottom: 0;
-  width: 8px;
-  height: 13px;
+  width: 6px;
+  height: 9px;
   border-radius: 5px 5px 0 0;
   background: #746b62;
-  box-shadow:
-    -9px -12px 0 -3px #332923,
-    9px -12px 0 -3px #332923;
+  z-index: 1;
 }
 
 .pause-icon.resume {
-  width: 34px;
-  height: 22px;
-  border-radius: 58% 44% 44% 58%;
-  background: #fffaf2;
-  transform: translateX(-1px);
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 16px solid #fffaf2;
+  transform: translateX(2px);
 }
 
 .pause-icon.resume::before {
-  content: "";
-  position: absolute;
-  right: -8px;
-  top: 2px;
-  width: 14px;
-  height: 18px;
-  background: #fffaf2;
-  clip-path: polygon(0 50%, 100% 0, 78% 50%, 100% 100%);
+  content: none;
 }
 
 .pause-icon.resume::after {
-  content: "";
-  position: absolute;
-  left: 7px;
-  top: 7px;
-  width: 4px;
-  height: 4px;
-  border-radius: 999px;
-  background: #332923;
-  box-shadow: 9px 0 0 #ff9fbe;
+  content: none;
 }
 
 .overlay-result {
