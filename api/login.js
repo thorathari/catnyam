@@ -1,7 +1,7 @@
 const {
   getUserByUsername,
   readJson,
-  requireMethod,
+  requireUser,
   sanitizeUser,
   sendJson,
   setSessionCookie,
@@ -10,7 +10,19 @@ const {
 
 module.exports = async function handler(req, res) {
   try {
-    if (!requireMethod(req, res, "POST")) return;
+    if (req.method === "GET") {
+      const user = await requireUser(req, res);
+      if (!user) return;
+
+      sendJson(res, 200, { user: sanitizeUser(user) });
+      return;
+    }
+
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "GET, POST");
+      sendJson(res, 405, { message: "허용되지 않은 요청입니다." });
+      return;
+    }
 
     const { username, password } = await readJson(req);
     const user = await getUserByUsername(username);

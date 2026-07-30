@@ -353,7 +353,7 @@ async function logout() {
 
 async function restoreSession() {
   try {
-    const data = await requestApi("/api/me");
+    const data = await requestApi("/api/login");
     showGameFor(data.user);
     return true;
   } catch {
