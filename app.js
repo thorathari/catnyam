@@ -2074,6 +2074,28 @@ function clearMovementInput() {
   touchRightButton.classList.remove("pressed");
 }
 
+function closeGuideTooltips(exceptItem = null) {
+  itemGuide.querySelectorAll(".guide-item.tooltip-open").forEach((item) => {
+    if (item !== exceptItem) {
+      item.classList.remove("tooltip-open");
+      item.setAttribute("aria-expanded", "false");
+    }
+  });
+}
+
+function bindGuideTooltips() {
+  itemGuide.querySelectorAll(".guide-item").forEach((item) => {
+    item.setAttribute("aria-expanded", "false");
+    item.addEventListener("click", (event) => {
+      event.preventDefault();
+      const willOpen = !item.classList.contains("tooltip-open");
+      closeGuideTooltips(item);
+      item.classList.toggle("tooltip-open", willOpen);
+      item.setAttribute("aria-expanded", String(willOpen));
+    });
+  });
+}
+
 function bindTouchControl(button, direction) {
   const start = (event) => {
     touchDirection = direction;
@@ -2187,6 +2209,7 @@ changeNicknameForm.addEventListener("submit", changeNickname);
 changePasswordForm.addEventListener("submit", changePassword);
 resetMyScoreButton.addEventListener("click", resetMyScore);
 deleteMyAccountButton.addEventListener("click", deleteMyAccount);
+bindGuideTooltips();
 bindTouchControl(touchLeftButton, -1);
 bindTouchControl(touchRightButton, 1);
 resetRankingButton.addEventListener("click", resetRankings);
@@ -2199,11 +2222,18 @@ document.addEventListener("selectionchange", () => {
     clearGameSelection(true);
   }
 });
+document.addEventListener("click", (event) => {
+  if (!itemGuide.contains(event.target)) {
+    closeGuideTooltips();
+  }
+});
 
 window.addEventListener("keydown", (event) => {
   if (event.key !== "Escape") {
     return;
   }
+
+  closeGuideTooltips();
 
   if (!playerHistoryModal.hidden) {
     closePlayerHistoryModal();
