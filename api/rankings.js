@@ -1,4 +1,9 @@
-const { requireMethod, sendJson, supabaseRequest } = require("../server/db");
+const {
+  requireAdmin,
+  requireMethod,
+  sendJson,
+  supabaseRequest,
+} = require("../server/db");
 
 const MAX_RANKINGS = 10;
 const MAX_HISTORY = 30;
@@ -28,7 +33,13 @@ function mapAllTimeRanking(user) {
   };
 }
 
-async function sendPlayerHistory(res, userId) {
+async function sendPlayerHistory(req, res, userId) {
+  const admin = await requireAdmin(req, res);
+
+  if (!admin) {
+    return;
+  }
+
   if (!userId) {
     sendJson(res, 400, { message: "플레이어 정보가 올바르지 않습니다." });
     return;
@@ -79,6 +90,7 @@ function buildDailyRankings(scores, users) {
         role: user.role,
         score,
         bestScore: score,
+        gamesPlayed: user.games_played || 0,
         createdAt: scoreRow.created_at,
       });
     }
@@ -98,7 +110,7 @@ module.exports = async function handler(req, res) {
     const userId = url.searchParams.get("userId");
 
     if (userId) {
-      await sendPlayerHistory(res, userId);
+      await sendPlayerHistory(req, res, userId);
       return;
     }
 

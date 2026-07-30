@@ -854,7 +854,7 @@ canvas {
 
 .ranking-list li {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: center;
   min-height: 52px;
@@ -894,6 +894,13 @@ canvas {
 
 .ranking-list .score {
   color: var(--berry);
+}
+
+.ranking-list .plays {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .admin-note {

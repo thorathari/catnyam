@@ -601,14 +601,16 @@ function appendRankingItem(rankValue, accountInfo, scoreValue) {
   const item = document.createElement("li");
   const rank = document.createElement("span");
   const name = document.createElement("span");
+  const plays = document.createElement("span");
   const score = document.createElement("span");
   const account = typeof accountInfo === "object" && accountInfo !== null ? accountInfo : null;
   const username = account?.username || accountInfo;
   name.className = "name";
+  plays.className = "plays";
   score.className = "score";
   rank.textContent = rankValue;
 
-  if (account?.id) {
+  if (account?.id && isAdmin(currentUser)) {
     const nameButton = document.createElement("button");
     nameButton.className = "ranking-name-button";
     nameButton.type = "button";
@@ -621,8 +623,9 @@ function appendRankingItem(rankValue, accountInfo, scoreValue) {
     name.textContent = username;
   }
 
+  plays.textContent = account ? `${account.gamesPlayed || 0}회` : "";
   score.textContent = scoreValue;
-  item.append(rank, name, score);
+  item.append(rank, name, plays, score);
   rankingList.append(item);
 }
 
