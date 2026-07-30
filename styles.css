@@ -541,7 +541,7 @@ canvas {
 }
 
 .guide-group.good {
-  justify-content: flex-end;
+  justify-content: center;
   max-width: 360px;
 }
 
