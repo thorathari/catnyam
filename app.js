@@ -1468,11 +1468,42 @@ function spawnDrop() {
   const kind = getRandomDropKind();
   addDrop(kind);
 
+  spawnExtraChuruDrops();
+  spawnExtraBombDrops();
+}
+
+function spawnExtraChuruDrops() {
   if (isTunaModeActive()) {
     addDrop("gold");
+
+    if (Math.random() < 0.7) {
+      addDrop("gold");
+    }
+
+    return;
   }
 
+  const roll = Math.random();
+
+  if (roll < 0.36) {
+    addDrop("normal");
+  } else if (roll < 0.48) {
+    addDrop("gold");
+  }
+}
+
+function spawnExtraBombDrops() {
   if (isClipperModeActive()) {
+    addDrop("bomb");
+
+    if (Math.random() < 0.7) {
+      addDrop("bomb");
+    }
+
+    return;
+  }
+
+  if (Math.random() < 0.16) {
     addDrop("bomb");
   }
 }
