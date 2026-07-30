@@ -1780,10 +1780,12 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
     const emphasisText = getCatEmphasisBubbleText();
     const bubbleText = getCatBubbleText();
 
+    if (bubbleText) {
+      drawSpeechBubble(width, height, bubbleText);
+    }
+
     if (emphasisText) {
       drawEmphasisBubble(width, height, emphasisText);
-    } else if (bubbleText) {
-      drawSpeechBubble(width, height, bubbleText);
     }
 
     ctx.restore();
@@ -1873,10 +1875,12 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
   const emphasisText = getCatEmphasisBubbleText();
   const bubbleText = getCatBubbleText();
 
+  if (bubbleText) {
+    drawSpeechBubble(width, height, bubbleText);
+  }
+
   if (emphasisText) {
     drawEmphasisBubble(width, height, emphasisText);
-  } else if (bubbleText) {
-    drawSpeechBubble(width, height, bubbleText);
   }
 
   ctx.restore();
@@ -1935,49 +1939,40 @@ function drawSpeechBubble(width, height, text) {
 
 function drawEmphasisBubble(width, height, text) {
   ctx.save();
-  ctx.translate(-width * 0.34, -height * 0.72);
-  ctx.font = "900 22px Jua, Nunito, sans-serif";
+  ctx.translate(width * 0.32, -height * 1.48);
+  ctx.font = "900 21px Jua, Nunito, sans-serif";
   const textWidth = ctx.measureText(text).width;
-  const radiusX = Math.max(52, textWidth / 2 + 22);
-  const radiusY = 32;
-  const points = 18;
-
-  ctx.beginPath();
-  for (let index = 0; index < points; index += 1) {
-    const angle = -Math.PI / 2 + (Math.PI * 2 * index) / points;
-    const spike = index % 2 === 0 ? 1.18 : 0.9;
-    const x = Math.cos(angle) * radiusX * spike;
-    const y = Math.sin(angle) * radiusY * spike;
-
-    if (index === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
-  }
-  ctx.closePath();
+  const bubbleWidth = Math.max(92, textWidth + 42);
+  const bubbleHeight = 42;
+  const bubbleLeft = -bubbleWidth * 0.22;
+  const textX = bubbleLeft + bubbleWidth / 2;
 
   ctx.fillStyle = "rgba(255, 244, 163, 0.78)";
   ctx.strokeStyle = "rgba(239, 111, 143, 0.78)";
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 2;
+  roundRect(bubbleLeft, -bubbleHeight / 2, bubbleWidth, bubbleHeight, 18);
   ctx.fill();
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.moveTo(8, radiusY * 0.68);
-  ctx.lineTo(28, radiusY + 20);
-  ctx.lineTo(-16, radiusY * 0.78);
+  ctx.moveTo(4, bubbleHeight / 2 - 6);
+  ctx.lineTo(-10, bubbleHeight / 2 + 12);
+  ctx.lineTo(24, bubbleHeight / 2 - 6);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
+  ctx.fillStyle = "rgba(255, 255, 255, 0.36)";
+  roundRect(bubbleLeft + 12, -bubbleHeight / 2 + 7, bubbleWidth - 24, 7, 4);
+  ctx.fill();
+
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 4;
   ctx.strokeStyle = "rgba(255, 250, 242, 0.72)";
   ctx.fillStyle = "rgba(217, 75, 87, 0.88)";
-  ctx.strokeText(text, 0, 0);
-  ctx.fillText(text, 0, 0);
+  ctx.strokeText(text, textX, 2);
+  ctx.fillText(text, textX, 2);
   ctx.restore();
 }
 
