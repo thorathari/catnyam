@@ -143,6 +143,10 @@ function createGameState() {
       text: "",
       until: 0,
     },
+    emphasisBubble: {
+      text: "",
+      until: 0,
+    },
     modes: {
       speedUntil: 0,
       hideUntil: 0,
@@ -1268,6 +1272,10 @@ function getDropScore(drop) {
   }
 
   const baseScore = drop.kind === "gold" ? 5 : 2;
+  return baseScore * getScoreMultiplier();
+}
+
+function getScoreMultiplier() {
   let multiplier = 1;
 
   if (isPurrModeActive()) {
@@ -1278,7 +1286,7 @@ function getDropScore(drop) {
     multiplier *= 2;
   }
 
-  return baseScore * multiplier;
+  return multiplier;
 }
 
 function applyModeItem(drop) {
@@ -1302,6 +1310,7 @@ function applyModeItem(drop) {
   if (drop.kind === "hand") {
     game.modes.purrUntil = game.elapsed + 5;
     setCatReaction("good");
+    setMultiplierBubble();
     triggerCanvasHighlight("mode");
     updateModeBadges();
     return true;
@@ -1310,6 +1319,7 @@ function applyModeItem(drop) {
   if (drop.kind === "catnip") {
     game.modes.catnipUntil = game.elapsed + 5;
     setCatReaction("good");
+    setMultiplierBubble();
     setCatBubble("캣닢파워!", 1.6);
     triggerCanvasHighlight("catnip");
     updateModeBadges();
@@ -1330,6 +1340,19 @@ function setCatBubble(text, duration) {
   game.bubble = {
     text,
     until: game.elapsed + duration,
+  };
+}
+
+function setMultiplierBubble() {
+  const multiplier = getScoreMultiplier();
+
+  if (multiplier <= 1) {
+    return;
+  }
+
+  game.emphasisBubble = {
+    text: multiplier >= 4 ? "4배!!!" : "2배!",
+    until: game.elapsed + 1.15,
   };
 }
 
@@ -1378,6 +1401,10 @@ function getCatBubbleText() {
   }
 
   return isPurrModeActive() ? "골골골골~" : "";
+}
+
+function getCatEmphasisBubbleText() {
+  return game.emphasisBubble?.until >= game.elapsed ? game.emphasisBubble.text : "";
 }
 
 function getCatReaction() {
@@ -1446,6 +1473,10 @@ function clearModes() {
   game.modes.purrUntil = 0;
   game.modes.catnipUntil = 0;
   game.bubble = {
+    text: "",
+    until: 0,
+  };
+  game.emphasisBubble = {
     text: "",
     until: 0,
   };
@@ -1746,9 +1777,12 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
 
   if (reaction === "box") {
     drawBoxCat(width, height);
+    const emphasisText = getCatEmphasisBubbleText();
     const bubbleText = getCatBubbleText();
 
-    if (bubbleText) {
+    if (emphasisText) {
+      drawEmphasisBubble(width, height, emphasisText);
+    } else if (bubbleText) {
       drawSpeechBubble(width, height, bubbleText);
     }
 
@@ -1836,9 +1870,12 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
 
   ctx.restore();
 
+  const emphasisText = getCatEmphasisBubbleText();
   const bubbleText = getCatBubbleText();
 
-  if (bubbleText) {
+  if (emphasisText) {
+    drawEmphasisBubble(width, height, emphasisText);
+  } else if (bubbleText) {
     drawSpeechBubble(width, height, bubbleText);
   }
 
@@ -1893,6 +1930,54 @@ function drawSpeechBubble(width, height, text) {
   ctx.fillStyle = "#ef6f8f";
   ctx.textAlign = "center";
   ctx.fillText(text, textX, -3);
+  ctx.restore();
+}
+
+function drawEmphasisBubble(width, height, text) {
+  ctx.save();
+  ctx.translate(width * 0.28, -height * 0.68);
+  ctx.font = "900 22px Jua, Nunito, sans-serif";
+  const textWidth = ctx.measureText(text).width;
+  const radiusX = Math.max(52, textWidth / 2 + 22);
+  const radiusY = 32;
+  const points = 18;
+
+  ctx.beginPath();
+  for (let index = 0; index < points; index += 1) {
+    const angle = -Math.PI / 2 + (Math.PI * 2 * index) / points;
+    const spike = index % 2 === 0 ? 1.18 : 0.9;
+    const x = Math.cos(angle) * radiusX * spike;
+    const y = Math.sin(angle) * radiusY * spike;
+
+    if (index === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+  ctx.closePath();
+
+  ctx.fillStyle = "#fff4a3";
+  ctx.strokeStyle = "#ef6f8f";
+  ctx.lineWidth = 4;
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-8, radiusY * 0.68);
+  ctx.lineTo(-28, radiusY + 20);
+  ctx.lineTo(16, radiusY * 0.78);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = "rgba(255, 250, 242, 0.9)";
+  ctx.fillStyle = "#d94b57";
+  ctx.strokeText(text, 0, 0);
+  ctx.fillText(text, 0, 0);
   ctx.restore();
 }
 
