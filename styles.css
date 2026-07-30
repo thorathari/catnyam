@@ -1020,7 +1020,7 @@ canvas {
 @media (max-width: 560px) {
   .shell {
     width: min(100% - 20px, 1180px);
-    padding: 18px 0;
+    padding: 12px 0;
   }
 
   .topbar,
@@ -1037,8 +1037,57 @@ canvas {
     justify-content: space-between;
   }
 
+  .game-stage {
+    padding: 10px;
+  }
+
   .hud {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .hud div {
+    min-height: 58px;
+    padding: 8px 6px;
+  }
+
+  .hud span {
+    font-size: 0.68rem;
+    line-height: 1.1;
+  }
+
+  .hud strong {
+    margin-top: 3px;
+    font-size: 1.26rem;
+  }
+
+  .mode-strip {
+    gap: 5px;
+    min-height: 24px;
+    margin: -2px 0 6px;
+  }
+
+  .mode-badge {
+    min-height: 22px;
+    padding: 0 8px;
+    font-size: 0.7rem;
+  }
+
+  .game-overlay {
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .game-overlay .primary-button {
+    min-width: 124px;
+    min-height: 36px;
+    padding: 0 14px;
+    font-size: 0.86rem;
+  }
+
+  .overlay-result {
+    font-size: 1.32rem;
   }
 
   .auth-actions button {
@@ -1046,12 +1095,48 @@ canvas {
   }
 
   .touch-button {
-    min-height: 70px;
-    font-size: 2.4rem;
+    min-height: 56px;
+    font-size: 2rem;
+  }
+
+  .touch-controls {
+    gap: 8px;
+    margin-top: 8px;
   }
 
   .item-guide {
-    grid-template-columns: repeat(2, max-content);
+    grid-template-columns: repeat(3, max-content);
+    gap: 5px 6px;
+    font-size: 0.72rem;
+  }
+
+  .item-guide span {
+    min-height: 24px;
+    gap: 4px;
+    padding: 0 7px;
+  }
+
+  .guide-icon {
+    width: 10px;
+    height: 16px;
+    border-radius: 4px;
+  }
+
+  .guide-icon.bomb,
+  .guide-icon.box,
+  .guide-icon.catnip {
+    width: 14px;
+    height: 14px;
+  }
+
+  .guide-icon.toy {
+    width: 16px;
+    height: 11px;
+  }
+
+  .guide-icon.hand {
+    width: 14px;
+    height: 16px;
   }
 
   .pause-actions {
