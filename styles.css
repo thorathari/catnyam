@@ -1231,10 +1231,12 @@ canvas {
   }
 
   .guide-group.bad {
-    flex-direction: column;
-    max-width: min(150px, 100%);
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    max-width: min(220px, 100%);
     min-height: 0;
-    padding-top: 2px;
+    padding-top: 4px;
     padding-left: 0;
     border-top: 1px solid rgba(37, 33, 29, 0.14);
     border-left: 0;
