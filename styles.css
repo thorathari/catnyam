@@ -345,6 +345,15 @@ button:disabled {
   animation: borderSparkle 0.7s ease-in-out infinite alternate;
 }
 
+.canvas-wrap.danger-highlight::after {
+  border-color: rgba(239, 111, 143, 0.92);
+  box-shadow:
+    0 0 0 3px rgba(255, 250, 242, 0.7),
+    0 0 22px rgba(239, 111, 143, 0.95),
+    inset 0 0 20px rgba(239, 111, 143, 0.5);
+  animation: dangerSparkle 0.62s ease-in-out infinite alternate;
+}
+
 .canvas-wrap.catnip-highlight::after {
   border-color: rgba(96, 154, 60, 0.95);
   box-shadow:
@@ -363,6 +372,18 @@ button:disabled {
   to {
     opacity: 1;
     transform: scale(1.006);
+  }
+}
+
+@keyframes dangerSparkle {
+  from {
+    opacity: 0.72;
+    transform: scale(0.996);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1.007);
   }
 }
 

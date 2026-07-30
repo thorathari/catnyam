@@ -782,7 +782,7 @@ function stopGame() {
   game.running = false;
   game.paused = false;
   pauseButton.hidden = true;
-  canvasWrap.classList.remove("mode-highlight", "catnip-highlight");
+  canvasWrap.classList.remove("mode-highlight", "danger-highlight", "catnip-highlight");
   clearMovementInput();
 }
 
@@ -1018,7 +1018,7 @@ function applyModeItem(drop) {
   if (drop.kind === "box") {
     game.modes.hideUntil = game.elapsed + 3;
     setCatBubble("건들지마라냥!", 3);
-    triggerCanvasHighlight("mode");
+    triggerCanvasHighlight("danger");
     updateModeBadges();
     return true;
   }
@@ -1058,9 +1058,14 @@ function setCatBubble(text, duration) {
 }
 
 function triggerCanvasHighlight(type) {
-  canvasWrap.classList.remove("mode-highlight", "catnip-highlight");
+  canvasWrap.classList.remove("mode-highlight", "danger-highlight", "catnip-highlight");
   void canvasWrap.offsetWidth;
-  canvasWrap.classList.add(type === "catnip" ? "catnip-highlight" : "mode-highlight");
+  const className = type === "catnip"
+    ? "catnip-highlight"
+    : type === "danger"
+      ? "danger-highlight"
+      : "mode-highlight";
+  canvasWrap.classList.add(className);
 }
 
 function addScorePopup(scoreDelta) {
@@ -1169,8 +1174,10 @@ function clearModes() {
 
 function updateCanvasHighlight() {
   const catnipActive = isCatnipModeActive();
-  const modeActive = !catnipActive && (isSpeedModeActive() || isHideModeActive() || isPurrModeActive());
+  const dangerActive = !catnipActive && isHideModeActive();
+  const modeActive = !catnipActive && !dangerActive && (isSpeedModeActive() || isPurrModeActive());
   canvasWrap.classList.toggle("catnip-highlight", catnipActive);
+  canvasWrap.classList.toggle("danger-highlight", dangerActive);
   canvasWrap.classList.toggle("mode-highlight", modeActive);
 }
 
