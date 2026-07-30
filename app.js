@@ -23,6 +23,8 @@ const overlayResult = document.querySelector("#overlayResult");
 const touchLeftButton = document.querySelector("#touchLeftButton");
 const touchRightButton = document.querySelector("#touchRightButton");
 const rankingList = document.querySelector("#rankingList");
+const dailyRankingButton = document.querySelector("#dailyRankingButton");
+const allTimeRankingButton = document.querySelector("#allTimeRankingButton");
 const accountModal = document.querySelector("#accountModal");
 const closeAccountModalButton = document.querySelector("#closeAccountModalButton");
 const passwordTabButton = document.querySelector("#passwordTabButton");
@@ -30,10 +32,13 @@ const adminTabButton = document.querySelector("#adminTabButton");
 const passwordTabPanel = document.querySelector("#passwordTabPanel");
 const adminTabPanel = document.querySelector("#adminTabPanel");
 const tabList = document.querySelector(".tab-list");
+const changeUsernameForm = document.querySelector("#changeUsernameForm");
+const newUsernameInput = document.querySelector("#newUsernameInput");
 const changePasswordForm = document.querySelector("#changePasswordForm");
 const currentPasswordInput = document.querySelector("#currentPasswordInput");
 const newPasswordInput = document.querySelector("#newPasswordInput");
 const newPasswordConfirmInput = document.querySelector("#newPasswordConfirmInput");
+const usernameMessage = document.querySelector("#usernameMessage");
 const passwordMessage = document.querySelector("#passwordMessage");
 const adminList = document.querySelector("#adminList");
 const adminMessage = document.querySelector("#adminMessage");
@@ -54,6 +59,11 @@ let animationId = null;
 let lastFrame = 0;
 let nextDropAt = 0;
 let touchDirection = 0;
+let rankingMode = "daily";
+let rankingData = {
+  daily: [],
+  allTime: [],
+};
 let game = createGameState();
 
 async function requestApi(path, options = {}) {
@@ -102,6 +112,10 @@ function createGameState() {
       type: "neutral",
       until: 0,
     },
+    bubble: {
+      text: "",
+      until: 0,
+    },
     modes: {
       speedUntil: 0,
       hideUntil: 0,
@@ -134,12 +148,20 @@ function setMessage(message, isGood = false) {
   setFieldMessage(authMessage, message, isGood);
 }
 
+function setUsernameMessage(message, isGood = false) {
+  setFieldMessage(usernameMessage, message, isGood);
+}
+
 function setPasswordMessage(message, isGood = false) {
   setFieldMessage(passwordMessage, message, isGood);
 }
 
 function setAdminMessage(message, isGood = false) {
   setFieldMessage(adminMessage, message, isGood);
+}
+
+function updateProfileName() {
+  currentUserName.textContent = isAdmin(currentUser) ? `${currentUser.username} 관리자` : currentUser.username;
 }
 
 function setAuthMode(mode) {
@@ -166,11 +188,14 @@ function showGameFor(user) {
   authPanel.hidden = true;
   gamePanel.hidden = false;
   profileBox.hidden = false;
-  currentUserName.textContent = isAdmin(currentUser) ? `${currentUser.username} 관리자` : currentUser.username;
+  updateProfileName();
   scoreText.textContent = "0";
   timeText.textContent = GAME_SECONDS;
   bestText.textContent = currentUser.bestScore || 0;
+  changeUsernameForm.reset();
   changePasswordForm.reset();
+  newUsernameInput.value = currentUser.username;
+  setUsernameMessage("");
   setPasswordMessage("");
   setAdminMessage("");
   renderRanking();
@@ -186,7 +211,9 @@ function showAuth() {
   gamePanel.hidden = true;
   profileBox.hidden = true;
   closeAccountModal();
+  changeUsernameForm.reset();
   changePasswordForm.reset();
+  setUsernameMessage("");
   setPasswordMessage("");
   setAdminMessage("");
   setAuthMode("login");
@@ -260,6 +287,44 @@ async function logout() {
   showAuth();
 }
 
+async function changeUsername(event) {
+  event.preventDefault();
+
+  if (!currentUser) {
+    return;
+  }
+
+  const username = normalizeName(newUsernameInput.value);
+
+  if (username.length < 2) {
+    setUsernameMessage("아이디는 2글자 이상 입력해주세요.");
+    return;
+  }
+
+  if (username === currentUser.username) {
+    setUsernameMessage("현재 아이디와 같습니다.", true);
+    return;
+  }
+
+  try {
+    const data = await requestApi("/api/change-username", {
+      method: "POST",
+      body: { username },
+    });
+    currentUser = data.user;
+    newUsernameInput.value = currentUser.username;
+    updateProfileName();
+    setUsernameMessage("아이디가 변경되었습니다.", true);
+    renderRanking();
+
+    if (!adminTabPanel.hidden) {
+      renderAdminList();
+    }
+  } catch (error) {
+    setUsernameMessage(error.message);
+  }
+}
+
 async function changePassword(event) {
   event.preventDefault();
 
@@ -302,11 +367,14 @@ function openAccountModal() {
   adminTabButton.hidden = !canManageAccounts;
   tabList.classList.toggle("single-tab", !canManageAccounts);
   setAccountTab("password");
+  changeUsernameForm.reset();
   changePasswordForm.reset();
+  newUsernameInput.value = currentUser.username;
+  setUsernameMessage("");
   setPasswordMessage("");
   setAdminMessage("");
   accountModal.hidden = false;
-  currentPasswordInput.focus();
+  newUsernameInput.focus();
 }
 
 function closeAccountModal() {
@@ -337,19 +405,39 @@ async function renderRanking() {
 
   try {
     const data = await requestApi("/api/rankings");
-    const ranking = data.rankings || [];
-
-    if (ranking.length === 0) {
-      appendRankingItem("-", "아직 기록이 없습니다", 0);
-      return;
-    }
-
-    ranking.forEach((account, index) => {
-      appendRankingItem(index + 1, account.username, account.bestScore || 0);
-    });
+    rankingData = {
+      daily: data.dailyRankings || [],
+      allTime: data.allTimeRankings || data.rankings || [],
+    };
+    renderRankingList();
   } catch {
     appendRankingItem("-", "랭킹 서버 연결 필요", 0);
   }
+}
+
+function setRankingMode(mode) {
+  rankingMode = mode;
+  const isDaily = mode === "daily";
+  dailyRankingButton.classList.toggle("active", isDaily);
+  allTimeRankingButton.classList.toggle("active", !isDaily);
+  dailyRankingButton.setAttribute("aria-selected", String(isDaily));
+  allTimeRankingButton.setAttribute("aria-selected", String(!isDaily));
+  renderRankingList();
+}
+
+function renderRankingList() {
+  rankingList.innerHTML = "";
+  const ranking = rankingMode === "daily" ? rankingData.daily : rankingData.allTime;
+  const emptyMessage = rankingMode === "daily" ? "오늘 기록이 없습니다" : "아직 기록이 없습니다";
+
+  if (ranking.length === 0) {
+    appendRankingItem("-", emptyMessage, 0);
+    return;
+  }
+
+  ranking.forEach((account, index) => {
+    appendRankingItem(index + 1, account.username, account.score ?? account.bestScore ?? 0);
+  });
 }
 
 function appendRankingItem(rankValue, username, scoreValue) {
@@ -398,6 +486,9 @@ function renderAdminAccount(account) {
   const main = document.createElement("div");
   const name = document.createElement("span");
   const meta = document.createElement("span");
+  const renameForm = document.createElement("form");
+  const renameInput = document.createElement("input");
+  const renameButton = document.createElement("button");
   const actions = document.createElement("div");
   const resetButton = document.createElement("button");
   const deleteButton = document.createElement("button");
@@ -406,12 +497,20 @@ function renderAdminAccount(account) {
   main.className = "admin-account-main";
   name.className = "admin-account-name";
   meta.className = "admin-account-meta";
+  renameForm.className = "admin-rename-row";
   actions.className = "admin-actions";
+  renameButton.className = "secondary-button";
   resetButton.className = "secondary-button";
   deleteButton.className = "danger-button";
 
   name.textContent = account.username;
   meta.textContent = `최고 ${account.bestScore || 0}점 · ${account.gamesPlayed || 0}회`;
+  renameInput.type = "text";
+  renameInput.maxLength = 16;
+  renameInput.value = account.username;
+  renameInput.setAttribute("aria-label", `${account.username} 새 아이디`);
+  renameButton.type = "submit";
+  renameButton.textContent = "아이디 변경";
   resetButton.type = "button";
   deleteButton.type = "button";
   resetButton.textContent = "비밀번호 초기화";
@@ -430,9 +529,43 @@ function renderAdminAccount(account) {
     deleteButton.addEventListener("click", () => deleteAccount(account.id, account.username));
   }
 
+  renameForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    renameAccount(account.id, account.username, renameInput.value);
+  });
+
+  renameForm.append(renameInput, renameButton);
   actions.append(resetButton, deleteButton);
-  item.append(main, meta, actions);
+  item.append(main, meta, renameForm, actions);
   adminList.append(item);
+}
+
+async function renameAccount(userId, currentUsername, nextUsername) {
+  const username = normalizeName(nextUsername);
+
+  if (username.length < 2) {
+    setAdminMessage("아이디는 2글자 이상 입력해주세요.");
+    return;
+  }
+
+  try {
+    const data = await requestApi("/api/admin/rename-user", {
+      method: "POST",
+      body: { userId, username },
+    });
+
+    if (currentUser?.id === data.user.id) {
+      currentUser = data.user;
+      newUsernameInput.value = currentUser.username;
+      updateProfileName();
+    }
+
+    renderRanking();
+    await renderAdminList();
+    setAdminMessage(`${currentUsername} 아이디를 ${data.user.username}(으)로 변경했습니다.`, true);
+  } catch (error) {
+    setAdminMessage(error.message);
+  }
 }
 
 async function resetAccountPassword(userId, username) {
@@ -650,12 +783,14 @@ function applyModeItem(drop) {
   if (drop.kind === "toy") {
     game.modes.speedUntil = game.elapsed + 5;
     setCatReaction("good");
+    setCatBubble("우다다모드!", 1.5);
     updateModeBadges();
     return true;
   }
 
   if (drop.kind === "box") {
     game.modes.hideUntil = game.elapsed + 3;
+    setCatBubble("건들지마라냥!", 3);
     updateModeBadges();
     return true;
   }
@@ -675,6 +810,21 @@ function setCatReaction(type) {
     type,
     until: game.elapsed + 0.45,
   };
+}
+
+function setCatBubble(text, duration) {
+  game.bubble = {
+    text,
+    until: game.elapsed + duration,
+  };
+}
+
+function getCatBubbleText() {
+  if (game.bubble?.text && game.bubble.until >= game.elapsed) {
+    return game.bubble.text;
+  }
+
+  return isPurrModeActive() ? "골골골골~" : "";
 }
 
 function getCatReaction() {
@@ -719,6 +869,10 @@ function clearModes() {
   game.modes.speedUntil = 0;
   game.modes.hideUntil = 0;
   game.modes.purrUntil = 0;
+  game.bubble = {
+    text: "",
+    until: 0,
+  };
   updateModeBadges();
 }
 
@@ -844,34 +998,47 @@ function drawBomb(drop) {
 }
 
 function drawToy(drop) {
-  const outer = drop.width / 2;
-  const inner = outer * 0.45;
+  const bodyWidth = drop.width * 0.82;
+  const bodyHeight = drop.height * 0.52;
 
   ctx.fillStyle = "rgba(142, 215, 245, 0.26)";
   ctx.beginPath();
-  ctx.arc(0, 0, outer + 7, 0, Math.PI * 2);
+  ctx.arc(0, 1, drop.width * 0.62, 0, Math.PI * 2);
   ctx.fill();
+
+  ctx.strokeStyle = "#746b62";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(bodyWidth * 0.42, 4);
+  ctx.quadraticCurveTo(bodyWidth * 0.72, 8, bodyWidth * 0.86, -8);
+  ctx.stroke();
 
   ctx.fillStyle = "#8ed7f5";
   ctx.beginPath();
-  for (let index = 0; index < 10; index += 1) {
-    const radius = index % 2 === 0 ? outer : inner;
-    const angle = -Math.PI / 2 + index * Math.PI / 5;
-    const px = Math.cos(angle) * radius;
-    const py = Math.sin(angle) * radius;
+  ctx.ellipse(-2, 4, bodyWidth * 0.42, bodyHeight * 0.42, 0, 0, Math.PI * 2);
+  ctx.fill();
 
-    if (index === 0) {
-      ctx.moveTo(px, py);
-    } else {
-      ctx.lineTo(px, py);
-    }
-  }
-  ctx.closePath();
+  ctx.beginPath();
+  ctx.arc(-12, -10, 6, 0, Math.PI * 2);
+  ctx.arc(-3, -12, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ffbed0";
+  ctx.beginPath();
+  ctx.arc(-12, -10, 3, 0, Math.PI * 2);
+  ctx.arc(-3, -12, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#332923";
+  ctx.beginPath();
+  ctx.arc(-11, 0, 2.2, 0, Math.PI * 2);
+  ctx.arc(-bodyWidth * 0.42, 3, 2.5, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = "#fffaf2";
   ctx.beginPath();
-  ctx.arc(0, 0, 5, 0, Math.PI * 2);
+  ctx.ellipse(3, 12, 8, 3, 0, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -933,6 +1100,12 @@ function drawCat(x, y, width, height, reaction = "neutral") {
 
   if (reaction === "box") {
     drawBoxCat(width, height);
+    const bubbleText = getCatBubbleText();
+
+    if (bubbleText) {
+      drawSpeechBubble(width, height, bubbleText);
+    }
+
     ctx.restore();
     return;
   }
@@ -1012,8 +1185,10 @@ function drawCat(x, y, width, height, reaction = "neutral") {
     ctx.stroke();
   });
 
-  if (isPurrModeActive()) {
-    drawPurrBubble(width, height);
+  const bubbleText = getCatBubbleText();
+
+  if (bubbleText) {
+    drawSpeechBubble(width, height, bubbleText);
   }
 
   ctx.restore();
@@ -1046,11 +1221,16 @@ function drawBoxCat(width, height) {
   ctx.stroke();
 }
 
-function drawPurrBubble(width, height) {
+function drawSpeechBubble(width, height, text) {
   ctx.save();
   ctx.translate(width * 0.32, -height * 0.54);
+  ctx.font = "800 16px Jua, Nunito, sans-serif";
+  const bubbleWidth = Math.max(112, ctx.measureText(text).width + 30);
+  const bubbleLeft = -bubbleWidth * 0.22;
+  const textX = bubbleLeft + bubbleWidth / 2;
+
   ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
-  roundRect(-12, -26, 112, 36, 8);
+  roundRect(bubbleLeft, -26, bubbleWidth, 36, 8);
   ctx.fill();
   ctx.beginPath();
   ctx.moveTo(5, 8);
@@ -1061,8 +1241,7 @@ function drawPurrBubble(width, height) {
 
   ctx.fillStyle = "#ef6f8f";
   ctx.textAlign = "center";
-  ctx.font = "800 16px Nunito, sans-serif";
-  ctx.fillText("골골골골~", 44, -3);
+  ctx.fillText(text, textX, -3);
   ctx.restore();
 }
 
@@ -1194,7 +1373,10 @@ accountModal.addEventListener("click", (event) => {
 });
 passwordTabButton.addEventListener("click", () => setAccountTab("password"));
 adminTabButton.addEventListener("click", () => setAccountTab("admin"));
+dailyRankingButton.addEventListener("click", () => setRankingMode("daily"));
+allTimeRankingButton.addEventListener("click", () => setRankingMode("allTime"));
 startButton.addEventListener("click", startGame);
+changeUsernameForm.addEventListener("submit", changeUsername);
 changePasswordForm.addEventListener("submit", changePassword);
 bindTouchControl(touchLeftButton, -1);
 bindTouchControl(touchRightButton, 1);

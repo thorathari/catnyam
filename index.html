@@ -82,9 +82,9 @@
               <span><i class="guide-icon normal"></i>츄르 +2</span>
               <span><i class="guide-icon gold"></i>황금 츄르 +5</span>
               <span><i class="guide-icon bomb"></i>폭탄 -3</span>
-              <span><i class="guide-icon toy"></i>장난감 우다다 5초</span>
-              <span><i class="guide-icon box"></i>상자 숨숨집 3초</span>
-              <span><i class="guide-icon hand"></i>집사의 손 2배 5초</span>
+              <span><i class="guide-icon toy"></i>장난감</span>
+              <span><i class="guide-icon box"></i>숨숨집</span>
+              <span><i class="guide-icon hand"></i>집사의 손길</span>
             </div>
           </div>
         </div>
@@ -101,6 +101,10 @@
               <p class="eyebrow">leaderboard</p>
               <h2>츄르 랭킹</h2>
             </div>
+          </div>
+          <div class="ranking-tabs" role="tablist" aria-label="랭킹 종류">
+            <button class="ranking-tab active" id="dailyRankingButton" type="button" role="tab" aria-selected="true">일일랭킹</button>
+            <button class="ranking-tab" id="allTimeRankingButton" type="button" role="tab" aria-selected="false">전체랭킹</button>
           </div>
           <ol class="ranking-list" id="rankingList"></ol>
         </section>
@@ -123,7 +127,16 @@
         </div>
 
         <section class="tab-panel" id="passwordTabPanel" role="tabpanel" aria-labelledby="passwordTabButton">
-          <form class="account-form" id="changePasswordForm">
+          <form class="account-form username-form" id="changeUsernameForm">
+            <label>
+              <span>새 아이디</span>
+              <input id="newUsernameInput" name="newUsername" type="text" autocomplete="username" maxlength="16" required>
+            </label>
+            <p class="form-message" id="usernameMessage" role="status"></p>
+            <button class="secondary-button" type="submit">아이디 변경</button>
+          </form>
+
+          <form class="account-form password-form" id="changePasswordForm">
             <label>
               <span>현재 비밀번호</span>
               <input id="currentPasswordInput" name="currentPassword" type="password" autocomplete="current-password" maxlength="24" required>
