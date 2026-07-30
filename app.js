@@ -1915,7 +1915,9 @@ function drawBoxCat(width, height) {
 
 function drawSpeechBubble(width, height, text) {
   ctx.save();
-  ctx.translate(width * 0.32, -height * 0.54);
+  const bubbleWidthBasis = Math.min(width, game.cat.width);
+  const bubbleHeightBasis = Math.min(height, game.cat.height);
+  ctx.translate(bubbleWidthBasis * 0.32, -bubbleHeightBasis * 0.54);
   ctx.font = "800 16px Jua, Nunito, sans-serif";
   const bubbleWidth = Math.max(112, ctx.measureText(text).width + 30);
   const bubbleLeft = -bubbleWidth * 0.22;
@@ -1939,31 +1941,39 @@ function drawSpeechBubble(width, height, text) {
 
 function drawEmphasisBubble(width, height, text) {
   ctx.save();
-  ctx.translate(width * 0.32, -height * 1.48);
+  const bubbleWidthBasis = Math.min(width, game.cat.width);
+  const bubbleHeightBasis = Math.min(height, game.cat.height);
+  ctx.translate(bubbleWidthBasis * 0.32, -bubbleHeightBasis * 0.54 - 56);
   ctx.font = "900 21px Jua, Nunito, sans-serif";
   const textWidth = ctx.measureText(text).width;
-  const bubbleWidth = Math.max(92, textWidth + 42);
-  const bubbleHeight = 42;
-  const bubbleLeft = -bubbleWidth * 0.22;
-  const textX = bubbleLeft + bubbleWidth / 2;
+  const radiusX = Math.max(48, textWidth / 2 + 21);
+  const radiusY = 28;
+  const points = 18;
+
+  ctx.beginPath();
+  for (let index = 0; index < points; index += 1) {
+    const angle = -Math.PI / 2 + (Math.PI * 2 * index) / points;
+    const spike = index % 2 === 0 ? 1.1 : 0.86;
+    const x = Math.cos(angle) * radiusX * spike;
+    const y = Math.sin(angle) * radiusY * spike;
+
+    if (index === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+  ctx.closePath();
 
   ctx.fillStyle = "rgba(255, 244, 163, 0.78)";
   ctx.strokeStyle = "rgba(239, 111, 143, 0.78)";
   ctx.lineWidth = 2;
-  roundRect(bubbleLeft, -bubbleHeight / 2, bubbleWidth, bubbleHeight, 18);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.beginPath();
-  ctx.moveTo(4, bubbleHeight / 2 - 6);
-  ctx.lineTo(-10, bubbleHeight / 2 + 12);
-  ctx.lineTo(24, bubbleHeight / 2 - 6);
-  ctx.closePath();
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = "rgba(255, 255, 255, 0.36)";
-  roundRect(bubbleLeft + 12, -bubbleHeight / 2 + 7, bubbleWidth - 24, 7, 4);
+  ctx.beginPath();
+  ctx.ellipse(-radiusX * 0.18, -radiusY * 0.36, radiusX * 0.46, 5, -0.08, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.textAlign = "center";
@@ -1971,8 +1981,8 @@ function drawEmphasisBubble(width, height, text) {
   ctx.lineWidth = 4;
   ctx.strokeStyle = "rgba(255, 250, 242, 0.72)";
   ctx.fillStyle = "rgba(217, 75, 87, 0.88)";
-  ctx.strokeText(text, textX, 2);
-  ctx.fillText(text, textX, 2);
+  ctx.strokeText(text, 0, 1);
+  ctx.fillText(text, 0, 1);
   ctx.restore();
 }
 
