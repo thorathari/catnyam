@@ -1935,7 +1935,7 @@ function drawSpeechBubble(width, height, text) {
 
 function drawEmphasisBubble(width, height, text) {
   ctx.save();
-  ctx.translate(width * 0.28, -height * 0.68);
+  ctx.translate(-width * 0.34, -height * 0.72);
   ctx.font = "900 22px Jua, Nunito, sans-serif";
   const textWidth = ctx.measureText(text).width;
   const radiusX = Math.max(52, textWidth / 2 + 22);
@@ -1957,16 +1957,16 @@ function drawEmphasisBubble(width, height, text) {
   }
   ctx.closePath();
 
-  ctx.fillStyle = "#fff4a3";
-  ctx.strokeStyle = "#ef6f8f";
+  ctx.fillStyle = "rgba(255, 244, 163, 0.78)";
+  ctx.strokeStyle = "rgba(239, 111, 143, 0.78)";
   ctx.lineWidth = 4;
   ctx.fill();
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.moveTo(-8, radiusY * 0.68);
-  ctx.lineTo(-28, radiusY + 20);
-  ctx.lineTo(16, radiusY * 0.78);
+  ctx.moveTo(8, radiusY * 0.68);
+  ctx.lineTo(28, radiusY + 20);
+  ctx.lineTo(-16, radiusY * 0.78);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
@@ -1974,8 +1974,8 @@ function drawEmphasisBubble(width, height, text) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineWidth = 5;
-  ctx.strokeStyle = "rgba(255, 250, 242, 0.9)";
-  ctx.fillStyle = "#d94b57";
+  ctx.strokeStyle = "rgba(255, 250, 242, 0.72)";
+  ctx.fillStyle = "rgba(217, 75, 87, 0.88)";
   ctx.strokeText(text, 0, 0);
   ctx.fillText(text, 0, 0);
   ctx.restore();
