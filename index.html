@@ -62,82 +62,94 @@
     </section>
 
     <section class="game-layout" id="gamePanel" hidden>
-      <div class="game-stage">
-        <div class="hud" aria-label="현재 게임 상태">
-          <div>
-            <span>점수</span>
-            <strong id="scoreText">0</strong>
-          </div>
-          <div>
-            <span>남은 시간</span>
-            <strong id="timeText">45</strong>
-          </div>
-          <div>
-            <span>최고 기록</span>
-            <strong id="bestText">0</strong>
-          </div>
-        </div>
-        <div class="mode-strip" aria-label="활성 모드">
-          <span class="mode-badge speed" id="speedModeBadge" hidden>우다다</span>
-          <span class="mode-badge hide" id="hideModeBadge" hidden>숨숨집</span>
-          <span class="mode-badge purr" id="purrModeBadge" hidden>골골송</span>
-          <span class="mode-badge catnip" id="catnipModeBadge" hidden>캣닢</span>
-          <span class="mode-badge tuna" id="tunaModeBadge" hidden>애교</span>
-          <span class="mode-badge clipper" id="clipperModeBadge" hidden>위이잉</span>
-        </div>
-        <div class="canvas-wrap" id="canvasWrap">
-          <canvas id="gameCanvas" width="900" height="560" aria-label="고양이가 떨어지는 츄르를 잡는 게임"></canvas>
-          <button class="pause-button" id="pauseButton" type="button" aria-label="일시정지" hidden>
-            <span></span>
-            <span></span>
-          </button>
-          <div class="game-overlay" id="gameOverlay">
-            <p class="overlay-result" id="overlayResult" hidden></p>
-            <button class="primary-button" id="startButton" type="button">게임 시작</button>
-            <div class="pause-actions" id="pauseActions" hidden>
-              <button class="pause-action-button restart" id="pauseRestartButton" type="button">다시하기</button>
-              <button class="pause-action-button home" id="pauseHomeButton" type="button">홈으로</button>
-              <button class="pause-action-button resume" id="resumeButton" type="button">계속하기</button>
+      <div class="play-column">
+        <div class="game-stage">
+          <div class="hud" aria-label="현재 게임 상태">
+            <div>
+              <span>점수</span>
+              <strong id="scoreText">0</strong>
             </div>
-            <div class="item-guide" id="itemGuide" aria-label="아이템별 점수와 효과">
-              <div class="guide-group good" aria-label="득점과 버프 아이템">
-                <button class="guide-item good" type="button" data-tooltip="기본 득점 아이템입니다.">
-                  <i class="guide-icon normal"></i>츄르 +2
-                </button>
-                <button class="guide-item good" type="button" data-tooltip="기본 츄르보다 점수가 높습니다.">
-                  <i class="guide-icon gold"></i>황금 츄르 +5
-                </button>
-                <button class="guide-item good" type="button" data-tooltip="5초 동안 이동속도가 빨라집니다.">
-                  <i class="guide-icon toy"></i>장난감
-                </button>
-                <button class="guide-item good" type="button" data-tooltip="5초 동안 츄르 점수가 2배가 됩니다.">
-                  <i class="guide-icon hand"></i>집사의 손길
-                </button>
-                <button class="guide-item good" type="button" data-tooltip="5초 동안 커지고 무적, 츄르 점수도 2배가 됩니다.">
-                  <i class="guide-icon catnip"></i>캣닢
-                </button>
-                <button class="guide-item good" type="button" data-tooltip="1점을 얻고 5초 동안 황금 츄르가 더 자주 나옵니다.">
-                  <i class="guide-icon tuna"></i>참치캔 +1
-                </button>
-              </div>
-              <div class="guide-group bad" aria-label="감점과 디버프 아이템">
-                <button class="guide-item bad" type="button" data-tooltip="먹으면 3점이 깎입니다.">
-                  <i class="guide-icon bomb"></i>폭탄 -3
-                </button>
-                <button class="guide-item bad" type="button" data-tooltip="3초 동안 아무 아이템도 먹지 못합니다.">
-                  <i class="guide-icon box"></i>숨숨집
-                </button>
-                <button class="guide-item bad" type="button" data-tooltip="1점이 깎이고 5초 동안 폭탄이 더 자주 나옵니다.">
-                  <i class="guide-icon clipper"></i>바리깡 -1
-                </button>
-              </div>
+            <div>
+              <span>남은 시간</span>
+              <strong id="timeText">45</strong>
+            </div>
+            <div>
+              <span>최고 기록</span>
+              <strong id="bestText">0</strong>
             </div>
           </div>
+          <div class="mode-strip" aria-label="활성 모드">
+            <span class="mode-badge speed" id="speedModeBadge" hidden>우다다</span>
+            <span class="mode-badge hide" id="hideModeBadge" hidden>숨숨집</span>
+            <span class="mode-badge purr" id="purrModeBadge" hidden>골골송</span>
+            <span class="mode-badge catnip" id="catnipModeBadge" hidden>캣닢</span>
+            <span class="mode-badge tuna" id="tunaModeBadge" hidden>애교</span>
+            <span class="mode-badge clipper" id="clipperModeBadge" hidden>위이잉</span>
+          </div>
+          <div class="canvas-wrap" id="canvasWrap">
+            <canvas id="gameCanvas" width="900" height="560" aria-label="고양이가 떨어지는 츄르를 잡는 게임"></canvas>
+            <button class="pause-button" id="pauseButton" type="button" aria-label="일시정지" hidden>
+              <span></span>
+              <span></span>
+            </button>
+            <div class="game-overlay" id="gameOverlay">
+              <p class="overlay-result" id="overlayResult" hidden></p>
+              <button class="primary-button" id="startButton" type="button">게임 시작</button>
+              <div class="pause-actions" id="pauseActions" hidden>
+                <button class="pause-action-button restart" id="pauseRestartButton" type="button">다시하기</button>
+                <button class="pause-action-button home" id="pauseHomeButton" type="button">홈으로</button>
+                <button class="pause-action-button resume" id="resumeButton" type="button">계속하기</button>
+              </div>
+              <div class="item-guide" id="itemGuide" aria-label="아이템별 점수와 효과">
+                <div class="guide-group good" aria-label="득점과 버프 아이템">
+                  <button class="guide-item good" type="button" data-tooltip="기본 득점 아이템입니다.">
+                    <i class="guide-icon normal"></i>츄르 +2
+                  </button>
+                  <button class="guide-item good" type="button" data-tooltip="기본 츄르보다 점수가 높습니다.">
+                    <i class="guide-icon gold"></i>황금 츄르 +5
+                  </button>
+                  <button class="guide-item good" type="button" data-tooltip="5초 동안 이동속도가 빨라집니다.">
+                    <i class="guide-icon toy"></i>장난감
+                  </button>
+                  <button class="guide-item good" type="button" data-tooltip="5초 동안 츄르 점수가 2배가 됩니다.">
+                    <i class="guide-icon hand"></i>집사의 손길
+                  </button>
+                  <button class="guide-item good" type="button" data-tooltip="5초 동안 커지고 무적, 츄르 점수도 2배가 됩니다.">
+                    <i class="guide-icon catnip"></i>캣닢
+                  </button>
+                  <button class="guide-item good" type="button" data-tooltip="1점을 얻고 5초 동안 황금 츄르가 더 자주 나옵니다.">
+                    <i class="guide-icon tuna"></i>참치캔 +1
+                  </button>
+                </div>
+                <div class="guide-group bad" aria-label="감점과 디버프 아이템">
+                  <button class="guide-item bad" type="button" data-tooltip="먹으면 3점이 깎입니다.">
+                    <i class="guide-icon bomb"></i>폭탄 -3
+                  </button>
+                  <button class="guide-item bad" type="button" data-tooltip="3초 동안 아무 아이템도 먹지 못합니다.">
+                    <i class="guide-icon box"></i>숨숨집
+                  </button>
+                  <button class="guide-item bad" type="button" data-tooltip="1점이 깎이고 5초 동안 폭탄이 더 자주 나옵니다.">
+                    <i class="guide-icon clipper"></i>바리깡 -1
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="touch-controls" aria-label="모바일 이동 조작">
+            <button class="touch-button" id="touchLeftButton" type="button" aria-label="왼쪽으로 이동">‹</button>
+            <button class="touch-button" id="touchRightButton" type="button" aria-label="오른쪽으로 이동">›</button>
+          </div>
         </div>
-        <div class="touch-controls" aria-label="모바일 이동 조작">
-          <button class="touch-button" id="touchLeftButton" type="button" aria-label="왼쪽으로 이동">‹</button>
-          <button class="touch-button" id="touchRightButton" type="button" aria-label="오른쪽으로 이동">›</button>
-        </div>
+
+        <section class="recent-play-panel" id="recentPlayPanel">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">live play</p>
+              <h2>최근 플레이</h2>
+            </div>
+          </div>
+          <ol class="recent-play-list" id="recentPlayList"></ol>
+        </section>
       </div>
 
       <aside class="side-column">
@@ -155,16 +167,6 @@
           <ol class="ranking-list" id="rankingList"></ol>
         </section>
       </aside>
-
-      <section class="recent-play-panel" id="recentPlayPanel">
-        <div class="panel-header">
-          <div>
-            <p class="eyebrow">live play</p>
-            <h2>최근 플레이</h2>
-          </div>
-        </div>
-        <ol class="recent-play-list" id="recentPlayList"></ol>
-      </section>
     </section>
 
     <section class="modal-backdrop" id="accountModal" hidden>

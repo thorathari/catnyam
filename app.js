@@ -839,13 +839,33 @@ function formatRecentPlayTime(value) {
     return `${Math.floor(elapsedSeconds / 3600)}시간 전`;
   }
 
-  return new Intl.DateTimeFormat("ko-KR", {
+  if (elapsedSeconds < 604800) {
+    return `${Math.floor(elapsedSeconds / 86400)}일 전`;
+  }
+
+  return `${Math.floor(elapsedSeconds / 604800)}주 전`;
+}
+
+function formatRecentPlayDateTime(value) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const parts = new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(date);
+    hour12: false,
+  }).formatToParts(date).reduce((result, part) => {
+    result[part.type] = part.value;
+    return result;
+  }, {});
+
+  return `${parts.month}.${parts.day} ${parts.hour}:${parts.minute}`;
 }
 
 function appendRecentPlayItem(play) {
@@ -853,14 +873,21 @@ function appendRecentPlayItem(play) {
   const main = document.createElement("span");
   const name = document.createElement("span");
   const time = document.createElement("time");
+  const relativeTime = document.createElement("span");
+  const exactTime = document.createElement("span");
   const score = document.createElement("span");
   main.className = "recent-play-main";
   name.className = "recent-play-name";
   time.className = "recent-play-time";
+  relativeTime.className = "recent-play-relative";
+  exactTime.className = "recent-play-date";
   score.className = "recent-play-score";
   name.textContent = play.nickname || "플레이어";
-  time.textContent = formatRecentPlayTime(play.createdAt);
+  relativeTime.textContent = formatRecentPlayTime(play.createdAt);
+  const exactTimeText = formatRecentPlayDateTime(play.createdAt);
+  exactTime.textContent = exactTimeText ? `(${exactTimeText})` : "";
   time.dateTime = play.createdAt || "";
+  time.append(relativeTime, exactTime);
   score.textContent = `${play.score || 0}점`;
   main.append(name, time);
   item.append(main, score);

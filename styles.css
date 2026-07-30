@@ -244,6 +244,12 @@ button:disabled {
   align-items: start;
 }
 
+.play-column {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
 .game-stage,
 .ranking-panel,
 .recent-play-panel {
@@ -254,7 +260,6 @@ button:disabled {
 }
 
 .game-stage {
-  grid-column: 1;
   padding: 16px;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
@@ -821,7 +826,6 @@ canvas {
 
 .side-column {
   grid-column: 2;
-  grid-row: 1 / span 2;
   display: grid;
   gap: 20px;
 }
@@ -829,10 +833,6 @@ canvas {
 .ranking-panel,
 .recent-play-panel {
   padding: 18px;
-}
-
-.recent-play-panel {
-  grid-column: 1;
 }
 
 .panel-header {
@@ -1135,7 +1135,7 @@ canvas {
 
 .recent-play-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -1144,19 +1144,27 @@ canvas {
 .recent-play-list li {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
-  min-height: 48px;
-  padding: 10px 12px;
+  min-height: 38px;
+  padding: 6px 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.72);
 }
 
+.recent-play-panel {
+  padding: 14px;
+}
+
+.recent-play-panel .panel-header {
+  margin-bottom: 10px;
+}
+
 .recent-play-main {
   display: grid;
   min-width: 0;
-  gap: 2px;
+  gap: 0;
 }
 
 .recent-play-name {
@@ -1168,9 +1176,22 @@ canvas {
 }
 
 .recent-play-time {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 800;
+}
+
+.recent-play-date {
+  overflow: hidden;
+  color: rgba(116, 107, 98, 0.76);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .recent-play-score {
@@ -1281,6 +1302,10 @@ canvas {
   .recent-play-panel {
     grid-column: auto;
     grid-row: auto;
+  }
+
+  .play-column {
+    display: contents;
   }
 
   .game-stage {
