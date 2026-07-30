@@ -470,7 +470,10 @@ canvas {
 }
 
 .game-overlay .primary-button {
-  min-width: 150px;
+  min-width: 132px;
+  min-height: 40px;
+  padding: 0 18px;
+  font-size: 0.95rem;
 }
 
 .pause-actions {
@@ -519,6 +522,7 @@ canvas {
 
 .item-guide {
   display: flex;
+  align-items: flex-start;
   justify-content: center;
   gap: 14px;
   max-width: min(680px, 100%);
@@ -542,8 +546,11 @@ canvas {
 }
 
 .guide-group.bad {
+  align-content: flex-start;
+  align-items: flex-start;
   justify-content: flex-start;
   max-width: 220px;
+  min-height: 76px;
   padding-left: 14px;
   border-left: 1px solid rgba(37, 33, 29, 0.14);
 }
@@ -1226,6 +1233,7 @@ canvas {
   .guide-group.bad {
     flex-direction: column;
     max-width: min(150px, 100%);
+    min-height: 0;
     padding-top: 2px;
     padding-left: 0;
     border-top: 1px solid rgba(37, 33, 29, 0.14);
