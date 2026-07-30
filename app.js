@@ -35,6 +35,7 @@ const touchRightButton = document.querySelector("#touchRightButton");
 const rankingList = document.querySelector("#rankingList");
 const dailyRankingButton = document.querySelector("#dailyRankingButton");
 const allTimeRankingButton = document.querySelector("#allTimeRankingButton");
+const recentPlayList = document.querySelector("#recentPlayList");
 const playerHistoryModal = document.querySelector("#playerHistoryModal");
 const closePlayerHistoryButton = document.querySelector("#closePlayerHistoryButton");
 const playerHistoryTitle = document.querySelector("#playerHistoryTitle");
@@ -77,6 +78,7 @@ const canvas = document.querySelector("#gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const REMEMBER_LOGIN_KEY = "catnyam_auto_login";
+const RANKING_REFRESH_MS = 15000;
 const keys = new Set();
 let authMode = "login";
 let currentUser = null;
@@ -89,10 +91,12 @@ let rankingData = {
   daily: [],
   allTime: [],
 };
+let recentPlayData = [];
 let rankingChanges = {
   daily: new Map(),
   allTime: new Map(),
 };
+let rankingRefreshId = null;
 let game = createGameState();
 
 async function requestApi(path, options = {}) {
@@ -269,6 +273,24 @@ function syncCurrentUser(user) {
   bestText.textContent = currentUser.bestScore || 0;
 }
 
+function startRankingRefresh() {
+  stopRankingRefresh();
+  rankingRefreshId = window.setInterval(() => {
+    if (currentUser && !gamePanel.hidden) {
+      renderRanking();
+    }
+  }, RANKING_REFRESH_MS);
+}
+
+function stopRankingRefresh() {
+  if (!rankingRefreshId) {
+    return;
+  }
+
+  window.clearInterval(rankingRefreshId);
+  rankingRefreshId = null;
+}
+
 function setAuthMode(mode) {
   authMode = mode;
   const isSignup = mode === "signup";
@@ -315,6 +337,7 @@ function showGameFor(user) {
   setAccountActionMessage("");
   setAdminMessage("");
   renderRanking();
+  startRankingRefresh();
   updateModeBadges();
   showGameOverlay("게임 시작");
   drawIntro();
@@ -322,6 +345,7 @@ function showGameFor(user) {
 
 function showAuth() {
   currentUser = null;
+  stopRankingRefresh();
   stopGame();
   authPanel.hidden = false;
   gamePanel.hidden = true;
@@ -643,14 +667,18 @@ async function renderRanking() {
       daily: data.dailyRankings || [],
       allTime: data.allTimeRankings || data.rankings || [],
     };
+    recentPlayData = data.recentPlays || [];
     rankingChanges = {
       daily: buildRankingChangeMap(rankingData.daily, nextRankingData.daily),
       allTime: buildRankingChangeMap(rankingData.allTime, nextRankingData.allTime),
     };
     rankingData = nextRankingData;
     renderRankingList();
+    renderRecentPlays();
   } catch {
+    recentPlayData = [];
     appendRankingItem("-", "랭킹 서버 연결 필요", 0);
+    renderRecentPlays("최근 플레이 서버 연결 필요");
   }
 }
 
@@ -776,6 +804,77 @@ function formatPlayDate(value) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+}
+
+function formatRecentPlayTime(value) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "날짜 없음";
+  }
+
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+
+  if (elapsedSeconds < 60) {
+    return "방금 전";
+  }
+
+  if (elapsedSeconds < 3600) {
+    return `${Math.floor(elapsedSeconds / 60)}분 전`;
+  }
+
+  if (elapsedSeconds < 86400) {
+    return `${Math.floor(elapsedSeconds / 3600)}시간 전`;
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function appendRecentPlayItem(play) {
+  const item = document.createElement("li");
+  const main = document.createElement("span");
+  const name = document.createElement("span");
+  const time = document.createElement("time");
+  const score = document.createElement("span");
+  main.className = "recent-play-main";
+  name.className = "recent-play-name";
+  time.className = "recent-play-time";
+  score.className = "recent-play-score";
+  name.textContent = play.nickname || "플레이어";
+  time.textContent = formatRecentPlayTime(play.createdAt);
+  time.dateTime = play.createdAt || "";
+  score.textContent = `${play.score || 0}점`;
+  main.append(name, time);
+  item.append(main, score);
+  recentPlayList.append(item);
+}
+
+function renderRecentPlays(message = "") {
+  recentPlayList.innerHTML = "";
+
+  if (message) {
+    const item = document.createElement("li");
+    item.className = "recent-play-empty";
+    item.textContent = message;
+    recentPlayList.append(item);
+    return;
+  }
+
+  if (recentPlayData.length === 0) {
+    const item = document.createElement("li");
+    item.className = "recent-play-empty";
+    item.textContent = "최근 플레이가 없습니다";
+    recentPlayList.append(item);
+    return;
+  }
+
+  recentPlayData.slice(0, 5).forEach(appendRecentPlayItem);
 }
 
 function closePlayerHistoryModal() {
