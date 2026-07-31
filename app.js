@@ -24,6 +24,7 @@ const logoutButton = document.querySelector("#logoutButton");
 const startButton = document.querySelector("#startButton");
 const gameOverlay = document.querySelector("#gameOverlay");
 const overlayResult = document.querySelector("#overlayResult");
+const shareResultButton = document.querySelector("#shareResultButton");
 const pauseButton = document.querySelector("#pauseButton");
 const pauseActions = document.querySelector("#pauseActions");
 const pauseRestartButton = document.querySelector("#pauseRestartButton");
@@ -102,6 +103,7 @@ let rankingRefreshId = null;
 let rankingRequestInFlight = false;
 let rankingRefreshQueued = false;
 let activePlayerHistoryAccount = null;
+let lastFinishedScore = null;
 let game = createGameState();
 
 async function requestApi(path, options = {}) {
@@ -1390,6 +1392,7 @@ async function startGame() {
   }
 
   stopGame();
+  lastFinishedScore = null;
   game = createGameState();
   game.gameSession = gameSession;
   game.running = true;
@@ -1424,10 +1427,11 @@ function stopGame() {
 
 function finishGame() {
   const finalScore = game.score;
+  lastFinishedScore = finalScore;
   stopGame();
   clearModes();
   drawFinish();
-  showGameOverlay("다시하기", `${finalScore}점!`);
+  showGameOverlay("다시하기", `${finalScore}점!`, "result");
   submitScore(finalScore);
 }
 
@@ -1437,7 +1441,7 @@ async function submitScore(score) {
   }
 
   if (!game.gameSession?.id || !game.gameSession?.token) {
-    showGameOverlay("다시하기", `${score}점 · 저장 실패`);
+    showGameOverlay("다시하기", `${score}점 · 저장 실패`, "result");
     return;
   }
 
@@ -1455,7 +1459,7 @@ async function submitScore(score) {
     bestText.textContent = currentUser.bestScore || 0;
     renderRanking();
   } catch {
-    showGameOverlay("다시하기", `${score}점 · 저장 실패`);
+    showGameOverlay("다시하기", `${score}점 · 저장 실패`, "result");
   }
 }
 
@@ -1486,6 +1490,7 @@ function resumeGame() {
 
 function returnToGameHome() {
   stopGame();
+  lastFinishedScore = null;
   game = createGameState();
   scoreText.textContent = "0";
   timeText.textContent = GAME_SECONDS;
@@ -1500,8 +1505,10 @@ function showPauseOverlay() {
 
 function showGameOverlay(buttonText, resultText = "", mode = "default") {
   const isPaused = mode === "pause";
+  const canShareResult = mode === "result" && lastFinishedScore !== null;
   startButton.textContent = buttonText;
   startButton.hidden = isPaused;
+  shareResultButton.hidden = !canShareResult;
   pauseActions.hidden = !isPaused;
   itemGuide.hidden = isPaused;
   overlayResult.textContent = resultText;
@@ -1514,8 +1521,184 @@ function hideGameOverlay() {
   gameOverlay.hidden = true;
   pauseActions.hidden = true;
   startButton.hidden = false;
+  shareResultButton.hidden = true;
   itemGuide.hidden = false;
   pauseButton.hidden = !game.running;
+}
+
+function getSharePageUrl() {
+  return `${window.location.origin}${window.location.pathname}`;
+}
+
+function getResultShareText(score) {
+  const nickname = getUserDisplayName(currentUser) || "플레이어";
+
+  return `Cat Nyam에서 ${nickname}님이 ${score}점 달성!\n츄르 잡으러 도전해봐냥`;
+}
+
+function drawShareRoundRect(target, x, y, width, height, radius) {
+  const r = Math.min(radius, width / 2, height / 2);
+  target.beginPath();
+  target.moveTo(x + r, y);
+  target.arcTo(x + width, y, x + width, y + height, r);
+  target.arcTo(x + width, y + height, x, y + height, r);
+  target.arcTo(x, y + height, x, y, r);
+  target.arcTo(x, y, x + width, y, r);
+  target.closePath();
+}
+
+function drawSharePaws(target) {
+  const paws = [
+    [142, 126, 0.55],
+    [914, 160, 0.42],
+    [170, 928, 0.38],
+    [936, 878, 0.5],
+  ];
+
+  target.save();
+  target.fillStyle = "rgba(239, 111, 143, 0.13)";
+  paws.forEach(([x, y, scale]) => {
+    target.save();
+    target.translate(x, y);
+    target.scale(scale, scale);
+    target.beginPath();
+    target.ellipse(0, 24, 38, 30, 0, 0, Math.PI * 2);
+    target.fill();
+    [[-38, -10], [-13, -24], [13, -24], [38, -10]].forEach(([toeX, toeY]) => {
+      target.beginPath();
+      target.ellipse(toeX, toeY, 15, 19, 0, 0, Math.PI * 2);
+      target.fill();
+    });
+    target.restore();
+  });
+  target.restore();
+}
+
+function createResultShareCanvas(score) {
+  const resultCanvas = document.createElement("canvas");
+  resultCanvas.width = 1080;
+  resultCanvas.height = 1080;
+
+  const resultCtx = resultCanvas.getContext("2d");
+  const nickname = getUserDisplayName(currentUser) || "플레이어";
+  const gradient = resultCtx.createLinearGradient(0, 0, resultCanvas.width, resultCanvas.height);
+
+  gradient.addColorStop(0, "#fff6ea");
+  gradient.addColorStop(0.48, "#effaf4");
+  gradient.addColorStop(1, "#ffeaf1");
+  resultCtx.fillStyle = gradient;
+  resultCtx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
+  drawSharePaws(resultCtx);
+
+  resultCtx.save();
+  drawShareRoundRect(resultCtx, 76, 72, 928, 936, 40);
+  resultCtx.fillStyle = "rgba(255, 255, 255, 0.74)";
+  resultCtx.fill();
+  resultCtx.strokeStyle = "rgba(37, 33, 29, 0.08)";
+  resultCtx.lineWidth = 4;
+  resultCtx.stroke();
+  resultCtx.restore();
+
+  resultCtx.fillStyle = "#ef6f8f";
+  resultCtx.font = '700 34px "Nunito", sans-serif';
+  resultCtx.textAlign = "center";
+  resultCtx.fillText("CUTE CATCH MINI GAME", 540, 145);
+  resultCtx.fillStyle = "#25211d";
+  resultCtx.font = '76px "Jua", "Nunito", sans-serif';
+  resultCtx.fillText("Cat Nyam", 540, 226);
+  resultCtx.font = '44px "Jua", "Nunito", sans-serif';
+  resultCtx.fillText(`${nickname}님의 기록`, 540, 296);
+  resultCtx.fillStyle = "#ef6f8f";
+  resultCtx.font = '108px "Jua", "Nunito", sans-serif';
+  resultCtx.fillText(`${score}점`, 540, 402);
+
+  resultCtx.save();
+  drawShareRoundRect(resultCtx, 90, 448, 900, 560, 32);
+  resultCtx.clip();
+  resultCtx.drawImage(canvas, 90, 448, 900, 560);
+  resultCtx.restore();
+  drawShareRoundRect(resultCtx, 90, 448, 900, 560, 32);
+  resultCtx.strokeStyle = "rgba(128, 190, 206, 0.55)";
+  resultCtx.lineWidth = 6;
+  resultCtx.stroke();
+
+  resultCtx.fillStyle = "rgba(37, 33, 29, 0.78)";
+  resultCtx.font = '30px "Jua", "Nunito", sans-serif';
+  resultCtx.fillText("츄르 잡으러 도전해봐냥", 540, 1042);
+
+  return resultCanvas;
+}
+
+function canvasToPngBlob(sourceCanvas) {
+  return new Promise((resolve, reject) => {
+    sourceCanvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error("결과 이미지를 만들 수 없습니다."));
+      }
+    }, "image/png");
+  });
+}
+
+async function createResultShareFile(score) {
+  const resultCanvas = createResultShareCanvas(score);
+  const blob = await canvasToPngBlob(resultCanvas);
+
+  return new File([blob], "catnyam-result.png", { type: "image/png" });
+}
+
+async function copyResultShareText(score) {
+  if (!navigator.clipboard?.writeText) {
+    throw new Error("이 브라우저에서는 공유와 복사를 지원하지 않습니다.");
+  }
+
+  await navigator.clipboard.writeText(`${getResultShareText(score)}\n${getSharePageUrl()}`);
+}
+
+async function shareResult() {
+  const score = lastFinishedScore ?? game.score ?? 0;
+  const shareData = {
+    title: "Cat Nyam 게임 결과",
+    text: getResultShareText(score),
+    url: getSharePageUrl(),
+  };
+
+  shareResultButton.disabled = true;
+
+  try {
+    if (navigator.share && typeof File !== "undefined") {
+      const file = await createResultShareFile(score);
+      const fileShareData = {
+        ...shareData,
+        files: [file],
+      };
+
+      if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+        await navigator.share(fileShareData);
+        return;
+      }
+    }
+
+    if (navigator.share) {
+      await navigator.share(shareData);
+      return;
+    }
+
+    await copyResultShareText(score);
+    window.alert("공유 문구를 복사했어요. 카톡에 붙여넣어 주세요.");
+  } catch (error) {
+    if (error.name !== "AbortError") {
+      try {
+        await copyResultShareText(score);
+        window.alert("이미지 공유가 지원되지 않아 공유 문구를 복사했어요.");
+      } catch {
+        window.alert(error.message || "공유를 완료하지 못했어요.");
+      }
+    }
+  } finally {
+    shareResultButton.disabled = false;
+  }
 }
 
 function loop(now) {
@@ -2765,6 +2948,7 @@ adminTabButton.addEventListener("click", () => setAccountTab("admin"));
 dailyRankingButton.addEventListener("click", () => setRankingMode("daily"));
 allTimeRankingButton.addEventListener("click", () => setRankingMode("allTime"));
 startButton.addEventListener("click", startGame);
+shareResultButton.addEventListener("click", shareResult);
 pauseButton.addEventListener("click", pauseGame);
 pauseRestartButton.addEventListener("click", startGame);
 pauseHomeButton.addEventListener("click", returnToGameHome);

@@ -94,7 +94,19 @@
             </button>
             <div class="game-overlay" id="gameOverlay">
               <p class="overlay-result" id="overlayResult" hidden></p>
-              <button class="primary-button" id="startButton" type="button">게임 시작</button>
+              <div class="result-actions">
+                <button class="primary-button" id="startButton" type="button">게임 시작</button>
+                <button class="share-result-button" id="shareResultButton" type="button" aria-label="게임 결과 공유" hidden>
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8.8 11.1 15 7.8"></path>
+                    <path d="M8.8 12.9 15 16.2"></path>
+                    <circle cx="6" cy="12" r="2.9"></circle>
+                    <circle cx="17.6" cy="6.4" r="2.9"></circle>
+                    <circle cx="17.6" cy="17.6" r="2.9"></circle>
+                  </svg>
+                  <span>결과 공유</span>
+                </button>
+              </div>
               <div class="pause-actions" id="pauseActions" hidden>
                 <button class="pause-action-button restart" id="pauseRestartButton" type="button">다시하기</button>
                 <button class="pause-action-button home" id="pauseHomeButton" type="button">홈으로</button>

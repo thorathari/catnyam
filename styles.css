@@ -492,6 +492,48 @@ canvas {
   font-size: 0.95rem;
 }
 
+.result-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.share-result-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  border: 2px solid rgba(30, 101, 79, 0.12);
+  border-radius: 8px;
+  padding: 0 14px;
+  color: #1e654f;
+  background: rgba(119, 216, 186, 0.86);
+  box-shadow: 0 10px 24px rgba(37, 33, 29, 0.12);
+  font-size: 0.9rem;
+  font-weight: 900;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.share-result-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.share-result-button:hover,
+.share-result-button:focus-visible {
+  color: white;
+  background: #288466;
+  outline: none;
+}
+
 .pause-actions {
   display: grid;
   grid-template-columns: 1fr;
@@ -1447,6 +1489,17 @@ canvas {
     min-height: 36px;
     padding: 0 14px;
     font-size: 0.86rem;
+  }
+
+  .share-result-button {
+    min-height: 36px;
+    padding: 0 12px;
+    font-size: 0.82rem;
+  }
+
+  .share-result-button svg {
+    width: 16px;
+    height: 16px;
   }
 
   .overlay-result {
