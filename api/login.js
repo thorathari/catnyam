@@ -43,6 +43,7 @@ module.exports = async function handler(req, res) {
       const user = await requireUser(req, res);
       if (!user) return;
 
+      setSessionCookie(res, user);
       sendJson(res, 200, { user: sanitizeUser(user) });
       return;
     }

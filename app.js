@@ -494,14 +494,19 @@ async function loginWithRememberedCredentials() {
 }
 
 async function initializeApp() {
-  showAuth();
-  renderRanking();
+  authPanel.hidden = true;
+  gamePanel.hidden = true;
+  profileBox.hidden = true;
 
   if (await restoreSession()) {
     return;
   }
 
-  await loginWithRememberedCredentials();
+  if (await loginWithRememberedCredentials()) {
+    return;
+  }
+
+  showAuth();
 }
 
 async function changeUsername(event) {
