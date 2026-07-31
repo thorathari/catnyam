@@ -845,7 +845,7 @@ canvas {
 }
 
 .touch-button {
-  min-height: 58px;
+  min-height: 68px;
   border: 0;
   border-radius: 8px;
   color: var(--ink);
@@ -1511,7 +1511,7 @@ canvas {
   }
 
   .touch-button {
-    min-height: 56px;
+    min-height: 72px;
     font-size: 2rem;
   }
 

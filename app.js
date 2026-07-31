@@ -2815,6 +2815,41 @@ function isTypingTarget(target) {
     || target?.isContentEditable;
 }
 
+function isButtonTarget(target) {
+  return target instanceof HTMLButtonElement || Boolean(target?.closest?.("button"));
+}
+
+function canUseGameHotkey(target) {
+  return currentUser
+    && !gamePanel.hidden
+    && accountModal.hidden
+    && playerHistoryModal.hidden
+    && !isTypingTarget(target)
+    && !isButtonTarget(target);
+}
+
+function handleSpaceGameAction(event) {
+  if ((event.code !== "Space" && event.key !== " ") || event.repeat || !canUseGameHotkey(event.target)) {
+    return;
+  }
+
+  event.preventDefault();
+
+  if (game.running) {
+    pauseGame();
+    return;
+  }
+
+  if (game.paused) {
+    resumeGame();
+    return;
+  }
+
+  if (!gameOverlay.hidden && !startButton.hidden && !startButton.disabled) {
+    startGame();
+  }
+}
+
 function clearMovementInput() {
   keys.clear();
   touchDirection = 0;
@@ -2913,9 +2948,11 @@ function preventGameTouchMove(event) {
 }
 
 window.addEventListener("keydown", (event) => {
+  handleSpaceGameAction(event);
+
   const controlKey = getControlKey(event.key);
 
-  if (controlKey && game.running && accountModal.hidden && !isTypingTarget(event.target)) {
+  if (controlKey && game.running && canUseGameHotkey(event.target)) {
     keys.add(controlKey);
     event.preventDefault();
   }
