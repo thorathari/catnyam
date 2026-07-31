@@ -96,7 +96,7 @@
               <p class="overlay-result" id="overlayResult" hidden></p>
               <div class="result-actions">
                 <button class="primary-button" id="startButton" type="button">게임 시작</button>
-                <button class="share-result-button" id="shareResultButton" type="button" aria-label="게임 결과 공유" hidden>
+                <button class="share-result-button" id="shareResultButton" type="button" aria-label="게임 결과 이미지 만들기" hidden>
                   <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M8.8 11.1 15 7.8"></path>
                     <path d="M8.8 12.9 15 16.2"></path>
@@ -104,8 +104,19 @@
                     <circle cx="17.6" cy="6.4" r="2.9"></circle>
                     <circle cx="17.6" cy="17.6" r="2.9"></circle>
                   </svg>
-                  <span>결과 공유</span>
+                  <span>공유하기</span>
                 </button>
+              </div>
+              <div class="share-preview-panel" id="sharePreviewPanel" hidden>
+                <img id="sharePreviewImage" alt="공유할 게임 결과 이미지" hidden>
+                <button class="copy-result-button" id="copyResultButton" type="button" aria-label="결과 이미지 복사">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="8" y="8" width="10" height="10" rx="2"></rect>
+                    <rect x="5" y="5" width="10" height="10" rx="2"></rect>
+                  </svg>
+                  <span>복사하기</span>
+                </button>
+                <p class="share-status" id="shareStatus" aria-live="polite"></p>
               </div>
               <div class="pause-actions" id="pauseActions" hidden>
                 <button class="pause-action-button restart" id="pauseRestartButton" type="button">다시하기</button>

@@ -534,6 +534,70 @@ canvas {
   outline: none;
 }
 
+.share-preview-panel {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  width: min(220px, 92%);
+  padding: 10px;
+  border: 1px solid rgba(37, 33, 29, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: 0 14px 34px rgba(37, 33, 29, 0.12);
+}
+
+.share-preview-panel[hidden],
+.share-preview-panel img[hidden] {
+  display: none;
+}
+
+.share-preview-panel img {
+  display: block;
+  width: min(116px, 42vw);
+  aspect-ratio: 1;
+  border: 2px solid rgba(128, 190, 206, 0.42);
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.copy-result-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 12px;
+  color: white;
+  background: #ef6f8f;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.copy-result-button svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linejoin: round;
+}
+
+.copy-result-button:hover,
+.copy-result-button:focus-visible {
+  background: #d94f80;
+  outline: none;
+}
+
+.share-status {
+  min-height: 16px;
+  margin: 0;
+  color: #288466;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
 .pause-actions {
   display: grid;
   grid-template-columns: 1fr;
@@ -1500,6 +1564,22 @@ canvas {
   .share-result-button svg {
     width: 16px;
     height: 16px;
+  }
+
+  .share-preview-panel {
+    gap: 5px;
+    width: min(190px, 92%);
+    padding: 8px;
+  }
+
+  .share-preview-panel img {
+    width: min(88px, 34vw);
+  }
+
+  .copy-result-button {
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 0.78rem;
   }
 
   .overlay-result {

@@ -25,6 +25,10 @@ const startButton = document.querySelector("#startButton");
 const gameOverlay = document.querySelector("#gameOverlay");
 const overlayResult = document.querySelector("#overlayResult");
 const shareResultButton = document.querySelector("#shareResultButton");
+const sharePreviewPanel = document.querySelector("#sharePreviewPanel");
+const sharePreviewImage = document.querySelector("#sharePreviewImage");
+const copyResultButton = document.querySelector("#copyResultButton");
+const shareStatus = document.querySelector("#shareStatus");
 const pauseButton = document.querySelector("#pauseButton");
 const pauseActions = document.querySelector("#pauseActions");
 const pauseRestartButton = document.querySelector("#pauseRestartButton");
@@ -104,6 +108,8 @@ let rankingRequestInFlight = false;
 let rankingRefreshQueued = false;
 let activePlayerHistoryAccount = null;
 let lastFinishedScore = null;
+let resultShareBlob = null;
+let resultShareUrl = "";
 let game = createGameState();
 
 async function requestApi(path, options = {}) {
@@ -1393,6 +1399,7 @@ async function startGame() {
 
   stopGame();
   lastFinishedScore = null;
+  resetSharePreview();
   game = createGameState();
   game.gameSession = gameSession;
   game.running = true;
@@ -1491,6 +1498,7 @@ function resumeGame() {
 function returnToGameHome() {
   stopGame();
   lastFinishedScore = null;
+  resetSharePreview();
   game = createGameState();
   scoreText.textContent = "0";
   timeText.textContent = GAME_SECONDS;
@@ -1509,6 +1517,7 @@ function showGameOverlay(buttonText, resultText = "", mode = "default") {
   startButton.textContent = buttonText;
   startButton.hidden = isPaused;
   shareResultButton.hidden = !canShareResult;
+  sharePreviewPanel.hidden = !canShareResult || !resultShareBlob;
   pauseActions.hidden = !isPaused;
   itemGuide.hidden = isPaused;
   overlayResult.textContent = resultText;
@@ -1522,6 +1531,7 @@ function hideGameOverlay() {
   pauseActions.hidden = true;
   startButton.hidden = false;
   shareResultButton.hidden = true;
+  sharePreviewPanel.hidden = true;
   itemGuide.hidden = false;
   pauseButton.hidden = !game.running;
 }
@@ -1641,11 +1651,38 @@ function canvasToPngBlob(sourceCanvas) {
   });
 }
 
-async function createResultShareFile(score) {
+function setResultShareBlob(blob) {
+  if (resultShareUrl) {
+    URL.revokeObjectURL(resultShareUrl);
+  }
+
+  resultShareBlob = blob;
+  resultShareUrl = URL.createObjectURL(blob);
+  sharePreviewImage.src = resultShareUrl;
+  sharePreviewImage.hidden = false;
+  sharePreviewPanel.hidden = false;
+}
+
+function resetSharePreview() {
+  if (resultShareUrl) {
+    URL.revokeObjectURL(resultShareUrl);
+  }
+
+  resultShareBlob = null;
+  resultShareUrl = "";
+  sharePreviewImage.removeAttribute("src");
+  sharePreviewImage.hidden = true;
+  sharePreviewPanel.hidden = true;
+  shareStatus.textContent = "";
+  copyResultButton.disabled = false;
+}
+
+async function prepareResultShareImage(score) {
   const resultCanvas = createResultShareCanvas(score);
   const blob = await canvasToPngBlob(resultCanvas);
 
-  return new File([blob], "catnyam-result.png", { type: "image/png" });
+  setResultShareBlob(blob);
+  return blob;
 }
 
 async function copyResultShareText(score) {
@@ -1658,46 +1695,51 @@ async function copyResultShareText(score) {
 
 async function shareResult() {
   const score = lastFinishedScore ?? game.score ?? 0;
-  const shareData = {
-    title: "Cat Nyam 게임 결과",
-    text: getResultShareText(score),
-    url: getSharePageUrl(),
-  };
-
   shareResultButton.disabled = true;
+  sharePreviewPanel.hidden = false;
+  itemGuide.hidden = true;
+  shareStatus.textContent = "이미지를 만들고 있어요.";
 
   try {
-    if (navigator.share && typeof File !== "undefined") {
-      const file = await createResultShareFile(score);
-      const fileShareData = {
-        ...shareData,
-        files: [file],
-      };
-
-      if (!navigator.canShare || navigator.canShare({ files: [file] })) {
-        await navigator.share(fileShareData);
-        return;
-      }
-    }
-
-    if (navigator.share) {
-      await navigator.share(shareData);
-      return;
-    }
-
-    await copyResultShareText(score);
-    window.alert("공유 문구를 복사했어요. 카톡에 붙여넣어 주세요.");
+    await prepareResultShareImage(score);
+    shareStatus.textContent = "이미지를 만들었어요. 복사하기를 눌러주세요.";
   } catch (error) {
-    if (error.name !== "AbortError") {
-      try {
-        await copyResultShareText(score);
-        window.alert("이미지 공유가 지원되지 않아 공유 문구를 복사했어요.");
-      } catch {
-        window.alert(error.message || "공유를 완료하지 못했어요.");
-      }
-    }
+    shareStatus.textContent = error.message || "결과 이미지를 만들지 못했어요.";
   } finally {
     shareResultButton.disabled = false;
+  }
+}
+
+async function copyResultImage() {
+  const score = lastFinishedScore ?? game.score ?? 0;
+
+  copyResultButton.disabled = true;
+  shareStatus.textContent = "복사하는 중입니다.";
+
+  try {
+    if (!resultShareBlob) {
+      await prepareResultShareImage(score);
+    }
+
+    if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+      throw new Error("이미지 클립보드 복사를 지원하지 않습니다.");
+    }
+
+    await navigator.clipboard.write([
+      new ClipboardItem({
+        [resultShareBlob.type]: resultShareBlob,
+      }),
+    ]);
+    shareStatus.textContent = "복사되었습니다.";
+  } catch (error) {
+    try {
+      await copyResultShareText(score);
+      shareStatus.textContent = "이미지 복사가 지원되지 않아 문구를 복사했어요.";
+    } catch {
+      shareStatus.textContent = error.message || "복사를 완료하지 못했어요.";
+    }
+  } finally {
+    copyResultButton.disabled = false;
   }
 }
 
@@ -2986,6 +3028,7 @@ dailyRankingButton.addEventListener("click", () => setRankingMode("daily"));
 allTimeRankingButton.addEventListener("click", () => setRankingMode("allTime"));
 startButton.addEventListener("click", startGame);
 shareResultButton.addEventListener("click", shareResult);
+copyResultButton.addEventListener("click", copyResultImage);
 pauseButton.addEventListener("click", pauseGame);
 pauseRestartButton.addEventListener("click", startGame);
 pauseHomeButton.addEventListener("click", returnToGameHome);
