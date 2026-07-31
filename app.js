@@ -101,6 +101,7 @@ let rankingChanges = {
 let rankingRefreshId = null;
 let rankingRequestInFlight = false;
 let rankingRefreshQueued = false;
+let activePlayerHistoryAccount = null;
 let game = createGameState();
 
 async function requestApi(path, options = {}) {
@@ -958,6 +959,7 @@ function renderRecentPlays(message = "") {
 
 function closePlayerHistoryModal() {
   playerHistoryModal.hidden = true;
+  activePlayerHistoryAccount = null;
 }
 
 function appendPlayerHistoryDetail(list, label, value) {
@@ -996,6 +998,7 @@ async function openPlayerHistory(account) {
     return;
   }
 
+  activePlayerHistoryAccount = account;
   playerHistoryTitle.textContent = `${getUserDisplayName(account)} 정보`;
   playerHistorySummary.textContent = "기록을 불러오는 중입니다.";
   playerHistoryList.innerHTML = "";
@@ -1015,6 +1018,7 @@ function renderPlayerHistory(data) {
   const user = data.user || {};
   const stats = data.stats || {};
   const history = data.history || [];
+  activePlayerHistoryAccount = user;
   playerHistoryTitle.textContent = `${getUserDisplayName(user) || "플레이어"} 정보`;
   renderPlayerHistorySummary(user, stats);
   playerHistoryList.innerHTML = "";
@@ -1028,14 +1032,61 @@ function renderPlayerHistory(data) {
   history.forEach((play) => {
     const item = document.createElement("li");
     const date = document.createElement("span");
+    const scoreRow = document.createElement("span");
     const score = document.createElement("span");
+    const deleteButton = document.createElement("button");
     date.className = "player-history-date";
+    scoreRow.className = "player-history-score-row";
     score.className = "player-history-score";
+    deleteButton.className = "player-history-delete-button";
+    deleteButton.type = "button";
+    deleteButton.textContent = "×";
+    deleteButton.title = `${play.score || 0}점 기록 삭제`;
+    deleteButton.setAttribute("aria-label", `${formatPlayDate(play.createdAt)} ${play.score || 0}점 기록 삭제`);
+    deleteButton.addEventListener("click", () => deletePlayerHistoryRecord(play, deleteButton));
     date.textContent = formatPlayDate(play.createdAt);
     score.textContent = `${play.score || 0}점`;
-    item.append(date, score);
+    scoreRow.append(score, deleteButton);
+    item.append(date, scoreRow);
     playerHistoryList.append(item);
   });
+}
+
+async function deletePlayerHistoryRecord(play, button) {
+  if (!activePlayerHistoryAccount?.id || !play?.id) {
+    return;
+  }
+
+  const playLabel = `${formatPlayDate(play.createdAt)} ${play.score || 0}점`;
+
+  if (!window.confirm(`${playLabel} 기록을 삭제할까요?`)) {
+    return;
+  }
+
+  button.disabled = true;
+  setPlayerHistoryMessage("");
+
+  try {
+    const data = await requestApi("/api/rankings", {
+      method: "DELETE",
+      body: {
+        userId: activePlayerHistoryAccount.id,
+        scoreId: play.id,
+      },
+    });
+    syncCurrentUser(data.user);
+    renderPlayerHistory(data);
+    renderRanking();
+
+    if (!adminTabPanel.hidden) {
+      await renderAdminList();
+    }
+
+    setPlayerHistoryMessage("플레이 기록을 삭제했습니다.", true);
+  } catch (error) {
+    setPlayerHistoryMessage(error.message);
+    button.disabled = false;
+  }
 }
 
 async function renderAdminList() {

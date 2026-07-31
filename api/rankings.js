@@ -1,6 +1,6 @@
 const {
   requireAdmin,
-  requireMethod,
+  readJson,
   sendJson,
   supabaseRequest,
 } = require("../server/db");
@@ -61,7 +61,12 @@ async function sendPlayerHistory(req, res, userId) {
     return;
   }
 
-  const scores = await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(user.id)}&select=score,created_at&order=created_at.desc&limit=${MAX_HISTORY}`, {
+  const payload = await buildPlayerHistoryPayload(user);
+  sendJson(res, 200, payload);
+}
+
+async function buildPlayerHistoryPayload(user) {
+  const scores = await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(user.id)}&select=id,score,created_at&order=created_at.desc&limit=${MAX_HISTORY}`, {
     prefer: "",
   });
   const { start, end } = getKstDayRange();
@@ -69,11 +74,12 @@ async function sendPlayerHistory(req, res, userId) {
     prefer: "",
   });
   const history = scores.map((scoreRow) => ({
+    id: scoreRow.id,
     score: scoreRow.score || 0,
     createdAt: scoreRow.created_at,
   }));
 
-  sendJson(res, 200, {
+  return {
     user: {
       ...mapAllTimeRanking(user),
       gamesPlayed: user.games_played || 0,
@@ -86,6 +92,65 @@ async function sendPlayerHistory(req, res, userId) {
       todayGamesPlayed: todayScores.length,
     },
     history,
+  };
+}
+
+async function recalculateUserScoreStats(userId) {
+  const remainingScores = await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(userId)}&select=score&order=score.desc,created_at.asc&limit=${MAX_RANKING_ROWS}`, {
+    prefer: "",
+  });
+  const bestScore = remainingScores[0]?.score || 0;
+  const updated = await supabaseRequest(`users?id=eq.${encodeURIComponent(userId)}`, {
+    method: "PATCH",
+    body: {
+      best_score: bestScore,
+      games_played: remainingScores.length,
+      updated_at: new Date().toISOString(),
+    },
+  });
+
+  return updated[0] || null;
+}
+
+async function deletePlayerHistory(req, res) {
+  const admin = await requireAdmin(req, res);
+
+  if (!admin) {
+    return;
+  }
+
+  const { userId, scoreId } = await readJson(req);
+  const scoreKey = String(scoreId || "").trim();
+
+  if (!userId || !/^\d+$/.test(scoreKey)) {
+    sendJson(res, 400, { message: "삭제할 플레이 기록 정보가 올바르지 않습니다." });
+    return;
+  }
+
+  const users = await supabaseRequest(`users?id=eq.${encodeURIComponent(userId)}&select=*&limit=1`, {
+    prefer: "",
+  });
+  const user = users?.[0];
+
+  if (!user) {
+    sendJson(res, 404, { message: "플레이어를 찾을 수 없습니다." });
+    return;
+  }
+
+  const deleted = await supabaseRequest(`scores?id=eq.${encodeURIComponent(scoreKey)}&user_id=eq.${encodeURIComponent(user.id)}`, {
+    method: "DELETE",
+  });
+
+  if (!deleted || deleted.length === 0) {
+    sendJson(res, 404, { message: "삭제할 플레이 기록을 찾을 수 없습니다." });
+    return;
+  }
+
+  const updatedUser = await recalculateUserScoreStats(user.id);
+  const payload = await buildPlayerHistoryPayload(updatedUser || user);
+  sendJson(res, 200, {
+    ...payload,
+    deletedScoreId: scoreKey,
   });
 }
 
@@ -143,7 +208,16 @@ function buildRecentPlays(scores, users) {
 
 module.exports = async function handler(req, res) {
   try {
-    if (!requireMethod(req, res, "GET")) return;
+    if (req.method !== "GET" && req.method !== "DELETE") {
+      res.setHeader("Allow", "GET, DELETE");
+      sendJson(res, 405, { message: "허용되지 않은 요청입니다." });
+      return;
+    }
+
+    if (req.method === "DELETE") {
+      await deletePlayerHistory(req, res);
+      return;
+    }
 
     const url = getRequestUrl(req);
     const userId = url.searchParams.get("userId");

@@ -1063,6 +1063,39 @@ canvas {
   font-weight: 900;
 }
 
+.player-history-score-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.player-history-delete-button {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  min-height: 24px;
+  border: 1px solid rgba(217, 75, 87, 0.24);
+  border-radius: 8px;
+  padding: 0;
+  color: #d94b57;
+  background: rgba(255, 244, 246, 0.88);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.player-history-delete-button:hover,
+.player-history-delete-button:focus-visible {
+  color: white;
+  background: #d94b57;
+  outline: none;
+}
+
+.player-history-delete-button:disabled {
+  opacity: 0.42;
+}
+
 .ranking-list {
   display: grid;
   gap: 10px;
