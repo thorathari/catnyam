@@ -142,6 +142,7 @@ function createGameState() {
   return {
     running: false,
     paused: false,
+    gameSession: null,
     score: 0,
     timeLeft: GAME_SECONDS,
     elapsed: 0,
@@ -1303,9 +1304,39 @@ async function resetRankings() {
   }
 }
 
-function startGame() {
+async function startGame() {
+  if (!currentUser) {
+    return;
+  }
+
+  startButton.disabled = true;
+  pauseRestartButton.disabled = true;
+
+  let gameSession;
+
+  try {
+    const data = await requestApi("/api/scores", {
+      method: "POST",
+      body: {
+        action: "start-game",
+      },
+    });
+    gameSession = data.gameSession;
+
+    if (!gameSession?.id || !gameSession?.token) {
+      throw new Error("게임 시작 토큰을 받을 수 없습니다.");
+    }
+  } catch (error) {
+    showGameOverlay("게임 시작", "게임 시작 실패");
+    setMessage(error.message);
+    startButton.disabled = false;
+    pauseRestartButton.disabled = false;
+    return;
+  }
+
   stopGame();
   game = createGameState();
+  game.gameSession = gameSession;
   game.running = true;
   game.paused = false;
   hideGameOverlay();
@@ -1316,6 +1347,8 @@ function startGame() {
   lastFrame = performance.now();
   nextDropAt = 0;
   animationId = requestAnimationFrame(loop);
+  startButton.disabled = false;
+  pauseRestartButton.disabled = false;
 }
 
 function cancelAnimation() {
@@ -1348,10 +1381,20 @@ async function submitScore(score) {
     return;
   }
 
+  if (!game.gameSession?.id || !game.gameSession?.token) {
+    showGameOverlay("다시하기", `${score}점 · 저장 실패`);
+    return;
+  }
+
   try {
     const data = await requestApi("/api/scores", {
       method: "POST",
-      body: { score },
+      body: {
+        action: "finish-game",
+        score,
+        sessionId: game.gameSession.id,
+        sessionToken: game.gameSession.token,
+      },
     });
     currentUser = data.user;
     bestText.textContent = currentUser.bestScore || 0;

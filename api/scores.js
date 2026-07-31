@@ -1,3 +1,5 @@
+const crypto = require("crypto");
+
 const {
   readJson,
   requireUser,
@@ -6,6 +8,106 @@ const {
   sendJson,
   supabaseRequest,
 } = require("../server/db");
+
+const GAME_SECONDS = 45;
+const MIN_PLAY_MS = (GAME_SECONDS - 5) * 1000;
+const SESSION_TTL_MS = 30 * 60 * 1000;
+const MAX_ACCEPTED_SCORE = 5000;
+
+function getSessionSecret() {
+  const secret = process.env.SESSION_SECRET;
+
+  if (!secret) {
+    throw new Error("SESSION_SECRET 환경변수가 필요합니다.");
+  }
+
+  return secret;
+}
+
+function hashGameToken(token) {
+  return crypto.createHmac("sha256", getSessionSecret()).update(token).digest("hex");
+}
+
+function timingSafeEqualText(left, right) {
+  const leftBuffer = Buffer.from(String(left || ""), "hex");
+  const rightBuffer = Buffer.from(String(right || ""), "hex");
+
+  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+async function createGameSession(user) {
+  const sessionId = crypto.randomUUID();
+  const token = crypto.randomBytes(32).toString("base64url");
+  const now = Date.now();
+
+  await supabaseRequest("game_sessions", {
+    method: "POST",
+    body: {
+      id: sessionId,
+      user_id: user.id,
+      token_hash: hashGameToken(token),
+      started_at: new Date(now).toISOString(),
+      expires_at: new Date(now + SESSION_TTL_MS).toISOString(),
+    },
+  });
+
+  return {
+    id: sessionId,
+    token,
+    minSubmitAfterMs: MIN_PLAY_MS,
+  };
+}
+
+async function validateGameSession(user, sessionId, sessionToken, score) {
+  if (!sessionId || !sessionToken) {
+    return "게임 시작 토큰이 필요합니다.";
+  }
+
+  if (score > MAX_ACCEPTED_SCORE) {
+    return "점수 값이 비정상적으로 높습니다.";
+  }
+
+  const sessions = await supabaseRequest(`game_sessions?id=eq.${encodeURIComponent(sessionId)}&user_id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`, {
+    prefer: "",
+  });
+  const session = sessions?.[0];
+
+  if (!session) {
+    return "게임 세션을 찾을 수 없습니다.";
+  }
+
+  const expectedHash = hashGameToken(sessionToken);
+
+  if (!timingSafeEqualText(expectedHash, session.token_hash)) {
+    return "게임 세션 토큰이 올바르지 않습니다.";
+  }
+
+  const now = Date.now();
+  const startedAt = new Date(session.started_at).getTime();
+  const expiresAt = new Date(session.expires_at).getTime();
+
+  if (Number.isNaN(startedAt) || now - startedAt < MIN_PLAY_MS) {
+    return "게임 시간이 너무 짧습니다.";
+  }
+
+  if (Number.isNaN(expiresAt) || now > expiresAt) {
+    return "게임 세션이 만료되었습니다.";
+  }
+
+  const usedSession = await supabaseRequest(`game_sessions?id=eq.${encodeURIComponent(session.id)}&user_id=eq.${encodeURIComponent(user.id)}&submitted_at=is.null`, {
+    method: "PATCH",
+    body: {
+      submitted_at: new Date(now).toISOString(),
+      submitted_score: score,
+    },
+  });
+
+  if (!usedSession || usedSession.length === 0) {
+    return "이미 제출된 게임 세션입니다.";
+  }
+
+  return "";
+}
 
 module.exports = async function handler(req, res) {
   try {
@@ -24,11 +126,31 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const { score } = await readJson(req);
+    const body = await readJson(req);
+    const { action, score, sessionId, sessionToken } = body;
+
+    if (action === "start-game") {
+      const gameSession = await createGameSession(user);
+      sendJson(res, 200, { gameSession });
+      return;
+    }
+
+    if (action !== "finish-game") {
+      sendJson(res, 400, { message: "게임 시작 토큰이 필요합니다." });
+      return;
+    }
+
     const numericScore = Number(score);
 
-    if (!Number.isInteger(numericScore) || numericScore < 0 || numericScore > 1000000) {
+    if (!Number.isInteger(numericScore) || numericScore < 0 || numericScore > MAX_ACCEPTED_SCORE) {
       sendJson(res, 400, { message: "점수 값이 올바르지 않습니다." });
+      return;
+    }
+
+    const sessionError = await validateGameSession(user, sessionId, sessionToken, numericScore);
+
+    if (sessionError) {
+      sendJson(res, 400, { message: sessionError });
       return;
     }
 

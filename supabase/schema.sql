@@ -36,11 +36,26 @@ create table if not exists public.scores (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.game_sessions (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  token_hash text not null,
+  started_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  submitted_at timestamptz,
+  submitted_score integer,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists users_best_score_idx
   on public.users (best_score desc, username asc);
 
 create index if not exists scores_user_created_idx
   on public.scores (user_id, created_at desc);
 
+create index if not exists game_sessions_user_started_idx
+  on public.game_sessions (user_id, started_at desc);
+
 alter table public.users enable row level security;
 alter table public.scores enable row level security;
+alter table public.game_sessions enable row level security;
