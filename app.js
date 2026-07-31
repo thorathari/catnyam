@@ -25,9 +25,6 @@ const startButton = document.querySelector("#startButton");
 const gameOverlay = document.querySelector("#gameOverlay");
 const overlayResult = document.querySelector("#overlayResult");
 const shareResultButton = document.querySelector("#shareResultButton");
-const sharePreviewPanel = document.querySelector("#sharePreviewPanel");
-const sharePreviewImage = document.querySelector("#sharePreviewImage");
-const copyResultButton = document.querySelector("#copyResultButton");
 const shareStatus = document.querySelector("#shareStatus");
 const pauseButton = document.querySelector("#pauseButton");
 const pauseActions = document.querySelector("#pauseActions");
@@ -108,8 +105,6 @@ let rankingRequestInFlight = false;
 let rankingRefreshQueued = false;
 let activePlayerHistoryAccount = null;
 let lastFinishedScore = null;
-let resultShareBlob = null;
-let resultShareUrl = "";
 let game = createGameState();
 
 async function requestApi(path, options = {}) {
@@ -1399,7 +1394,7 @@ async function startGame() {
 
   stopGame();
   lastFinishedScore = null;
-  resetSharePreview();
+  resetShareStatus();
   game = createGameState();
   game.gameSession = gameSession;
   game.running = true;
@@ -1498,7 +1493,7 @@ function resumeGame() {
 function returnToGameHome() {
   stopGame();
   lastFinishedScore = null;
-  resetSharePreview();
+  resetShareStatus();
   game = createGameState();
   scoreText.textContent = "0";
   timeText.textContent = GAME_SECONDS;
@@ -1517,7 +1512,9 @@ function showGameOverlay(buttonText, resultText = "", mode = "default") {
   startButton.textContent = buttonText;
   startButton.hidden = isPaused;
   shareResultButton.hidden = !canShareResult;
-  sharePreviewPanel.hidden = !canShareResult || !resultShareBlob;
+  if (!canShareResult) {
+    resetShareStatus();
+  }
   pauseActions.hidden = !isPaused;
   itemGuide.hidden = isPaused;
   overlayResult.textContent = resultText;
@@ -1531,7 +1528,7 @@ function hideGameOverlay() {
   pauseActions.hidden = true;
   startButton.hidden = false;
   shareResultButton.hidden = true;
-  sharePreviewPanel.hidden = true;
+  shareStatus.hidden = true;
   itemGuide.hidden = false;
   pauseButton.hidden = !game.running;
 }
@@ -1550,143 +1547,9 @@ function getFullResultShareText(score) {
   return `${getResultShareText(score)}\n${getSharePageUrl()}`;
 }
 
-function drawShareRoundRect(target, x, y, width, height, radius) {
-  const r = Math.min(radius, width / 2, height / 2);
-  target.beginPath();
-  target.moveTo(x + r, y);
-  target.arcTo(x + width, y, x + width, y + height, r);
-  target.arcTo(x + width, y + height, x, y + height, r);
-  target.arcTo(x, y + height, x, y, r);
-  target.arcTo(x, y, x + width, y, r);
-  target.closePath();
-}
-
-function drawSharePaws(target) {
-  const paws = [
-    [142, 126, 0.55],
-    [914, 160, 0.42],
-    [170, 928, 0.38],
-    [936, 878, 0.5],
-  ];
-
-  target.save();
-  target.fillStyle = "rgba(239, 111, 143, 0.13)";
-  paws.forEach(([x, y, scale]) => {
-    target.save();
-    target.translate(x, y);
-    target.scale(scale, scale);
-    target.beginPath();
-    target.ellipse(0, 24, 38, 30, 0, 0, Math.PI * 2);
-    target.fill();
-    [[-38, -10], [-13, -24], [13, -24], [38, -10]].forEach(([toeX, toeY]) => {
-      target.beginPath();
-      target.ellipse(toeX, toeY, 15, 19, 0, 0, Math.PI * 2);
-      target.fill();
-    });
-    target.restore();
-  });
-  target.restore();
-}
-
-function createResultShareCanvas(score) {
-  const resultCanvas = document.createElement("canvas");
-  resultCanvas.width = 1080;
-  resultCanvas.height = 1080;
-
-  const resultCtx = resultCanvas.getContext("2d");
-  const nickname = getUserDisplayName(currentUser) || "플레이어";
-  const gradient = resultCtx.createLinearGradient(0, 0, resultCanvas.width, resultCanvas.height);
-
-  gradient.addColorStop(0, "#fff6ea");
-  gradient.addColorStop(0.48, "#effaf4");
-  gradient.addColorStop(1, "#ffeaf1");
-  resultCtx.fillStyle = gradient;
-  resultCtx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
-  drawSharePaws(resultCtx);
-
-  resultCtx.save();
-  drawShareRoundRect(resultCtx, 76, 72, 928, 936, 40);
-  resultCtx.fillStyle = "rgba(255, 255, 255, 0.74)";
-  resultCtx.fill();
-  resultCtx.strokeStyle = "rgba(37, 33, 29, 0.08)";
-  resultCtx.lineWidth = 4;
-  resultCtx.stroke();
-  resultCtx.restore();
-
-  resultCtx.fillStyle = "#ef6f8f";
-  resultCtx.font = '700 34px "Nunito", sans-serif';
-  resultCtx.textAlign = "center";
-  resultCtx.fillText("CUTE CATCH MINI GAME", 540, 145);
-  resultCtx.fillStyle = "#25211d";
-  resultCtx.font = '76px "Jua", "Nunito", sans-serif';
-  resultCtx.fillText("Cat Nyam", 540, 226);
-  resultCtx.font = '44px "Jua", "Nunito", sans-serif';
-  resultCtx.fillText(`${nickname}님의 기록`, 540, 296);
-  resultCtx.fillStyle = "#ef6f8f";
-  resultCtx.font = '108px "Jua", "Nunito", sans-serif';
-  resultCtx.fillText(`${score}점`, 540, 402);
-
-  resultCtx.save();
-  drawShareRoundRect(resultCtx, 90, 448, 900, 560, 32);
-  resultCtx.clip();
-  resultCtx.drawImage(canvas, 90, 448, 900, 560);
-  resultCtx.restore();
-  drawShareRoundRect(resultCtx, 90, 448, 900, 560, 32);
-  resultCtx.strokeStyle = "rgba(128, 190, 206, 0.55)";
-  resultCtx.lineWidth = 6;
-  resultCtx.stroke();
-
-  resultCtx.fillStyle = "rgba(37, 33, 29, 0.78)";
-  resultCtx.font = '30px "Jua", "Nunito", sans-serif';
-  resultCtx.fillText("츄르 잡으러 도전해봐냥", 540, 1042);
-
-  return resultCanvas;
-}
-
-function canvasToPngBlob(sourceCanvas) {
-  return new Promise((resolve, reject) => {
-    sourceCanvas.toBlob((blob) => {
-      if (blob) {
-        resolve(blob);
-      } else {
-        reject(new Error("결과 이미지를 만들 수 없습니다."));
-      }
-    }, "image/png");
-  });
-}
-
-function setResultShareBlob(blob) {
-  if (resultShareUrl) {
-    URL.revokeObjectURL(resultShareUrl);
-  }
-
-  resultShareBlob = blob;
-  resultShareUrl = URL.createObjectURL(blob);
-  sharePreviewImage.src = resultShareUrl;
-  sharePreviewImage.hidden = false;
-  sharePreviewPanel.hidden = false;
-}
-
-function resetSharePreview() {
-  if (resultShareUrl) {
-    URL.revokeObjectURL(resultShareUrl);
-  }
-
-  resultShareBlob = null;
-  resultShareUrl = "";
-  sharePreviewImage.removeAttribute("src");
-  sharePreviewImage.hidden = true;
-  sharePreviewPanel.hidden = true;
+function resetShareStatus() {
   shareStatus.textContent = "";
-  copyResultButton.disabled = false;
-}
-
-async function prepareResultShareImage(score) {
-  const resultCanvas = createResultShareCanvas(score);
-  const blob = await canvasToPngBlob(resultCanvas);
-
-  setResultShareBlob(blob);
-  return blob;
+  shareStatus.hidden = true;
 }
 
 async function copyResultShareText(score) {
@@ -1697,73 +1560,19 @@ async function copyResultShareText(score) {
   await navigator.clipboard.writeText(getFullResultShareText(score));
 }
 
-async function copyResultImageWithText(score) {
-  const textBlob = new Blob([getFullResultShareText(score)], { type: "text/plain" });
-
-  await navigator.clipboard.write([
-    new ClipboardItem({
-      [resultShareBlob.type]: resultShareBlob,
-      "text/plain": textBlob,
-    }),
-  ]);
-}
-
-async function copyResultImageOnly() {
-  await navigator.clipboard.write([
-    new ClipboardItem({
-      [resultShareBlob.type]: resultShareBlob,
-    }),
-  ]);
-}
-
 async function shareResult() {
   const score = lastFinishedScore ?? game.score ?? 0;
   shareResultButton.disabled = true;
-  sharePreviewPanel.hidden = false;
-  itemGuide.hidden = true;
-  shareStatus.textContent = "이미지를 만들고 있어요.";
-
-  try {
-    await prepareResultShareImage(score);
-    shareStatus.textContent = "이미지를 만들었어요. 복사하기를 눌러주세요.";
-  } catch (error) {
-    shareStatus.textContent = error.message || "결과 이미지를 만들지 못했어요.";
-  } finally {
-    shareResultButton.disabled = false;
-  }
-}
-
-async function copyResultImage() {
-  const score = lastFinishedScore ?? game.score ?? 0;
-
-  copyResultButton.disabled = true;
+  shareStatus.hidden = false;
   shareStatus.textContent = "복사하는 중입니다.";
 
   try {
-    if (!resultShareBlob) {
-      await prepareResultShareImage(score);
-    }
-
-    if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
-      throw new Error("이미지 클립보드 복사를 지원하지 않습니다.");
-    }
-
-    try {
-      await copyResultImageWithText(score);
-      shareStatus.textContent = "이미지와 문구가 복사되었습니다.";
-    } catch {
-      await copyResultImageOnly();
-      shareStatus.textContent = "이미지가 복사되었습니다. 앱에 따라 문구는 따로 붙여넣어 주세요.";
-    }
+    await copyResultShareText(score);
+    shareStatus.textContent = "공유 문구가 복사되었습니다.";
   } catch (error) {
-    try {
-      await copyResultShareText(score);
-      shareStatus.textContent = "이미지 복사가 지원되지 않아 문구를 복사했어요.";
-    } catch {
-      shareStatus.textContent = error.message || "복사를 완료하지 못했어요.";
-    }
+    shareStatus.textContent = error.message || "복사를 완료하지 못했어요.";
   } finally {
-    copyResultButton.disabled = false;
+    shareResultButton.disabled = false;
   }
 }
 
@@ -3052,7 +2861,6 @@ dailyRankingButton.addEventListener("click", () => setRankingMode("daily"));
 allTimeRankingButton.addEventListener("click", () => setRankingMode("allTime"));
 startButton.addEventListener("click", startGame);
 shareResultButton.addEventListener("click", shareResult);
-copyResultButton.addEventListener("click", copyResultImage);
 pauseButton.addEventListener("click", pauseGame);
 pauseRestartButton.addEventListener("click", startGame);
 pauseHomeButton.addEventListener("click", returnToGameHome);
