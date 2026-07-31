@@ -1546,6 +1546,10 @@ function getResultShareText(score) {
   return `Cat Nyam에서 ${nickname}님이 ${score}점 달성!\n츄르 잡으러 도전해봐냥`;
 }
 
+function getFullResultShareText(score) {
+  return `${getResultShareText(score)}\n${getSharePageUrl()}`;
+}
+
 function drawShareRoundRect(target, x, y, width, height, radius) {
   const r = Math.min(radius, width / 2, height / 2);
   target.beginPath();
@@ -1690,7 +1694,26 @@ async function copyResultShareText(score) {
     throw new Error("이 브라우저에서는 공유와 복사를 지원하지 않습니다.");
   }
 
-  await navigator.clipboard.writeText(`${getResultShareText(score)}\n${getSharePageUrl()}`);
+  await navigator.clipboard.writeText(getFullResultShareText(score));
+}
+
+async function copyResultImageWithText(score) {
+  const textBlob = new Blob([getFullResultShareText(score)], { type: "text/plain" });
+
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      [resultShareBlob.type]: resultShareBlob,
+      "text/plain": textBlob,
+    }),
+  ]);
+}
+
+async function copyResultImageOnly() {
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      [resultShareBlob.type]: resultShareBlob,
+    }),
+  ]);
 }
 
 async function shareResult() {
@@ -1725,12 +1748,13 @@ async function copyResultImage() {
       throw new Error("이미지 클립보드 복사를 지원하지 않습니다.");
     }
 
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        [resultShareBlob.type]: resultShareBlob,
-      }),
-    ]);
-    shareStatus.textContent = "복사되었습니다.";
+    try {
+      await copyResultImageWithText(score);
+      shareStatus.textContent = "이미지와 문구가 복사되었습니다.";
+    } catch {
+      await copyResultImageOnly();
+      shareStatus.textContent = "이미지가 복사되었습니다. 앱에 따라 문구는 따로 붙여넣어 주세요.";
+    }
   } catch (error) {
     try {
       await copyResultShareText(score);
