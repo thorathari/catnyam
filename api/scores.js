@@ -40,16 +40,20 @@ async function createGameSession(user) {
   const token = crypto.randomBytes(32).toString("base64url");
   const now = Date.now();
 
-  await supabaseRequest("game_sessions", {
-    method: "POST",
-    body: {
-      id: sessionId,
-      user_id: user.id,
-      token_hash: hashGameToken(token),
-      started_at: new Date(now).toISOString(),
-      expires_at: new Date(now + SESSION_TTL_MS).toISOString(),
-    },
-  });
+  try {
+    await supabaseRequest("game_sessions", {
+      method: "POST",
+      body: {
+        id: sessionId,
+        user_id: user.id,
+        token_hash: hashGameToken(token),
+        started_at: new Date(now).toISOString(),
+        expires_at: new Date(now + SESSION_TTL_MS).toISOString(),
+      },
+    });
+  } catch (error) {
+    throw new Error(`게임 세션 저장에 실패했습니다. Supabase SQL Editor에서 supabase/schema.sql을 다시 실행해주세요. (${error.message})`);
+  }
 
   return {
     id: sessionId,

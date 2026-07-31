@@ -1381,7 +1381,8 @@ async function startGame() {
       throw new Error("게임 시작 토큰을 받을 수 없습니다.");
     }
   } catch (error) {
-    showGameOverlay("게임 시작", "게임 시작 실패");
+    const overlayMessage = error.message.includes("schema.sql") ? "schema.sql 실행 필요" : "서버 설정 확인 필요";
+    showGameOverlay("게임 시작", overlayMessage);
     setMessage(error.message);
     startButton.disabled = false;
     pauseRestartButton.disabled = false;

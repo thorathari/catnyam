@@ -36,7 +36,7 @@ SUPABASE_SECRET_KEY
 SESSION_SECRET
 ```
 
-`SUPABASE_SECRET_KEY`는 브라우저에 넣지 말고 Vercel 환경변수에만 저장해야 합니다.
+`SUPABASE_SECRET_KEY`는 브라우저에 넣지 말고 Vercel 환경변수에만 저장해야 합니다. 레거시 키를 쓰는 경우 `SUPABASE_SERVICE_ROLE_KEY` 이름도 지원합니다.
 
 ## 조작
 

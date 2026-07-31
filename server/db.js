@@ -17,7 +17,11 @@ function getEnv(name) {
 
 function getSupabaseConfig() {
   const url = getEnv("SUPABASE_URL").replace(/\/$/, "");
-  const secretKey = getEnv("SUPABASE_SECRET_KEY");
+  const secretKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!secretKey) {
+    throw new Error("SUPABASE_SECRET_KEY 환경변수가 필요합니다.");
+  }
 
   return { url, secretKey };
 }
