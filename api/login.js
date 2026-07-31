@@ -5,8 +5,37 @@ const {
   sanitizeUser,
   sendJson,
   setSessionCookie,
+  supabaseRequest,
   verifyPassword,
 } = require("../server/db");
+
+function isMissingLastLoginColumn(error) {
+  return /last_login_at/i.test(error.message || "") && /column|schema cache/i.test(error.message || "");
+}
+
+async function updateLastLogin(user) {
+  const lastLoginAt = new Date().toISOString();
+
+  try {
+    const updated = await supabaseRequest(`users?id=eq.${encodeURIComponent(user.id)}`, {
+      method: "PATCH",
+      body: {
+        last_login_at: lastLoginAt,
+      },
+    });
+
+    return updated[0] || {
+      ...user,
+      last_login_at: lastLoginAt,
+    };
+  } catch (error) {
+    if (!isMissingLastLoginColumn(error)) {
+      throw error;
+    }
+
+    return user;
+  }
+}
 
 module.exports = async function handler(req, res) {
   try {
@@ -32,8 +61,9 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    setSessionCookie(res, user);
-    sendJson(res, 200, { user: sanitizeUser(user) });
+    const loggedInUser = await updateLastLogin(user);
+    setSessionCookie(res, loggedInUser);
+    sendJson(res, 200, { user: sanitizeUser(loggedInUser) });
   } catch (error) {
     sendJson(res, 500, { message: error.message });
   }

@@ -99,6 +99,8 @@ let rankingChanges = {
   allTime: new Map(),
 };
 let rankingRefreshId = null;
+let rankingRequestInFlight = false;
+let rankingRefreshQueued = false;
 let game = createGameState();
 
 async function requestApi(path, options = {}) {
@@ -671,7 +673,22 @@ function setAccountTab(tabName) {
 }
 
 async function renderRanking() {
-  rankingList.innerHTML = "";
+  if (rankingRequestInFlight) {
+    rankingRefreshQueued = true;
+    return;
+  }
+
+  rankingRequestInFlight = true;
+  const hadRankingContent = rankingList.children.length > 0;
+  const hadRecentPlayContent = recentPlayList.children.length > 0;
+
+  if (!hadRankingContent) {
+    appendRankingItem("-", "랭킹을 불러오는 중입니다", 0);
+  }
+
+  if (!hadRecentPlayContent) {
+    renderRecentPlays("최근 플레이를 불러오는 중입니다");
+  }
 
   try {
     const data = await requestApi("/api/rankings");
@@ -688,9 +705,22 @@ async function renderRanking() {
     renderRankingList();
     renderRecentPlays();
   } catch {
-    recentPlayData = [];
-    appendRankingItem("-", "랭킹 서버 연결 필요", 0);
-    renderRecentPlays("최근 플레이 서버 연결 필요");
+    if (!hadRankingContent) {
+      rankingList.innerHTML = "";
+      appendRankingItem("-", "랭킹 서버 연결 필요", 0);
+    }
+
+    if (!hadRecentPlayContent) {
+      recentPlayData = [];
+      renderRecentPlays("최근 플레이 서버 연결 필요");
+    }
+  } finally {
+    rankingRequestInFlight = false;
+
+    if (rankingRefreshQueued) {
+      rankingRefreshQueued = false;
+      renderRanking();
+    }
   }
 }
 
@@ -802,6 +832,10 @@ function appendRankingItem(rankValue, accountInfo, scoreValue, rankDelta = 0) {
 }
 
 function formatPlayDate(value) {
+  if (!value) {
+    return "날짜 없음";
+  }
+
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
@@ -934,22 +968,20 @@ function getRoleLabel(role) {
   return role === "admin" ? "관리자" : "일반 사용자";
 }
 
-function renderPlayerHistorySummary(user, stats, history) {
+function renderPlayerHistorySummary(user, stats) {
   const details = document.createElement("dl");
   const totalGames = stats.totalGamesPlayed ?? user.gamesPlayed ?? 0;
   const todayGames = stats.todayGamesPlayed ?? 0;
-  const historyCount = stats.recentHistoryCount ?? history.length;
-  const historyLimit = stats.recentHistoryLimit || history.length;
   details.className = "player-history-info";
 
   appendPlayerHistoryDetail(details, "아이디", user.username);
   appendPlayerHistoryDetail(details, "닉네임", getUserDisplayName(user));
   appendPlayerHistoryDetail(details, "권한", getRoleLabel(user.role));
   appendPlayerHistoryDetail(details, "가입일", formatPlayDate(user.createdAt));
+  appendPlayerHistoryDetail(details, "최종 접속일", formatPlayDate(user.lastLoginAt));
   appendPlayerHistoryDetail(details, "최고 기록", `${user.bestScore || 0}점`);
   appendPlayerHistoryDetail(details, "전체 횟수", `${totalGames}회`);
   appendPlayerHistoryDetail(details, "오늘 횟수", `${todayGames}회`);
-  appendPlayerHistoryDetail(details, "최근 기록", `${historyCount}/${historyLimit}개`);
   playerHistorySummary.replaceChildren(details);
 }
 
@@ -978,7 +1010,7 @@ function renderPlayerHistory(data) {
   const stats = data.stats || {};
   const history = data.history || [];
   playerHistoryTitle.textContent = `${getUserDisplayName(user) || "플레이어"} 정보`;
-  renderPlayerHistorySummary(user, stats, history);
+  renderPlayerHistorySummary(user, stats);
   playerHistoryList.innerHTML = "";
   setPlayerHistoryMessage("");
 

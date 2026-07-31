@@ -79,12 +79,11 @@ async function sendPlayerHistory(req, res, userId) {
       gamesPlayed: user.games_played || 0,
       createdAt: user.created_at,
       updatedAt: user.updated_at,
+      lastLoginAt: user.last_login_at,
     },
     stats: {
       totalGamesPlayed: user.games_played || 0,
       todayGamesPlayed: todayScores.length,
-      recentHistoryCount: history.length,
-      recentHistoryLimit: MAX_HISTORY,
     },
     history,
   });

@@ -16,6 +16,10 @@ function isMissingNicknameColumn(error) {
   return /nickname/i.test(error.message || "") && /column|schema cache/i.test(error.message || "");
 }
 
+function isMissingLastLoginColumn(error) {
+  return /last_login_at/i.test(error.message || "") && /column|schema cache/i.test(error.message || "");
+}
+
 module.exports = async function handler(req, res) {
   try {
     if (!requireMethod(req, res, "POST")) return;
@@ -47,6 +51,7 @@ module.exports = async function handler(req, res) {
     const users = await supabaseRequest("users?select=id", { prefer: "" });
     const role = users.length === 0 ? "admin" : "user";
     const { salt, hash } = hashPassword(password);
+    const lastLoginAt = new Date().toISOString();
     const body = {
       username,
       nickname,
@@ -54,6 +59,7 @@ module.exports = async function handler(req, res) {
       password_hash: hash,
       password_salt: salt,
       role,
+      last_login_at: lastLoginAt,
     };
     let created;
 
@@ -63,12 +69,17 @@ module.exports = async function handler(req, res) {
         body,
       });
     } catch (error) {
-      if (!isMissingNicknameColumn(error)) {
+      if (!isMissingNicknameColumn(error) && !isMissingLastLoginColumn(error)) {
         throw error;
       }
 
       const fallbackBody = { ...body };
-      delete fallbackBody.nickname;
+      if (isMissingNicknameColumn(error)) {
+        delete fallbackBody.nickname;
+      }
+      if (isMissingLastLoginColumn(error)) {
+        delete fallbackBody.last_login_at;
+      }
       created = await supabaseRequest("users", {
         method: "POST",
         body: fallbackBody,

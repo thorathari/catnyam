@@ -10,12 +10,16 @@ create table if not exists public.users (
   role text not null default 'user' check (role in ('user', 'admin')),
   best_score integer not null default 0 check (best_score >= 0),
   games_played integer not null default 0 check (games_played >= 0),
+  last_login_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz
 );
 
 alter table public.users
   add column if not exists nickname text;
+
+alter table public.users
+  add column if not exists last_login_at timestamptz;
 
 update public.users
 set nickname = username
