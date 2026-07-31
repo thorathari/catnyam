@@ -1273,11 +1273,26 @@ canvas {
 }
 
 .admin-account-name {
+  border: 0;
+  padding: 0;
   min-width: 0;
   overflow: hidden;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
   font-weight: 900;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.admin-account-name:hover,
+.admin-account-name:focus-visible {
+  color: #d94f80;
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .admin-account-meta {

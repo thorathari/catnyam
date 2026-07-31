@@ -1119,7 +1119,7 @@ async function renderAdminList() {
 function renderAdminAccount(account) {
   const item = document.createElement("div");
   const main = document.createElement("div");
-  const name = document.createElement("span");
+  const name = document.createElement("button");
   const meta = document.createElement("span");
   const renameForm = document.createElement("form");
   const renameInput = document.createElement("input");
@@ -1141,8 +1141,11 @@ function renderAdminAccount(account) {
   deleteButton.className = "danger-button";
 
   const displayName = getUserDisplayName(account);
-  name.textContent = displayName;
-  meta.textContent = `아이디 ${account.username} · 최고 ${account.bestScore || 0}점 · ${account.gamesPlayed || 0}회`;
+  name.type = "button";
+  name.textContent = `${displayName}(${account.username})`;
+  name.setAttribute("aria-label", `${displayName} 계정 정보 보기`);
+  name.addEventListener("click", () => openPlayerHistory(account));
+  meta.textContent = `최고 ${account.bestScore || 0}점 · ${account.gamesPlayed || 0}회`;
   renameInput.type = "text";
   renameInput.maxLength = 16;
   renameInput.value = account.username;
