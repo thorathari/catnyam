@@ -292,7 +292,7 @@ function isBombMode(mode = currentGameMode) {
 }
 
 function canUseGameMode(mode) {
-  return !isBombMode(mode) || isAdmin(currentUser);
+  return Boolean(mode);
 }
 
 function ensureAllowedGameMode() {
@@ -310,7 +310,7 @@ function updateGameModeUI() {
   const bombMode = isBombMode();
 
   gameModeButtons.forEach((button) => {
-    const isLocked = isBombMode(button.dataset.gameMode) && !isAdmin(currentUser);
+    const isLocked = false;
     const isActive = button.dataset.gameMode === currentGameMode;
     button.hidden = isLocked;
     button.disabled = isLocked;

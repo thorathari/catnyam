@@ -21,7 +21,7 @@ function normalizeGameMode(mode) {
 }
 
 function canUseGameMode(user, mode) {
-  return mode !== CatnyamEngine.GAME_MODES.BOMB || user.role === "admin";
+  return Boolean(user && mode);
 }
 
 function getSessionSecret() {
