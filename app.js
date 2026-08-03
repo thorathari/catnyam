@@ -113,6 +113,7 @@ let rankingRequestInFlight = false;
 let rankingRefreshQueued = false;
 let activePlayerHistoryAccount = null;
 let lastFinishedScore = null;
+let lastFinishedGameMode = null;
 const expandedAdminAccountIds = new Set();
 let game = createGameState();
 
@@ -357,6 +358,7 @@ function setGameMode(mode) {
 
   currentGameMode = nextMode;
   lastFinishedScore = null;
+  lastFinishedGameMode = null;
   resetShareStatus();
   rankingData = {
     daily: [],
@@ -1621,6 +1623,7 @@ async function startGame() {
 
   stopGame();
   lastFinishedScore = null;
+  lastFinishedGameMode = null;
   resetShareStatus();
   currentGameMode = CatnyamEngine.normalizeGameMode(gameSession.gameMode || currentGameMode);
   updateGameModeUI();
@@ -1658,6 +1661,7 @@ function stopGame() {
 function finishGame() {
   const finalScore = game.score;
   lastFinishedScore = finalScore;
+  lastFinishedGameMode = game.gameMode;
   stopGame();
   clearModes();
   drawFinish();
@@ -1728,6 +1732,7 @@ function resumeGame() {
 function returnToGameHome() {
   stopGame();
   lastFinishedScore = null;
+  lastFinishedGameMode = null;
   resetShareStatus();
   game = createGameState();
   scoreText.textContent = "0";
@@ -1774,10 +1779,17 @@ function getSharePageUrl() {
   return `${window.location.origin}${window.location.pathname}`;
 }
 
+function getShareModeLabel() {
+  const mode = CatnyamEngine.normalizeGameMode(lastFinishedGameMode || game.gameMode || currentGameMode);
+
+  return mode === CatnyamEngine.GAME_MODES.BOMB ? "폭탄피하기" : "츄르먹기";
+}
+
 function getResultShareText(score) {
   const nickname = getUserDisplayName(currentUser) || "플레이어";
+  const modeLabel = getShareModeLabel();
 
-  return `Cat Nyam에서 ${nickname}님이 ${score}점 달성!\n츄르 잡으러 도전해봐냥`;
+  return `Cat Nyam ${modeLabel}에서 ${nickname}님이 ${score}점 달성!\n츄르 잡으러 도전해봐냥`;
 }
 
 function getFullResultShareText(score) {
