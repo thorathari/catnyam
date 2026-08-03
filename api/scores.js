@@ -14,7 +14,7 @@ const GAME_SECONDS = 45;
 const CHURU_MIN_PLAY_MS = (GAME_SECONDS - 5) * 1000;
 const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
 const SUBMIT_CLOCK_SKEW_MS = 3000;
-const MAX_ACCEPTED_SCORE = 100000;
+const MAX_ACCEPTED_SCORE = 500000;
 
 function normalizeGameMode(mode) {
   return CatnyamEngine.normalizeGameMode(mode);

@@ -27,8 +27,8 @@
   const BOMB_START_HEARTS = 3;
   const BOMB_RAIN_INTERVAL = 10;
   const BOMB_CATNIP_WINDOW_SECONDS = 40;
-  const BOMB_GOLD_WINDOW_SECONDS = 16;
-  const SURVIVAL_SCORE_INTERVAL = 0.3;
+  const BOMB_GOLD_WINDOW_SECONDS = 4;
+  const SURVIVAL_SCORE_INTERVAL = 0.1;
 
   function normalizeGameMode(mode) {
     return mode === GAME_MODES.BOMB ? GAME_MODES.BOMB : GAME_MODES.CHURU;
@@ -110,7 +110,7 @@
         nextHeartAt: 6 + rng() * 24,
         bombSpecialSchedules: {
           catnip: createWindowDropSchedule(rng, BOMB_CATNIP_WINDOW_SECONDS, 0.72),
-          gold: createWindowDropSchedule(rng, BOMB_GOLD_WINDOW_SECONDS, 0.42),
+          gold: createWindowDropSchedule(rng, BOMB_GOLD_WINDOW_SECONDS, 0.85),
         },
         gameOver: false,
       }
@@ -306,7 +306,7 @@
       speed: 155 + state.rng() * 95 + state.elapsed * 1.65,
     });
 
-    if (state.elapsed > 8 && state.rng() < 0.3 + pressure * 0.5) {
+    if (state.elapsed > 6 && state.rng() < 0.42 + pressure * 0.5) {
       addDrop(state, "bomb", {
         width: 38,
         height: 38,
@@ -315,7 +315,7 @@
       });
     }
 
-    if (state.elapsed > 28 && state.rng() < pressure * 0.38) {
+    if (state.elapsed > 22 && state.rng() < 0.1 + pressure * 0.46) {
       addDrop(state, "bomb", {
         width: 38,
         height: 38,
@@ -348,7 +348,7 @@
   }
 
   function spawnBombRain(state, events) {
-    const count = 5 + Math.min(2, Math.floor(state.elapsed / 45));
+    const count = 4 + Math.min(1, Math.floor(state.elapsed / 60));
 
     for (let index = 0; index < count; index += 1) {
       const lane = (index + 0.16 + state.rng() * 0.68) / count;
@@ -368,7 +368,7 @@
   function spawnBombAvoidDrops(state, events) {
     if (state.elapsed >= state.nextDropAt) {
       spawnBombAvoidDrop(state);
-      state.nextDropAt = state.elapsed + Math.max(0.14, 0.62 - state.elapsed * 0.006);
+      state.nextDropAt = state.elapsed + Math.max(0.1, 0.5 - state.elapsed * 0.0055);
     }
 
     if (state.heartSpawned < state.heartSpawnLimit && state.elapsed >= state.nextHeartAt) {
@@ -431,6 +431,10 @@
       x: state.cat.x,
       y: state.cat.y,
     });
+  }
+
+  function getBombModeItemScore(state, baseScore) {
+    return baseScore * (isCatnipModeActive(state) ? 2 : 1);
   }
 
   function applyModeItem(state, drop, events) {
@@ -502,7 +506,7 @@
     }
 
     if (drop.kind === "gold") {
-      applyScoreDelta(state, 5, events);
+      applyScoreDelta(state, getBombModeItemScore(state, 5), events);
       return false;
     }
 
