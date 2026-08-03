@@ -25,9 +25,9 @@
   const MAX_BOMB_INPUT_EVENTS = 20000;
   const TIME_EPSILON = 1e-9;
   const BOMB_START_HEARTS = 3;
-  const BOMB_RAIN_INTERVAL = 10;
+  const BOMB_RAIN_INTERVAL = 15;
   const BOMB_CATNIP_WINDOW_SECONDS = 40;
-  const BOMB_GOLD_WINDOW_SECONDS = 4;
+  const BOMB_GOLD_WINDOW_SECONDS = 3;
   const SURVIVAL_SCORE_INTERVAL = 0.1;
 
   function normalizeGameMode(mode) {
@@ -110,7 +110,7 @@
         nextHeartAt: 6 + rng() * 24,
         bombSpecialSchedules: {
           catnip: createWindowDropSchedule(rng, BOMB_CATNIP_WINDOW_SECONDS, 0.72),
-          gold: createWindowDropSchedule(rng, BOMB_GOLD_WINDOW_SECONDS, 0.85),
+          gold: createWindowDropSchedule(rng, BOMB_GOLD_WINDOW_SECONDS, 0.9),
         },
         gameOver: false,
       }
@@ -306,7 +306,7 @@
       speed: 155 + state.rng() * 95 + state.elapsed * 1.65,
     });
 
-    if (state.elapsed > 6 && state.rng() < 0.42 + pressure * 0.5) {
+    if (state.elapsed > 7 && state.rng() < 0.34 + pressure * 0.42) {
       addDrop(state, "bomb", {
         width: 38,
         height: 38,
@@ -315,7 +315,7 @@
       });
     }
 
-    if (state.elapsed > 22 && state.rng() < 0.1 + pressure * 0.46) {
+    if (state.elapsed > 30 && state.rng() < pressure * 0.28) {
       addDrop(state, "bomb", {
         width: 38,
         height: 38,
@@ -368,7 +368,7 @@
   function spawnBombAvoidDrops(state, events) {
     if (state.elapsed >= state.nextDropAt) {
       spawnBombAvoidDrop(state);
-      state.nextDropAt = state.elapsed + Math.max(0.1, 0.5 - state.elapsed * 0.0055);
+      state.nextDropAt = state.elapsed + Math.max(0.14, 0.58 - state.elapsed * 0.0048);
     }
 
     if (state.heartSpawned < state.heartSpawnLimit && state.elapsed >= state.nextHeartAt) {
