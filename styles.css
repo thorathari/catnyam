@@ -349,6 +349,11 @@ button:disabled {
   background: #5d6876;
 }
 
+.mode-badge.heart {
+  color: #8f274b;
+  background: rgba(255, 210, 224, 0.72);
+}
+
 .canvas-wrap {
   position: relative;
   touch-action: none;
@@ -498,6 +503,38 @@ canvas {
   justify-content: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.game-mode-selector {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(37, 33, 29, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.74);
+  box-shadow: 0 10px 24px rgba(37, 33, 29, 0.08);
+}
+
+.game-mode-button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 12px;
+  color: var(--ink);
+  background: transparent;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.game-mode-button.active {
+  color: white;
+  background: #ef6f8f;
+}
+
+.game-mode-button:not(.active):hover,
+.game-mode-button:not(.active):focus-visible {
+  background: rgba(119, 216, 186, 0.28);
+  outline: none;
 }
 
 .share-result-button {
@@ -728,6 +765,68 @@ canvas {
   height: 18px;
   border-radius: 999px;
   background: #38302d;
+}
+
+.guide-icon.heart {
+  position: relative;
+  width: 19px;
+  height: 17px;
+  border-radius: 0;
+  background: transparent;
+  transform: rotate(-45deg);
+}
+
+.guide-icon.heart::before,
+.guide-icon.heart::after {
+  content: "";
+  position: absolute;
+  background: #ef6f8f;
+}
+
+.guide-icon.heart::before {
+  left: 5px;
+  top: 1px;
+  width: 11px;
+  height: 17px;
+  border-radius: 8px 8px 4px 4px;
+}
+
+.guide-icon.heart::after {
+  left: 0;
+  top: 1px;
+  width: 17px;
+  height: 11px;
+  border-radius: 8px 4px 4px 8px;
+}
+
+.guide-icon.timer {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #288466;
+  border-radius: 999px;
+  background: rgba(119, 216, 186, 0.28);
+}
+
+.guide-icon.timer::before {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 3px;
+  width: 2px;
+  height: 6px;
+  border-radius: 999px;
+  background: #288466;
+  box-shadow: 3px 5px 0 -1px #288466;
+}
+
+.guide-icon.rain {
+  position: relative;
+  width: 22px;
+  height: 18px;
+  border-radius: 999px;
+  background: #38302d;
+  box-shadow: -8px 9px 0 -3px #38302d, 8px 9px 0 -3px #38302d;
 }
 
 .guide-icon.toy {
@@ -1499,6 +1598,17 @@ canvas {
     font-size: 0.86rem;
   }
 
+  .game-mode-selector {
+    gap: 3px;
+    padding: 3px;
+  }
+
+  .game-mode-button {
+    min-height: 28px;
+    padding: 0 9px;
+    font-size: 0.74rem;
+  }
+
   .share-result-button {
     min-height: 36px;
     padding: 0 12px;
@@ -1580,9 +1690,17 @@ canvas {
   .guide-icon.bomb,
   .guide-icon.box,
   .guide-icon.catnip,
+  .guide-icon.rain,
+  .guide-icon.timer,
   .guide-icon.tuna {
     width: 14px;
     height: 14px;
+  }
+
+  .guide-icon.heart {
+    width: 19px;
+    height: 17px;
+    transform: rotate(-45deg) scale(0.78);
   }
 
   .guide-icon.toy {

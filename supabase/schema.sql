@@ -33,14 +33,35 @@ create table if not exists public.scores (
   id bigint generated always as identity primary key,
   user_id uuid not null references public.users(id) on delete cascade,
   score integer not null check (score >= 0),
+  game_mode text not null default 'churu' check (game_mode in ('churu', 'bomb')),
   created_at timestamptz not null default now()
 );
+
+alter table public.scores
+  add column if not exists game_mode text;
+
+update public.scores
+set game_mode = 'churu'
+where game_mode is null or game_mode not in ('churu', 'bomb');
+
+alter table public.scores
+  alter column game_mode set default 'churu',
+  alter column game_mode set not null;
+
+do $$
+begin
+  alter table public.scores
+    add constraint scores_game_mode_check check (game_mode in ('churu', 'bomb'));
+exception
+  when duplicate_object then null;
+end $$;
 
 create table if not exists public.game_sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,
   token_hash text not null,
   seed text not null,
+  game_mode text not null default 'churu' check (game_mode in ('churu', 'bomb')),
   started_at timestamptz not null default now(),
   expires_at timestamptz not null,
   submitted_at timestamptz,
@@ -51,11 +72,36 @@ create table if not exists public.game_sessions (
 alter table public.game_sessions
   add column if not exists seed text;
 
+alter table public.game_sessions
+  add column if not exists game_mode text;
+
+update public.game_sessions
+set game_mode = 'churu'
+where game_mode is null or game_mode not in ('churu', 'bomb');
+
+alter table public.game_sessions
+  alter column game_mode set default 'churu',
+  alter column game_mode set not null;
+
+do $$
+begin
+  alter table public.game_sessions
+    add constraint game_sessions_game_mode_check check (game_mode in ('churu', 'bomb'));
+exception
+  when duplicate_object then null;
+end $$;
+
 create index if not exists users_best_score_idx
   on public.users (best_score desc, username asc);
 
 create index if not exists scores_user_created_idx
   on public.scores (user_id, created_at desc);
+
+create index if not exists scores_game_mode_score_idx
+  on public.scores (game_mode, score desc, created_at asc);
+
+create index if not exists scores_game_mode_created_idx
+  on public.scores (game_mode, created_at desc);
 
 create index if not exists game_sessions_user_started_idx
   on public.game_sessions (user_id, started_at desc);

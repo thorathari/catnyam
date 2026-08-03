@@ -15,6 +15,10 @@ const MIN_PLAY_MS = (GAME_SECONDS - 5) * 1000;
 const SESSION_TTL_MS = 30 * 60 * 1000;
 const MAX_ACCEPTED_SCORE = 5000;
 
+function normalizeGameMode(mode) {
+  return CatnyamEngine.normalizeGameMode(mode);
+}
+
 function getSessionSecret() {
   const secret = process.env.SESSION_SECRET;
 
@@ -36,10 +40,11 @@ function timingSafeEqualText(left, right) {
   return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-async function createGameSession(user) {
+async function createGameSession(user, gameMode) {
   const sessionId = crypto.randomUUID();
   const token = crypto.randomBytes(32).toString("base64url");
   const seed = crypto.randomBytes(16).toString("hex");
+  const normalizedMode = normalizeGameMode(gameMode);
   const now = Date.now();
 
   try {
@@ -50,6 +55,7 @@ async function createGameSession(user) {
         user_id: user.id,
         token_hash: hashGameToken(token),
         seed,
+        game_mode: normalizedMode,
         started_at: new Date(now).toISOString(),
         expires_at: new Date(now + SESSION_TTL_MS).toISOString(),
       },
@@ -62,11 +68,12 @@ async function createGameSession(user) {
     id: sessionId,
     token,
     seed,
+    gameMode: normalizedMode,
     minSubmitAfterMs: MIN_PLAY_MS,
   };
 }
 
-async function validateGameSession(user, sessionId, sessionToken, score, inputLog) {
+async function validateGameSession(user, sessionId, sessionToken, score, inputLog, gameMode) {
   if (!sessionId || !sessionToken) {
     return { error: "게임 시작 토큰이 필요합니다." };
   }
@@ -106,7 +113,14 @@ async function validateGameSession(user, sessionId, sessionToken, score, inputLo
     return { error: "게임 세션 seed가 없습니다. Supabase SQL Editor에서 supabase/schema.sql을 다시 실행해주세요." };
   }
 
-  const simulation = CatnyamEngine.simulateGame(session.seed, inputLog);
+  const sessionGameMode = normalizeGameMode(session.game_mode);
+  const requestedGameMode = normalizeGameMode(gameMode);
+
+  if (gameMode && requestedGameMode !== sessionGameMode) {
+    return { error: "게임 모드 검증에 실패했습니다." };
+  }
+
+  const simulation = CatnyamEngine.simulateGame(session.seed, inputLog, { mode: sessionGameMode });
 
   if (simulation.error) {
     return { error: simulation.error };
@@ -128,7 +142,7 @@ async function validateGameSession(user, sessionId, sessionToken, score, inputLo
     return { error: "이미 제출된 게임 세션입니다." };
   }
 
-  return { score: simulation.score };
+  return { score: simulation.score, gameMode: sessionGameMode };
 }
 
 module.exports = async function handler(req, res) {
@@ -149,10 +163,10 @@ module.exports = async function handler(req, res) {
     }
 
     const body = await readJson(req);
-    const { action, score, sessionId, sessionToken, inputLog } = body;
+    const { action, score, sessionId, sessionToken, inputLog, gameMode } = body;
 
     if (action === "start-game") {
-      const gameSession = await createGameSession(user);
+      const gameSession = await createGameSession(user, gameMode);
       sendJson(res, 200, { gameSession });
       return;
     }
@@ -169,7 +183,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const validation = await validateGameSession(user, sessionId, sessionToken, numericScore, inputLog);
+    const validation = await validateGameSession(user, sessionId, sessionToken, numericScore, inputLog, gameMode);
 
     if (validation.error) {
       sendJson(res, 400, { message: validation.error });
@@ -183,6 +197,7 @@ module.exports = async function handler(req, res) {
       body: {
         user_id: user.id,
         score: verifiedScore,
+        game_mode: validation.gameMode,
       },
     });
 

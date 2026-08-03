@@ -4,12 +4,21 @@ const {
   sendJson,
   supabaseRequest,
 } = require("../server/db");
+const CatnyamEngine = require("../game-engine");
 
 const MAX_HISTORY = 30;
 const MAX_DAILY_SCORES = 10000;
 const MAX_RANKING_ROWS = 10000;
 const MAX_RECENT_PLAYS = 5;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+function normalizeGameMode(mode) {
+  return CatnyamEngine.normalizeGameMode(mode);
+}
+
+function getGameModeFilter(gameMode) {
+  return `game_mode=eq.${encodeURIComponent(normalizeGameMode(gameMode))}`;
+}
 
 function getDisplayName(user) {
   return String(user.nickname || "").trim() || user.username;
@@ -39,7 +48,7 @@ function mapAllTimeRanking(user) {
   };
 }
 
-async function sendPlayerHistory(req, res, userId) {
+async function sendPlayerHistory(req, res, userId, gameMode) {
   const admin = await requireAdmin(req, res);
 
   if (!admin) {
@@ -61,34 +70,43 @@ async function sendPlayerHistory(req, res, userId) {
     return;
   }
 
-  const payload = await buildPlayerHistoryPayload(user);
+  const payload = await buildPlayerHistoryPayload(user, gameMode);
   sendJson(res, 200, payload);
 }
 
-async function buildPlayerHistoryPayload(user) {
-  const scores = await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(user.id)}&select=id,score,created_at&order=created_at.desc&limit=${MAX_HISTORY}`, {
+async function buildPlayerHistoryPayload(user, gameMode) {
+  const normalizedMode = normalizeGameMode(gameMode);
+  const modeFilter = getGameModeFilter(normalizedMode);
+  const scoreBaseFilter = `user_id=eq.${encodeURIComponent(user.id)}&${modeFilter}`;
+  const scores = await supabaseRequest(`scores?${scoreBaseFilter}&select=id,score,created_at,game_mode&order=created_at.desc&limit=${MAX_HISTORY}`, {
+    prefer: "",
+  });
+  const allScores = await supabaseRequest(`scores?${scoreBaseFilter}&select=id,score&order=score.desc,created_at.asc&limit=${MAX_RANKING_ROWS}`, {
     prefer: "",
   });
   const { start, end } = getKstDayRange();
-  const todayScores = await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(user.id)}&select=id&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&limit=${MAX_DAILY_SCORES}`, {
+  const todayScores = await supabaseRequest(`scores?${scoreBaseFilter}&select=id&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&limit=${MAX_DAILY_SCORES}`, {
     prefer: "",
   });
   const history = scores.map((scoreRow) => ({
     id: scoreRow.id,
     score: scoreRow.score || 0,
+    gameMode: normalizeGameMode(scoreRow.game_mode),
     createdAt: scoreRow.created_at,
   }));
 
   return {
     user: {
       ...mapAllTimeRanking(user),
+      bestScore: allScores[0]?.score || 0,
       gamesPlayed: user.games_played || 0,
       createdAt: user.created_at,
       updatedAt: user.updated_at,
       lastLoginAt: user.last_login_at,
     },
     stats: {
-      totalGamesPlayed: user.games_played || 0,
+      gameMode: normalizedMode,
+      totalGamesPlayed: allScores.length,
       todayGamesPlayed: todayScores.length,
     },
     history,
@@ -119,7 +137,7 @@ async function deletePlayerHistory(req, res) {
     return;
   }
 
-  const { userId, scoreId } = await readJson(req);
+  const { userId, scoreId, gameMode } = await readJson(req);
   const scoreKey = String(scoreId || "").trim();
 
   if (!userId || !/^\d+$/.test(scoreKey)) {
@@ -147,7 +165,7 @@ async function deletePlayerHistory(req, res) {
   }
 
   const updatedUser = await recalculateUserScoreStats(user.id);
-  const payload = await buildPlayerHistoryPayload(updatedUser || user);
+  const payload = await buildPlayerHistoryPayload(updatedUser || user, gameMode);
   sendJson(res, 200, {
     ...payload,
     deletedScoreId: scoreKey,
@@ -200,6 +218,7 @@ function buildRecentPlays(scores, users) {
       return {
         nickname: getDisplayName(user),
         score: scoreRow.score || 0,
+        gameMode: normalizeGameMode(scoreRow.game_mode),
         createdAt: scoreRow.created_at,
       };
     })
@@ -221,27 +240,32 @@ module.exports = async function handler(req, res) {
 
     const url = getRequestUrl(req);
     const userId = url.searchParams.get("userId");
+    const gameMode = normalizeGameMode(url.searchParams.get("gameMode"));
 
     if (userId) {
-      await sendPlayerHistory(req, res, userId);
+      await sendPlayerHistory(req, res, userId, gameMode);
       return;
     }
 
     const { start, end } = getKstDayRange();
+    const modeFilter = getGameModeFilter(gameMode);
     const users = await supabaseRequest(`users?select=*&order=best_score.desc,username.asc&limit=${MAX_RANKING_ROWS}`, {
       prefer: "",
     });
-    const scores = await supabaseRequest(`scores?select=user_id,score,created_at&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&order=score.desc,created_at.asc&limit=${MAX_DAILY_SCORES}`, {
+    const scores = await supabaseRequest(`scores?select=user_id,score,created_at&${modeFilter}&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&order=score.desc,created_at.asc&limit=${MAX_DAILY_SCORES}`, {
       prefer: "",
     });
-    const recentScores = await supabaseRequest(`scores?select=user_id,score,created_at&order=created_at.desc&limit=${MAX_RECENT_PLAYS}`, {
+    const allScores = await supabaseRequest(`scores?select=user_id,score,created_at&${modeFilter}&order=score.desc,created_at.asc&limit=${MAX_RANKING_ROWS}`, {
+      prefer: "",
+    });
+    const recentScores = await supabaseRequest(`scores?select=user_id,score,created_at,game_mode&${modeFilter}&order=created_at.desc&limit=${MAX_RECENT_PLAYS}`, {
       prefer: "",
     });
     const dailyRankings = buildDailyRankings(scores, users);
-    const allTimeRankings = users.map(mapAllTimeRanking);
+    const allTimeRankings = buildDailyRankings(allScores, users);
     const recentPlays = buildRecentPlays(recentScores, users);
 
-    sendJson(res, 200, { dailyRankings, allTimeRankings, recentPlays });
+    sendJson(res, 200, { dailyRankings, allTimeRankings, recentPlays, gameMode });
   } catch (error) {
     sendJson(res, 500, { message: error.message });
   }

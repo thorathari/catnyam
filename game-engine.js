@@ -8,6 +8,10 @@
   root.CatnyamEngine = engine;
 })(typeof globalThis !== "undefined" ? globalThis : this, function createGameEngine() {
   const GAME_SECONDS = 45;
+  const GAME_MODES = {
+    CHURU: "churu",
+    BOMB: "bomb",
+  };
   const STEP_SECONDS = 1 / 60;
   const TOTAL_STEPS = Math.round(GAME_SECONDS / STEP_SECONDS);
   const CANVAS_WIDTH = 900;
@@ -18,6 +22,13 @@
   const CAT_BASE_SPEED = 520;
   const MAX_INPUT_EVENTS = TOTAL_STEPS + 1;
   const TIME_EPSILON = 1e-9;
+  const BOMB_START_HEARTS = 3;
+  const BOMB_RAIN_INTERVAL = 10;
+  const SURVIVAL_SCORE_INTERVAL = 1;
+
+  function normalizeGameMode(mode) {
+    return mode === GAME_MODES.BOMB ? GAME_MODES.BOMB : GAME_MODES.CHURU;
+  }
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -66,10 +77,24 @@
 
   function createGameState(options = {}) {
     const seed = String(options.seed || "catnyam-local");
+    const gameMode = normalizeGameMode(options.mode);
     const rng = createRng(seed);
+    const bombModeState = gameMode === GAME_MODES.BOMB
+      ? {
+        hearts: BOMB_START_HEARTS,
+        nextDropAt: 0.9,
+        nextBombRainAt: BOMB_RAIN_INTERVAL,
+        nextSurvivalScoreAt: SURVIVAL_SCORE_INTERVAL,
+        heartSpawnLimit: rng() < 0.68 ? 1 : 0,
+        heartSpawned: 0,
+        nextHeartAt: 6 + rng() * 24,
+        gameOver: false,
+      }
+      : {};
 
     return {
       seed,
+      gameMode,
       rng,
       step: 0,
       score: 0,
@@ -101,6 +126,7 @@
         height: CAT_BASE_HEIGHT,
         speed: CAT_BASE_SPEED,
       },
+      ...bombModeState,
     };
   }
 
@@ -179,7 +205,7 @@
     ]);
   }
 
-  function addDrop(state, kind) {
+  function addDrop(state, kind, options = {}) {
     const isGold = kind === "gold";
     const isBomb = kind === "bomb";
     const isToy = kind === "toy";
@@ -188,16 +214,17 @@
     const isCatnip = kind === "catnip";
     const isTuna = kind === "tuna";
     const isClipper = kind === "clipper";
+    const isHeart = kind === "heart";
 
     noteDropSpawned(state, kind);
     state.drops.push({
       id: state.nextDropId,
-      x: 34 + state.rng() * (CANVAS_WIDTH - 68),
-      y: -40,
-      width: isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 44 : isCatnip ? 46 : isTuna ? 44 : isClipper ? 48 : isGold ? 34 : 28,
-      height: isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 42 : isClipper ? 34 : isGold ? 70 : 60,
-      speed: 170 + state.rng() * 145 + state.elapsed * 2.3,
-      rotation: state.rng() * Math.PI,
+      x: options.x ?? 34 + state.rng() * (CANVAS_WIDTH - 68),
+      y: options.y ?? -40,
+      width: options.width ?? (isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 44 : isCatnip ? 46 : isTuna ? 44 : isClipper ? 48 : isHeart ? 42 : isGold ? 34 : 28),
+      height: options.height ?? (isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 42 : isClipper ? 34 : isHeart ? 38 : isGold ? 70 : 60),
+      speed: options.speed ?? 170 + state.rng() * 145 + state.elapsed * 2.3,
+      rotation: options.rotation ?? state.rng() * Math.PI,
       spin: (state.rng() - 0.5) * 3,
       kind,
     });
@@ -247,6 +274,65 @@
     spawnExtraBombDrops(state);
   }
 
+  function spawnBombAvoidDrop(state) {
+    addDrop(state, "bomb", {
+      width: 38,
+      height: 38,
+      speed: 145 + state.rng() * 85 + state.elapsed * 1.35,
+    });
+
+    if (state.elapsed > 28 && state.rng() < 0.12) {
+      addDrop(state, "bomb", {
+        width: 38,
+        height: 38,
+        y: -80 - state.rng() * 80,
+        speed: 160 + state.rng() * 95 + state.elapsed * 1.6,
+      });
+    }
+  }
+
+  function spawnHeartDrop(state) {
+    addDrop(state, "heart", {
+      speed: 155 + state.rng() * 80,
+      rotation: 0,
+    });
+    state.heartSpawned += 1;
+    state.nextHeartAt = Number.POSITIVE_INFINITY;
+  }
+
+  function spawnBombRain(state, events) {
+    const count = 6 + Math.min(3, Math.floor(state.elapsed / 15));
+
+    for (let index = 0; index < count; index += 1) {
+      const lane = (index + 0.16 + state.rng() * 0.68) / count;
+      addDrop(state, "bomb", {
+        width: 38,
+        height: 38,
+        x: 34 + lane * (CANVAS_WIDTH - 68),
+        y: -50 - state.rng() * 260,
+        speed: 190 + state.rng() * 105 + state.elapsed * 1.45,
+      });
+    }
+
+    state.nextBombRainAt += BOMB_RAIN_INTERVAL;
+    events.push({ type: "rain" });
+  }
+
+  function spawnBombAvoidDrops(state, events) {
+    if (state.elapsed >= state.nextDropAt) {
+      spawnBombAvoidDrop(state);
+      state.nextDropAt = state.elapsed + Math.max(0.62, 1.35 - state.elapsed * 0.008);
+    }
+
+    if (state.heartSpawned < state.heartSpawnLimit && state.elapsed >= state.nextHeartAt) {
+      spawnHeartDrop(state);
+    }
+
+    while (state.elapsed >= state.nextBombRainAt && state.nextBombRainAt < GAME_SECONDS) {
+      spawnBombRain(state, events);
+    }
+  }
+
   function getScoreMultiplier(state) {
     let multiplier = 1;
 
@@ -270,12 +356,13 @@
     return baseScore * getScoreMultiplier(state);
   }
 
-  function applyScoreDelta(state, scoreDelta, events) {
+  function applyScoreDelta(state, scoreDelta, events, source = "item") {
     state.score = Math.max(0, state.score + scoreDelta);
     events.push({
       type: "score",
       scoreDelta,
       score: state.score,
+      source,
       x: state.cat.x,
       y: state.cat.y,
     });
@@ -327,6 +414,42 @@
     return drop.kind === "bomb" || drop.kind === "box" || drop.kind === "clipper";
   }
 
+  function applySurvivalScore(state, events) {
+    while (state.elapsed >= state.nextSurvivalScoreAt && !state.gameOver) {
+      applyScoreDelta(state, 1, events, "survival");
+      state.nextSurvivalScoreAt += SURVIVAL_SCORE_INTERVAL;
+    }
+  }
+
+  function handleBombAvoidCollision(state, drop, events) {
+    if (drop.kind === "heart") {
+      state.hearts += 1;
+      events.push({
+        type: "heart",
+        hearts: state.hearts,
+      });
+      return false;
+    }
+
+    if (drop.kind === "bomb") {
+      state.hearts = Math.max(0, state.hearts - 1);
+      applyScoreDelta(state, -3, events, "bomb");
+      events.push({
+        type: "life",
+        hearts: state.hearts,
+      });
+
+      if (state.hearts <= 0) {
+        state.gameOver = true;
+        state.timeLeft = 0;
+      }
+
+      return false;
+    }
+
+    return true;
+  }
+
   function knockAwayDrop(state, drop, events) {
     const direction = drop.x >= state.cat.x ? 1 : -1;
     drop.knocked = true;
@@ -341,10 +464,13 @@
   }
 
   function collides(state, drop) {
-    const catLeft = state.cat.x - getCatWidth(state) / 2;
-    const catRight = state.cat.x + getCatWidth(state) / 2;
-    const catTop = state.cat.y - getCatHeight(state) / 2;
-    const catBottom = state.cat.y + getCatHeight(state) / 2;
+    const hitboxScale = state.gameMode === GAME_MODES.BOMB ? 0.72 : 1;
+    const catHitboxWidth = getCatWidth(state) * hitboxScale;
+    const catHitboxHeight = getCatHeight(state) * (state.gameMode === GAME_MODES.BOMB ? 0.78 : 1);
+    const catLeft = state.cat.x - catHitboxWidth / 2;
+    const catRight = state.cat.x + catHitboxWidth / 2;
+    const catTop = state.cat.y - catHitboxHeight / 2;
+    const catBottom = state.cat.y + catHitboxHeight / 2;
     const dropLeft = drop.x - drop.width / 2;
     const dropRight = drop.x + drop.width / 2;
     const dropTop = drop.y - drop.height / 2;
@@ -374,7 +500,10 @@
     state.cat.x += safeDirection * state.cat.speed * speedMultiplier * stepDelta;
     state.cat.x = clamp(state.cat.x, getCatWidth(state) / 2 + 12, CANVAS_WIDTH - getCatWidth(state) / 2 - 12);
 
-    if (state.elapsed >= state.nextDropAt) {
+    if (state.gameMode === GAME_MODES.BOMB) {
+      applySurvivalScore(state, events);
+      spawnBombAvoidDrops(state, events);
+    } else if (state.elapsed >= state.nextDropAt) {
       spawnDrop(state);
       state.nextDropAt = state.elapsed + Math.max(0.32, 0.82 - state.elapsed * 0.008);
     }
@@ -398,6 +527,10 @@
       }
 
       if (collides(state, drop)) {
+        if (state.gameMode === GAME_MODES.BOMB) {
+          return handleBombAvoidCollision(state, drop, events);
+        }
+
         if (isHideModeActive(state) && !isCatnipModeActive(state)) {
           return true;
         }
@@ -449,7 +582,7 @@
     return { inputLog: normalized };
   }
 
-  function simulateGame(seed, inputLog) {
+  function simulateGame(seed, inputLog, options = {}) {
     const normalized = normalizeInputLog(inputLog);
 
     if (normalized.error) {
@@ -458,7 +591,7 @@
       };
     }
 
-    const state = createGameState({ seed });
+    const state = createGameState({ seed, mode: options.mode });
     let direction = 0;
     let logIndex = 0;
 
@@ -475,11 +608,15 @@
       score: state.score,
       steps: state.step,
       elapsed: state.elapsed,
+      hearts: state.hearts,
+      gameMode: state.gameMode,
     };
   }
 
   return {
+    BOMB_START_HEARTS,
     GAME_SECONDS,
+    GAME_MODES,
     STEP_SECONDS,
     TOTAL_STEPS,
     CANVAS_WIDTH,
@@ -496,6 +633,7 @@
     isPurrModeActive,
     isSpeedModeActive,
     isTunaModeActive,
+    normalizeGameMode,
     normalizeInputLog,
     simulateGame,
     stepGame,

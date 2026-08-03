@@ -24,6 +24,8 @@ const logoutButton = document.querySelector("#logoutButton");
 const startButton = document.querySelector("#startButton");
 const gameOverlay = document.querySelector("#gameOverlay");
 const overlayResult = document.querySelector("#overlayResult");
+const gameModeSelector = document.querySelector("#gameModeSelector");
+const gameModeButtons = Array.from(document.querySelectorAll(".game-mode-button"));
 const shareResultButton = document.querySelector("#shareResultButton");
 const shareStatus = document.querySelector("#shareStatus");
 const pauseButton = document.querySelector("#pauseButton");
@@ -35,9 +37,11 @@ const itemGuide = document.querySelector("#itemGuide");
 const touchLeftButton = document.querySelector("#touchLeftButton");
 const touchRightButton = document.querySelector("#touchRightButton");
 const rankingList = document.querySelector("#rankingList");
+const rankingTitle = document.querySelector("#rankingTitle");
 const dailyRankingButton = document.querySelector("#dailyRankingButton");
 const allTimeRankingButton = document.querySelector("#allTimeRankingButton");
 const recentPlayList = document.querySelector("#recentPlayList");
+const recentPlayTitle = document.querySelector("#recentPlayTitle");
 const playerHistoryModal = document.querySelector("#playerHistoryModal");
 const closePlayerHistoryButton = document.querySelector("#closePlayerHistoryButton");
 const playerHistoryTitle = document.querySelector("#playerHistoryTitle");
@@ -77,6 +81,7 @@ const purrModeBadge = document.querySelector("#purrModeBadge");
 const catnipModeBadge = document.querySelector("#catnipModeBadge");
 const tunaModeBadge = document.querySelector("#tunaModeBadge");
 const clipperModeBadge = document.querySelector("#clipperModeBadge");
+const heartModeBadge = document.querySelector("#heartModeBadge");
 const canvasWrap = document.querySelector("#canvasWrap");
 const canvas = document.querySelector("#gameCanvas");
 const ctx = canvas.getContext("2d");
@@ -89,6 +94,7 @@ let currentUser = null;
 let animationId = null;
 let lastFrame = 0;
 let touchDirection = 0;
+let currentGameMode = CatnyamEngine.GAME_MODES.CHURU;
 let rankingMode = "daily";
 let rankingData = {
   daily: [],
@@ -141,9 +147,9 @@ async function requestApi(path, options = {}) {
   return data;
 }
 
-function createGameState(seed = "catnyam-local") {
+function createGameState(seed = "catnyam-local", mode = currentGameMode) {
   return {
-    ...CatnyamEngine.createGameState({ seed }),
+    ...CatnyamEngine.createGameState({ seed, mode }),
     running: false,
     paused: false,
     gameSession: null,
@@ -218,6 +224,67 @@ function isAdmin(user) {
 
 function getUserDisplayName(user) {
   return user?.nickname || user?.username || "";
+}
+
+function getGameModeLabel(mode = currentGameMode) {
+  return mode === CatnyamEngine.GAME_MODES.BOMB ? "폭탄피하기" : "츄르먹기";
+}
+
+function updateGameModeUI() {
+  const isBombMode = currentGameMode === CatnyamEngine.GAME_MODES.BOMB;
+
+  gameModeButtons.forEach((button) => {
+    const isActive = button.dataset.gameMode === currentGameMode;
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-pressed", String(isActive));
+  });
+
+  itemGuide.querySelectorAll(".churu-guide").forEach((group) => {
+    group.hidden = isBombMode;
+  });
+  itemGuide.querySelectorAll(".bomb-guide").forEach((group) => {
+    group.hidden = !isBombMode;
+  });
+
+  rankingTitle.textContent = isBombMode ? "폭탄피하기 랭킹" : "츄르 랭킹";
+  recentPlayTitle.textContent = isBombMode ? "최근 폭탄피하기" : "최근 플레이";
+}
+
+function setGameMode(mode) {
+  if (game.running || game.paused) {
+    return;
+  }
+
+  const nextMode = CatnyamEngine.normalizeGameMode(mode);
+
+  if (nextMode === currentGameMode) {
+    updateGameModeUI();
+    return;
+  }
+
+  currentGameMode = nextMode;
+  lastFinishedScore = null;
+  resetShareStatus();
+  rankingData = {
+    daily: [],
+    allTime: [],
+  };
+  rankingChanges = {
+    daily: new Map(),
+    allTime: new Map(),
+  };
+  recentPlayData = [];
+  rankingList.innerHTML = "";
+  recentPlayList.innerHTML = "";
+  game = createGameState(`${currentGameMode}-preview`, currentGameMode);
+  scoreText.textContent = "0";
+  timeText.textContent = GAME_SECONDS;
+  bestText.textContent = "0";
+  clearModes();
+  updateGameModeUI();
+  renderRanking();
+  showGameOverlay("게임 시작");
+  drawIntro();
 }
 
 function setFieldMessage(element, message, isGood = false) {
@@ -331,6 +398,7 @@ function showGameFor(user) {
   setPasswordMessage("");
   setAccountActionMessage("");
   setAdminMessage("");
+  updateGameModeUI();
   renderRanking();
   startRankingRefresh();
   updateModeBadges();
@@ -677,7 +745,13 @@ async function renderRanking() {
   }
 
   try {
-    const data = await requestApi("/api/rankings");
+    const requestedGameMode = currentGameMode;
+    const data = await requestApi(`/api/rankings?gameMode=${encodeURIComponent(requestedGameMode)}`);
+
+    if (requestedGameMode !== currentGameMode) {
+      return;
+    }
+
     const nextRankingData = {
       daily: data.dailyRankings || [],
       allTime: data.allTimeRankings || data.rankings || [],
@@ -688,6 +762,7 @@ async function renderRanking() {
       allTime: buildRankingChangeMap(rankingData.allTime, nextRankingData.allTime),
     };
     rankingData = nextRankingData;
+    updateDisplayedBestScore();
     renderRankingList();
     renderRecentPlays();
   } catch {
@@ -763,6 +838,16 @@ function buildRankingChangeMap(previousRanking, nextRanking) {
   });
 
   return changes;
+}
+
+function updateDisplayedBestScore() {
+  if (!currentUser) {
+    bestText.textContent = "0";
+    return;
+  }
+
+  const currentUserRanking = rankingData.allTime.find((account) => account.id === currentUser.id);
+  bestText.textContent = currentUserRanking?.bestScore ?? currentUserRanking?.score ?? 0;
 }
 
 function renderRankChange(element, delta) {
@@ -964,6 +1049,7 @@ function renderPlayerHistorySummary(user, stats) {
   appendPlayerHistoryDetail(details, "아이디", user.username);
   appendPlayerHistoryDetail(details, "닉네임", getUserDisplayName(user));
   appendPlayerHistoryDetail(details, "권한", getRoleLabel(user.role));
+  appendPlayerHistoryDetail(details, "게임 모드", getGameModeLabel(stats.gameMode));
   appendPlayerHistoryDetail(details, "가입일", formatPlayDate(user.createdAt));
   appendPlayerHistoryDetail(details, "최종 접속일", formatPlayDate(user.lastLoginAt));
   appendPlayerHistoryDetail(details, "최고 기록", `${user.bestScore || 0}점`);
@@ -985,7 +1071,7 @@ async function openPlayerHistory(account) {
   playerHistoryModal.hidden = false;
 
   try {
-    const data = await requestApi(`/api/rankings?userId=${encodeURIComponent(account.id)}`);
+    const data = await requestApi(`/api/rankings?userId=${encodeURIComponent(account.id)}&gameMode=${encodeURIComponent(currentGameMode)}`);
     renderPlayerHistory(data);
   } catch (error) {
     playerHistorySummary.textContent = "";
@@ -1051,6 +1137,7 @@ async function deletePlayerHistoryRecord(play, button) {
       body: {
         userId: activePlayerHistoryAccount.id,
         scoreId: play.id,
+        gameMode: currentGameMode,
       },
     });
     syncCurrentUser(data.user);
@@ -1352,6 +1439,7 @@ async function startGame() {
       method: "POST",
       body: {
         action: "start-game",
+        gameMode: currentGameMode,
       },
     });
     gameSession = data.gameSession;
@@ -1371,7 +1459,9 @@ async function startGame() {
   stopGame();
   lastFinishedScore = null;
   resetShareStatus();
-  game = createGameState(gameSession.seed);
+  currentGameMode = CatnyamEngine.normalizeGameMode(gameSession.gameMode || currentGameMode);
+  updateGameModeUI();
+  game = createGameState(gameSession.seed, currentGameMode);
   game.gameSession = gameSession;
   game.running = true;
   game.paused = false;
@@ -1428,6 +1518,7 @@ async function submitScore(score) {
       body: {
         action: "finish-game",
         score,
+        gameMode: currentGameMode,
         sessionId: game.gameSession.id,
         sessionToken: game.gameSession.token,
         inputLog: game.inputLog,
@@ -1487,6 +1578,7 @@ function showGameOverlay(buttonText, resultText = "", mode = "default") {
   const canShareResult = mode === "result" && lastFinishedScore !== null;
   startButton.textContent = buttonText;
   startButton.hidden = isPaused;
+  gameModeSelector.hidden = isPaused;
   shareResultButton.hidden = !canShareResult;
   if (!canShareResult) {
     resetShareStatus();
@@ -1503,6 +1595,7 @@ function hideGameOverlay() {
   gameOverlay.hidden = true;
   pauseActions.hidden = true;
   startButton.hidden = false;
+  gameModeSelector.hidden = true;
   shareResultButton.hidden = true;
   shareStatus.hidden = true;
   itemGuide.hidden = false;
@@ -1607,8 +1700,10 @@ function handleEngineEvents(events) {
   events.forEach((event) => {
     if (event.type === "score") {
       scoreText.textContent = event.score;
-      setCatReaction(event.scoreDelta < 0 ? "bad" : "good");
-      addScorePopup(event.scoreDelta);
+      if (event.source !== "survival") {
+        setCatReaction(event.scoreDelta < 0 ? "bad" : "good");
+        addScorePopup(event.scoreDelta);
+      }
       return;
     }
 
@@ -1620,6 +1715,26 @@ function handleEngineEvents(events) {
 
     if (event.type === "mode") {
       handleModeEvent(event.kind);
+      return;
+    }
+
+    if (event.type === "heart") {
+      setCatReaction("good");
+      setCatBubble("하트 +1", 1.1);
+      updateModeBadges();
+      return;
+    }
+
+    if (event.type === "life") {
+      setCatReaction("bad");
+      setCatBubble(event.hearts <= 0 ? "털썩..." : "아야!", 1.1);
+      updateModeBadges();
+      return;
+    }
+
+    if (event.type === "rain") {
+      setCatBubble("폭탄비!", 1.2);
+      triggerCanvasHighlight("danger");
     }
   });
 }
@@ -1772,12 +1887,28 @@ function getModeSecondsLeft(until) {
 }
 
 function updateModeBadges() {
+  const isBombMode = game.gameMode === CatnyamEngine.GAME_MODES.BOMB;
+
+  if (isBombMode) {
+    speedModeBadge.hidden = true;
+    hideModeBadge.hidden = true;
+    purrModeBadge.hidden = true;
+    catnipModeBadge.hidden = true;
+    tunaModeBadge.hidden = true;
+    clipperModeBadge.hidden = true;
+    heartModeBadge.hidden = false;
+    heartModeBadge.textContent = `하트 ${game.hearts ?? 0}`;
+    updateCanvasHighlight();
+    return;
+  }
+
   updateModeBadge(speedModeBadge, isSpeedModeActive(), `우다다 ${getModeSecondsLeft(game.modes.speedUntil)}초`);
   updateModeBadge(hideModeBadge, isHideModeActive(), `숨숨집 ${getModeSecondsLeft(game.modes.hideUntil)}초`);
   updateModeBadge(purrModeBadge, isPurrModeActive(), `골골송 ${getModeSecondsLeft(game.modes.purrUntil)}초`);
   updateModeBadge(catnipModeBadge, isCatnipModeActive(), `캣닢 ${getModeSecondsLeft(game.modes.catnipUntil)}초`);
   updateModeBadge(tunaModeBadge, isTunaModeActive(), `애교 ${getModeSecondsLeft(game.modes.tunaUntil)}초`);
   updateModeBadge(clipperModeBadge, isClipperModeActive(), `위이잉 ${getModeSecondsLeft(game.modes.clipperUntil)}초`);
+  heartModeBadge.hidden = true;
   updateCanvasHighlight();
 }
 
@@ -1814,19 +1945,6 @@ function updateCanvasHighlight() {
   canvasWrap.classList.toggle("catnip-highlight", catnipActive);
   canvasWrap.classList.toggle("danger-highlight", dangerActive);
   canvasWrap.classList.toggle("mode-highlight", modeActive);
-}
-
-function collides(drop) {
-  const catLeft = game.cat.x - getCatWidth() / 2;
-  const catRight = game.cat.x + getCatWidth() / 2;
-  const catTop = game.cat.y - getCatHeight() / 2;
-  const catBottom = game.cat.y + getCatHeight() / 2;
-  const dropLeft = drop.x - drop.width / 2;
-  const dropRight = drop.x + drop.width / 2;
-  const dropTop = drop.y - drop.height / 2;
-  const dropBottom = drop.y + drop.height / 2;
-
-  return dropRight > catLeft && dropLeft < catRight && dropBottom > catTop && dropTop < catBottom;
 }
 
 function draw() {
@@ -1928,6 +2046,12 @@ function drawChuru(drop) {
     return;
   }
 
+  if (drop.kind === "heart") {
+    drawHeartItem(drop);
+    ctx.restore();
+    return;
+  }
+
   ctx.fillStyle = drop.kind === "gold" ? "#ffd84f" : "#ff9f6e";
   roundRect(-drop.width / 2, -drop.height / 2, drop.width, drop.height, 9);
   ctx.fill();
@@ -1940,6 +2064,33 @@ function drawChuru(drop) {
   ctx.fillRect(-drop.width / 2, -drop.height / 2 - 5, drop.width, 10);
 
   ctx.restore();
+}
+
+function drawHeartItem(drop) {
+  const size = drop.width;
+
+  ctx.save();
+  ctx.scale(size / 42, size / 42);
+  ctx.fillStyle = "rgba(239, 111, 143, 0.18)";
+  ctx.beginPath();
+  ctx.ellipse(0, 6, 26, 22, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.rotate(-Math.PI / 4);
+  ctx.fillStyle = "#ef6f8f";
+  ctx.beginPath();
+  roundRect(-9, -9, 18, 18, 5);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, -9, 9, 0, Math.PI * 2);
+  ctx.arc(9, 0, 9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.54)";
+  ctx.beginPath();
+  ctx.ellipse(-7, -8, 5, 3, -0.7, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawBomb(drop) {
@@ -2645,6 +2796,9 @@ passwordTabButton.addEventListener("click", () => setAccountTab("password"));
 adminTabButton.addEventListener("click", () => setAccountTab("admin"));
 dailyRankingButton.addEventListener("click", () => setRankingMode("daily"));
 allTimeRankingButton.addEventListener("click", () => setRankingMode("allTime"));
+gameModeButtons.forEach((button) => {
+  button.addEventListener("click", () => setGameMode(button.dataset.gameMode));
+});
 startButton.addEventListener("click", startGame);
 shareResultButton.addEventListener("click", shareResult);
 pauseButton.addEventListener("click", pauseGame);
