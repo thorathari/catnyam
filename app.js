@@ -1632,24 +1632,28 @@ async function submitScore(score) {
     return;
   }
 
+  const finishedGame = game;
+  const submittedGameMode = finishedGame.gameMode;
+
   try {
     const data = await requestApi("/api/scores", {
       method: "POST",
       body: {
         action: "finish-game",
         score,
-        gameMode: currentGameMode,
-        sessionId: game.gameSession.id,
-        sessionToken: game.gameSession.token,
-        steps: game.step,
-        inputLog: game.inputLog,
+        gameMode: submittedGameMode,
+        sessionId: finishedGame.gameSession.id,
+        sessionToken: finishedGame.gameSession.token,
+        steps: finishedGame.step,
+        inputLog: finishedGame.inputLog,
       },
     });
     currentUser = data.user;
     bestText.textContent = currentUser.bestScore || 0;
     renderRanking();
-  } catch {
-    showGameOverlay("다시하기", `${score}점 · 저장 실패`, "result");
+  } catch (error) {
+    console.warn("Score save failed:", error);
+    showGameOverlay("다시하기", `${score}점 · 저장 실패: ${error.message}`, "result");
   }
 }
 
@@ -1863,8 +1867,8 @@ function handleEngineEvents(events) {
     }
 
     if (event.type === "rain") {
-      setCatBubble("폭탄비!", 2);
-      triggerCanvasHighlight("danger", 2);
+      setCatBubble("폭탄비!", 5);
+      triggerCanvasHighlight("danger", 5);
     }
   });
 }

@@ -27,7 +27,7 @@
   const BOMB_START_HEARTS = 3;
   const BOMB_RAIN_INTERVAL = 15;
   const BOMB_CATNIP_WINDOW_SECONDS = 40;
-  const BOMB_GOLD_WINDOW_SECONDS = 2;
+  const BOMB_GOLD_WINDOW_SECONDS = 1;
   const SURVIVAL_SCORE_INTERVAL = 0.1;
 
   function normalizeGameMode(mode) {
@@ -110,7 +110,7 @@
         nextHeartAt: 6 + rng() * 24,
         bombSpecialSchedules: {
           catnip: createWindowDropSchedule(rng, BOMB_CATNIP_WINDOW_SECONDS, 0.72),
-          gold: createWindowDropSchedule(rng, BOMB_GOLD_WINDOW_SECONDS, 0.9),
+          gold: createWindowDropSchedule(rng, BOMB_GOLD_WINDOW_SECONDS, 1),
         },
         gameOver: false,
       }
@@ -346,7 +346,7 @@
       speed: 155 + state.rng() * 85 + state.elapsed * 0.75,
     });
 
-    if (state.rng() < 0.35) {
+    if (state.rng() < 0.55) {
       addDrop(state, "gold", {
         y: -95 - state.rng() * 80,
         speed: 165 + state.rng() * 95 + state.elapsed * 0.8,
