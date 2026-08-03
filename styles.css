@@ -349,6 +349,11 @@ button:disabled {
   background: #5d6876;
 }
 
+.mode-badge.rain {
+  color: white;
+  background: #d84b5f;
+}
+
 .mode-badge.heart {
   color: #8f274b;
   background: rgba(255, 210, 224, 0.72);

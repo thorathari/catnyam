@@ -84,6 +84,7 @@ const purrModeBadge = document.querySelector("#purrModeBadge");
 const catnipModeBadge = document.querySelector("#catnipModeBadge");
 const tunaModeBadge = document.querySelector("#tunaModeBadge");
 const clipperModeBadge = document.querySelector("#clipperModeBadge");
+const bombRainModeBadge = document.querySelector("#bombRainModeBadge");
 const heartModeBadge = document.querySelector("#heartModeBadge");
 const canvasWrap = document.querySelector("#canvasWrap");
 const canvas = document.querySelector("#gameCanvas");
@@ -174,6 +175,7 @@ function createGameState(seed = "catnyam-local", mode = currentGameMode) {
       text: "",
       until: 0,
     },
+    bombRainUntil: 0,
   };
 }
 
@@ -1923,7 +1925,9 @@ function handleEngineEvents(events) {
 
     if (event.type === "rain") {
       setCatBubble("폭탄비!", 5);
+      game.bombRainUntil = game.elapsed + 5;
       triggerCanvasHighlight("danger", 5);
+      updateModeBadges();
     }
   });
 }
@@ -2084,6 +2088,10 @@ function getModeSecondsLeft(until) {
   return Math.max(0, Math.ceil(until - game.elapsed));
 }
 
+function isBombRainActive() {
+  return game.bombRainUntil > game.elapsed;
+}
+
 function updateModeBadges() {
   const isBombMode = game.gameMode === CatnyamEngine.GAME_MODES.BOMB;
 
@@ -2091,9 +2099,10 @@ function updateModeBadges() {
     speedModeBadge.hidden = true;
     hideModeBadge.hidden = true;
     purrModeBadge.hidden = true;
-    catnipModeBadge.hidden = true;
     tunaModeBadge.hidden = true;
     clipperModeBadge.hidden = true;
+    updateModeBadge(catnipModeBadge, isCatnipModeActive(), `무적 ${getModeSecondsLeft(game.modes.catnipUntil)}초`);
+    updateModeBadge(bombRainModeBadge, isBombRainActive(), `폭탄비 ${getModeSecondsLeft(game.bombRainUntil)}초`);
     heartModeBadge.hidden = true;
     updateCanvasHighlight();
     return;
@@ -2105,6 +2114,7 @@ function updateModeBadges() {
   updateModeBadge(catnipModeBadge, isCatnipModeActive(), `캣닢 ${getModeSecondsLeft(game.modes.catnipUntil)}초`);
   updateModeBadge(tunaModeBadge, isTunaModeActive(), `애교 ${getModeSecondsLeft(game.modes.tunaUntil)}초`);
   updateModeBadge(clipperModeBadge, isClipperModeActive(), `위이잉 ${getModeSecondsLeft(game.modes.clipperUntil)}초`);
+  bombRainModeBadge.hidden = true;
   heartModeBadge.hidden = true;
   updateCanvasHighlight();
 }
@@ -2132,6 +2142,7 @@ function clearModes() {
     text: "",
     until: 0,
   };
+  game.bombRainUntil = 0;
   game.canvasHighlight = null;
   updateModeBadges();
 }
