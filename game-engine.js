@@ -82,7 +82,7 @@
     const bombModeState = gameMode === GAME_MODES.BOMB
       ? {
         hearts: BOMB_START_HEARTS,
-        nextDropAt: 0.9,
+        nextDropAt: 0.55,
         nextBombRainAt: BOMB_RAIN_INTERVAL,
         nextSurvivalScoreAt: SURVIVAL_SCORE_INTERVAL,
         heartSpawnLimit: rng() < 0.68 ? 1 : 0,
@@ -278,15 +278,15 @@
     addDrop(state, "bomb", {
       width: 38,
       height: 38,
-      speed: 145 + state.rng() * 85 + state.elapsed * 1.35,
+      speed: 155 + state.rng() * 95 + state.elapsed * 1.55,
     });
 
-    if (state.elapsed > 28 && state.rng() < 0.12) {
+    if (state.elapsed > 16 && state.rng() < 0.24) {
       addDrop(state, "bomb", {
         width: 38,
         height: 38,
         y: -80 - state.rng() * 80,
-        speed: 160 + state.rng() * 95 + state.elapsed * 1.6,
+        speed: 170 + state.rng() * 110 + state.elapsed * 1.8,
       });
     }
   }
@@ -301,7 +301,7 @@
   }
 
   function spawnBombRain(state, events) {
-    const count = 6 + Math.min(3, Math.floor(state.elapsed / 15));
+    const count = 9 + Math.min(4, Math.floor(state.elapsed / 15));
 
     for (let index = 0; index < count; index += 1) {
       const lane = (index + 0.16 + state.rng() * 0.68) / count;
@@ -310,7 +310,7 @@
         height: 38,
         x: 34 + lane * (CANVAS_WIDTH - 68),
         y: -50 - state.rng() * 260,
-        speed: 190 + state.rng() * 105 + state.elapsed * 1.45,
+        speed: 205 + state.rng() * 125 + state.elapsed * 1.7,
       });
     }
 
@@ -321,7 +321,7 @@
   function spawnBombAvoidDrops(state, events) {
     if (state.elapsed >= state.nextDropAt) {
       spawnBombAvoidDrop(state);
-      state.nextDropAt = state.elapsed + Math.max(0.62, 1.35 - state.elapsed * 0.008);
+      state.nextDropAt = state.elapsed + Math.max(0.42, 0.9 - state.elapsed * 0.006);
     }
 
     if (state.heartSpawned < state.heartSpawnLimit && state.elapsed >= state.nextHeartAt) {

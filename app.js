@@ -265,7 +265,7 @@ function updateGameModeUI() {
   });
 
   rankingTitle.textContent = isBombMode ? "폭탄피하기 랭킹" : "츄르 랭킹";
-  recentPlayTitle.textContent = isBombMode ? "최근 폭탄피하기" : "최근 플레이";
+  recentPlayTitle.textContent = "최근 플레이";
 }
 
 function setGameMode(mode) {
@@ -1918,8 +1918,7 @@ function updateModeBadges() {
     catnipModeBadge.hidden = true;
     tunaModeBadge.hidden = true;
     clipperModeBadge.hidden = true;
-    heartModeBadge.hidden = false;
-    heartModeBadge.textContent = `하트 ${game.hearts ?? 0}`;
+    heartModeBadge.hidden = true;
     updateCanvasHighlight();
     return;
   }
@@ -1974,6 +1973,66 @@ function draw() {
   game.drops.forEach(drawChuru);
   drawCat(game.cat.x, game.cat.y, getCatWidth(), getCatHeight(), getCatReaction(), getCatRotation());
   game.scorePopups.forEach(drawScorePopup);
+  drawBombModeHearts();
+}
+
+function drawBombModeHearts() {
+  if (game.gameMode !== CatnyamEngine.GAME_MODES.BOMB) {
+    return;
+  }
+
+  const hearts = Math.max(0, Number(game.hearts) || 0);
+  if (hearts <= 0) {
+    return;
+  }
+
+  const visibleHearts = Math.min(hearts, 8);
+  const hudWidth = 24 + visibleHearts * 31 + (hearts > visibleHearts ? 42 : 0);
+
+  ctx.save();
+  ctx.fillStyle = "rgba(255, 255, 255, 0.76)";
+  ctx.strokeStyle = "rgba(239, 111, 143, 0.22)";
+  ctx.lineWidth = 2;
+  roundRect(18, 18, hudWidth, 42, 12);
+  ctx.fill();
+  ctx.stroke();
+
+  for (let index = 0; index < visibleHearts; index += 1) {
+    drawLifeHeart(40 + index * 31, 39, 20);
+  }
+
+  if (hearts > visibleHearts) {
+    ctx.fillStyle = "#8f274b";
+    ctx.font = "900 18px Jua, Nunito, sans-serif";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
+    ctx.fillText(`+${hearts - visibleHearts}`, 40 + visibleHearts * 31, 39);
+  }
+
+  ctx.restore();
+}
+
+function drawLifeHeart(x, y, size) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(size / 42, size / 42);
+  ctx.rotate(-Math.PI / 4);
+  ctx.fillStyle = "#ef6f8f";
+  roundRect(-9, -9, 18, 18, 5);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(0, -9, 9, 0, Math.PI * 2);
+  ctx.arc(9, 0, 9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.58)";
+  ctx.beginPath();
+  ctx.ellipse(-5, -5, 3.5, 2.2, -0.7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawWorld() {
@@ -2615,11 +2674,13 @@ function drawOpenMouth(height, tongueColor) {
 function drawIntro() {
   drawWorld();
   drawCat(canvas.width / 2, canvas.height - 84, 104, 74);
+  drawBombModeHearts();
 }
 
 function drawFinish() {
   drawWorld();
   drawCat(game.cat.x, game.cat.y, game.cat.width, game.cat.height, getCatReaction());
+  drawBombModeHearts();
 }
 
 function roundRect(x, y, width, height, radius) {
