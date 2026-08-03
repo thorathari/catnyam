@@ -230,11 +230,29 @@ function getGameModeLabel(mode = currentGameMode) {
   return mode === CatnyamEngine.GAME_MODES.BOMB ? "폭탄피하기" : "츄르먹기";
 }
 
+function canUseGameMode(mode) {
+  return mode !== CatnyamEngine.GAME_MODES.BOMB || isAdmin(currentUser);
+}
+
+function ensureAllowedGameMode() {
+  if (!canUseGameMode(currentGameMode)) {
+    currentGameMode = CatnyamEngine.GAME_MODES.CHURU;
+
+    if (game && !game.running && !game.paused && game.gameMode !== currentGameMode) {
+      game = createGameState(`${currentGameMode}-preview`, currentGameMode);
+    }
+  }
+}
+
 function updateGameModeUI() {
+  ensureAllowedGameMode();
   const isBombMode = currentGameMode === CatnyamEngine.GAME_MODES.BOMB;
 
   gameModeButtons.forEach((button) => {
+    const isLocked = button.dataset.gameMode === CatnyamEngine.GAME_MODES.BOMB && !isAdmin(currentUser);
     const isActive = button.dataset.gameMode === currentGameMode;
+    button.hidden = isLocked;
+    button.disabled = isLocked;
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-pressed", String(isActive));
   });
@@ -256,6 +274,10 @@ function setGameMode(mode) {
   }
 
   const nextMode = CatnyamEngine.normalizeGameMode(mode);
+
+  if (!canUseGameMode(nextMode)) {
+    return;
+  }
 
   if (nextMode === currentGameMode) {
     updateGameModeUI();

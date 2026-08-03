@@ -19,6 +19,10 @@ function normalizeGameMode(mode) {
   return CatnyamEngine.normalizeGameMode(mode);
 }
 
+function canUseGameMode(user, mode) {
+  return mode !== CatnyamEngine.GAME_MODES.BOMB || user.role === "admin";
+}
+
 function getSessionSecret() {
   const secret = process.env.SESSION_SECRET;
 
@@ -116,6 +120,10 @@ async function validateGameSession(user, sessionId, sessionToken, score, inputLo
   const sessionGameMode = normalizeGameMode(session.game_mode);
   const requestedGameMode = normalizeGameMode(gameMode);
 
+  if (!canUseGameMode(user, sessionGameMode)) {
+    return { error: "폭탄피하기 모드는 현재 관리자만 이용할 수 있습니다." };
+  }
+
   if (gameMode && requestedGameMode !== sessionGameMode) {
     return { error: "게임 모드 검증에 실패했습니다." };
   }
@@ -166,7 +174,14 @@ module.exports = async function handler(req, res) {
     const { action, score, sessionId, sessionToken, inputLog, gameMode } = body;
 
     if (action === "start-game") {
-      const gameSession = await createGameSession(user, gameMode);
+      const normalizedMode = normalizeGameMode(gameMode);
+
+      if (!canUseGameMode(user, normalizedMode)) {
+        sendJson(res, 403, { message: "폭탄피하기 모드는 현재 관리자만 이용할 수 있습니다." });
+        return;
+      }
+
+      const gameSession = await createGameSession(user, normalizedMode);
       sendJson(res, 200, { gameSession });
       return;
     }
