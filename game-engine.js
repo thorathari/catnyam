@@ -102,7 +102,7 @@
     const bombModeState = gameMode === GAME_MODES.BOMB
       ? {
         hearts: BOMB_START_HEARTS,
-        nextDropAt: 0.55,
+        nextDropAt: 0.4,
         nextBombRainAt: BOMB_RAIN_INTERVAL,
         nextSurvivalScoreAt: SURVIVAL_SCORE_INTERVAL,
         heartSpawnLimit: rng() < 0.68 ? 1 : 0,
@@ -306,6 +306,15 @@
       speed: 155 + state.rng() * 95 + state.elapsed * 1.65,
     });
 
+    if (state.elapsed > 1.5 && state.rng() < 0.24 + pressure * 0.18) {
+      addDrop(state, "bomb", {
+        width: 38,
+        height: 38,
+        y: -70 - state.rng() * 90,
+        speed: 165 + state.rng() * 105 + state.elapsed * 1.8,
+      });
+    }
+
     if (state.elapsed > 7 && state.rng() < 0.34 + pressure * 0.42) {
       addDrop(state, "bomb", {
         width: 38,
@@ -375,7 +384,7 @@
   function spawnBombAvoidDrops(state, events) {
     if (state.elapsed >= state.nextDropAt) {
       spawnBombAvoidDrop(state);
-      state.nextDropAt = state.elapsed + Math.max(0.14, 0.58 - state.elapsed * 0.0048);
+      state.nextDropAt = state.elapsed + Math.max(0.14, 0.5 - state.elapsed * 0.0048);
     }
 
     if (state.heartSpawned < state.heartSpawnLimit && state.elapsed >= state.nextHeartAt) {
