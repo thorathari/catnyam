@@ -69,7 +69,9 @@ const passwordMessage = document.querySelector("#passwordMessage");
 const adminList = document.querySelector("#adminList");
 const adminMessage = document.querySelector("#adminMessage");
 const resetRankingButton = document.querySelector("#resetRankingButton");
+const resetBombRankingButton = document.querySelector("#resetBombRankingButton");
 const resetMyScoreButton = document.querySelector("#resetMyScoreButton");
+const resetMyBombScoreButton = document.querySelector("#resetMyBombScoreButton");
 const deleteMyAccountButton = document.querySelector("#deleteMyAccountButton");
 const accountActionMessage = document.querySelector("#accountActionMessage");
 const scoreText = document.querySelector("#scoreText");
@@ -229,6 +231,26 @@ function getUserDisplayName(user) {
 
 function getGameModeLabel(mode = currentGameMode) {
   return mode === CatnyamEngine.GAME_MODES.BOMB ? "폭탄피하기" : "츄르먹기";
+}
+
+function getModeScoreStats(account, mode) {
+  return account?.scoreStats?.[mode] || {
+    bestScore: 0,
+    gamesPlayed: 0,
+  };
+}
+
+function createAdminModeStat(mode, stats) {
+  const row = document.createElement("span");
+  const label = document.createElement("strong");
+  const value = document.createElement("span");
+
+  row.className = "admin-mode-stat";
+  label.textContent = getGameModeLabel(mode);
+  value.textContent = `최고 ${stats.bestScore || 0}점 · ${stats.gamesPlayed || 0}회`;
+  row.append(label, value);
+
+  return row;
 }
 
 function isBombMode(mode = currentGameMode) {
@@ -1228,7 +1250,8 @@ function renderAdminAccount(account) {
   const renameInput = document.createElement("input");
   const renameButton = document.createElement("button");
   const actions = document.createElement("div");
-  const scoreResetButton = document.createElement("button");
+  const churuScoreResetButton = document.createElement("button");
+  const bombScoreResetButton = document.createElement("button");
   const resetButton = document.createElement("button");
   const deleteButton = document.createElement("button");
 
@@ -1239,7 +1262,8 @@ function renderAdminAccount(account) {
   renameForm.className = "admin-rename-row";
   actions.className = "admin-actions";
   renameButton.className = "secondary-button";
-  scoreResetButton.className = "secondary-button";
+  churuScoreResetButton.className = "secondary-button";
+  bombScoreResetButton.className = "secondary-button";
   resetButton.className = "secondary-button";
   deleteButton.className = "danger-button";
 
@@ -1248,20 +1272,26 @@ function renderAdminAccount(account) {
   name.textContent = `${displayName}(${account.username})`;
   name.setAttribute("aria-label", `${displayName} 계정 정보 보기`);
   name.addEventListener("click", () => openPlayerHistory(account));
-  meta.textContent = `최고 ${account.bestScore || 0}점 · ${account.gamesPlayed || 0}회`;
+  meta.replaceChildren(
+    createAdminModeStat(CatnyamEngine.GAME_MODES.CHURU, getModeScoreStats(account, CatnyamEngine.GAME_MODES.CHURU)),
+    createAdminModeStat(CatnyamEngine.GAME_MODES.BOMB, getModeScoreStats(account, CatnyamEngine.GAME_MODES.BOMB)),
+  );
   renameInput.type = "text";
   renameInput.maxLength = 16;
   renameInput.value = account.username;
   renameInput.setAttribute("aria-label", `${account.username} 새 아이디`);
   renameButton.type = "submit";
   renameButton.textContent = "아이디 변경";
-  scoreResetButton.type = "button";
+  churuScoreResetButton.type = "button";
+  bombScoreResetButton.type = "button";
   resetButton.type = "button";
   deleteButton.type = "button";
-  scoreResetButton.textContent = "점수 초기화";
+  churuScoreResetButton.textContent = "츄르 점수 초기화";
+  bombScoreResetButton.textContent = "폭탄 점수 초기화";
   resetButton.textContent = "비밀번호 초기화";
   deleteButton.textContent = "계정 삭제";
-  scoreResetButton.addEventListener("click", () => resetAccountScore(account.id, displayName));
+  churuScoreResetButton.addEventListener("click", () => resetAccountScore(account.id, displayName, CatnyamEngine.GAME_MODES.CHURU));
+  bombScoreResetButton.addEventListener("click", () => resetAccountScore(account.id, displayName, CatnyamEngine.GAME_MODES.BOMB));
 
   if (isAdmin(account)) {
     const badge = document.createElement("span");
@@ -1282,7 +1312,7 @@ function renderAdminAccount(account) {
   });
 
   renameForm.append(renameInput, renameButton);
-  actions.append(scoreResetButton, resetButton, deleteButton);
+  actions.append(churuScoreResetButton, bombScoreResetButton, resetButton, deleteButton);
   item.append(main, meta, renameForm, actions);
   adminList.append(item);
 }
@@ -1334,8 +1364,10 @@ async function resetAccountPassword(userId, username) {
   }
 }
 
-async function resetAccountScore(userId, username) {
-  if (!window.confirm(`${username} 점수와 플레이 기록을 초기화할까요?`)) {
+async function resetAccountScore(userId, username, gameMode) {
+  const modeLabel = getGameModeLabel(gameMode);
+
+  if (!window.confirm(`${username} ${modeLabel} 점수와 플레이 기록을 초기화할까요?`)) {
     return;
   }
 
@@ -1345,12 +1377,13 @@ async function resetAccountScore(userId, username) {
       body: {
         action: "reset-score",
         userId,
+        gameMode,
       },
     });
     syncCurrentUser(data.user);
     renderRanking();
     await renderAdminList();
-    setAdminMessage(`${getUserDisplayName(data.user)} 점수를 초기화했습니다.`, true);
+    setAdminMessage(`${username} ${modeLabel} 점수를 초기화했습니다.`, true);
   } catch (error) {
     setAdminMessage(error.message);
   }
@@ -1374,16 +1407,20 @@ async function deleteAccount(userId, username) {
   }
 }
 
-async function resetMyScore() {
-  if (!currentUser || !window.confirm("내 점수와 플레이 기록을 초기화할까요?")) {
+async function resetMyScore(gameMode) {
+  const modeLabel = getGameModeLabel(gameMode);
+  const button = gameMode === CatnyamEngine.GAME_MODES.BOMB ? resetMyBombScoreButton : resetMyScoreButton;
+
+  if (!currentUser || !window.confirm(`내 ${modeLabel} 점수와 플레이 기록을 초기화할까요?`)) {
     return;
   }
 
-  resetMyScoreButton.disabled = true;
+  button.disabled = true;
 
   try {
     const data = await requestApi("/api/scores", {
       method: "DELETE",
+      body: { gameMode },
     });
     syncCurrentUser(data.user);
     renderRanking();
@@ -1392,11 +1429,11 @@ async function resetMyScore() {
       await renderAdminList();
     }
 
-    setAccountActionMessage("내 점수를 초기화했습니다.", true);
+    setAccountActionMessage(`내 ${modeLabel} 점수를 초기화했습니다.`, true);
   } catch (error) {
     setAccountActionMessage(error.message);
   } finally {
-    resetMyScoreButton.disabled = false;
+    button.disabled = false;
   }
 }
 
@@ -1420,6 +1457,7 @@ async function deleteMyAccount() {
 
   deleteMyAccountButton.disabled = true;
   resetMyScoreButton.disabled = true;
+  resetMyBombScoreButton.disabled = true;
 
   try {
     const deletedName = getUserDisplayName(currentUser);
@@ -1434,30 +1472,33 @@ async function deleteMyAccount() {
     setAccountActionMessage(error.message);
     deleteMyAccountButton.disabled = false;
     resetMyScoreButton.disabled = false;
+    resetMyBombScoreButton.disabled = false;
   }
 }
 
-async function resetRankings() {
-  if (!window.confirm("전체 츄르 랭킹과 플레이 기록을 초기화할까요?")) {
+async function resetRankings(gameMode) {
+  const modeLabel = getGameModeLabel(gameMode);
+  const button = gameMode === CatnyamEngine.GAME_MODES.BOMB ? resetBombRankingButton : resetRankingButton;
+
+  if (!window.confirm(`전체 ${modeLabel} 랭킹과 플레이 기록을 초기화할까요?`)) {
     return;
   }
 
-  resetRankingButton.disabled = true;
+  button.disabled = true;
 
   try {
-    await requestApi("/api/admin/reset-rankings", {
+    const data = await requestApi("/api/admin/reset-rankings", {
       method: "POST",
+      body: { gameMode },
     });
-    currentUser.bestScore = 0;
-    currentUser.gamesPlayed = 0;
-    bestText.textContent = "0";
+    syncCurrentUser(data.user);
     renderRanking();
     await renderAdminList();
-    setAdminMessage("츄르 랭킹을 초기화했습니다.", true);
+    setAdminMessage(`${modeLabel} 랭킹을 초기화했습니다.`, true);
   } catch (error) {
     setAdminMessage(error.message);
   } finally {
-    resetRankingButton.disabled = false;
+    button.disabled = false;
   }
 }
 
@@ -2927,12 +2968,14 @@ resumeButton.addEventListener("click", resumeGame);
 changeUsernameForm.addEventListener("submit", changeUsername);
 changeNicknameForm.addEventListener("submit", changeNickname);
 changePasswordForm.addEventListener("submit", changePassword);
-resetMyScoreButton.addEventListener("click", resetMyScore);
+resetMyScoreButton.addEventListener("click", () => resetMyScore(CatnyamEngine.GAME_MODES.CHURU));
+resetMyBombScoreButton.addEventListener("click", () => resetMyScore(CatnyamEngine.GAME_MODES.BOMB));
 deleteMyAccountButton.addEventListener("click", deleteMyAccount);
 bindGuideTooltips();
 bindTouchControl(touchLeftButton, -1);
 bindTouchControl(touchRightButton, 1);
-resetRankingButton.addEventListener("click", resetRankings);
+resetRankingButton.addEventListener("click", () => resetRankings(CatnyamEngine.GAME_MODES.CHURU));
+resetBombRankingButton.addEventListener("click", () => resetRankings(CatnyamEngine.GAME_MODES.BOMB));
 gamePanel.addEventListener("selectstart", preventGameSelection);
 gamePanel.addEventListener("dragstart", preventGameSelection);
 gamePanel.addEventListener("contextmenu", preventGameSelection);

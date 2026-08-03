@@ -209,22 +209,35 @@ async function getUserById(id) {
   return users?.[0] || null;
 }
 
-async function resetScoresForUser(userId) {
-  await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(userId)}`, {
-    method: "DELETE",
-    prefer: "return=minimal",
-  });
+function normalizeScoreGameMode(gameMode) {
+  return gameMode === "bomb" ? "bomb" : "churu";
+}
 
+async function recalculateUserScoreStats(userId) {
+  const scores = await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(userId)}&select=score&order=score.desc,created_at.asc&limit=100000`, {
+    prefer: "",
+  });
   const updated = await supabaseRequest(`users?id=eq.${encodeURIComponent(userId)}`, {
     method: "PATCH",
     body: {
-      best_score: 0,
-      games_played: 0,
+      best_score: scores[0]?.score || 0,
+      games_played: scores.length,
       updated_at: new Date().toISOString(),
     },
   });
 
   return updated[0] || null;
+}
+
+async function resetScoresForUser(userId, gameMode) {
+  const modeFilter = gameMode ? `&game_mode=eq.${encodeURIComponent(normalizeScoreGameMode(gameMode))}` : "";
+
+  await supabaseRequest(`scores?user_id=eq.${encodeURIComponent(userId)}${modeFilter}`, {
+    method: "DELETE",
+    prefer: "return=minimal",
+  });
+
+  return recalculateUserScoreStats(userId);
 }
 
 async function requireUser(req, res) {
@@ -275,7 +288,9 @@ module.exports = {
   hashPassword,
   normalizeNickname,
   normalizeUsername,
+  normalizeScoreGameMode,
   readJson,
+  recalculateUserScoreStats,
   requireAdmin,
   requireMethod,
   requireUser,

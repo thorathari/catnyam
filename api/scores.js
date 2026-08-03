@@ -183,7 +183,14 @@ module.exports = async function handler(req, res) {
     if (!user) return;
 
     if (req.method === "DELETE") {
-      const updated = await resetScoresForUser(user.id);
+      const body = await readJson(req);
+
+      if (!body.gameMode) {
+        sendJson(res, 400, { message: "초기화할 게임 모드를 선택해주세요." });
+        return;
+      }
+
+      const updated = await resetScoresForUser(user.id, body.gameMode);
       sendJson(res, 200, { user: sanitizeUser(updated) });
       return;
     }

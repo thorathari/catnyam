@@ -1017,7 +1017,7 @@ canvas {
 
 .account-danger-zone {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
   margin-top: 16px;
   padding-top: 16px;
@@ -1383,9 +1383,15 @@ canvas {
   gap: 10px;
 }
 
+.admin-ranking-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
 .admin-reset-rank-button {
   width: 100%;
-  margin-bottom: 14px;
 }
 
 .admin-account {
@@ -1428,9 +1434,37 @@ canvas {
 }
 
 .admin-account-meta {
+  display: grid;
+  gap: 4px;
   color: var(--muted);
   font-size: 0.84rem;
   font-weight: 800;
+}
+
+.admin-mode-stat {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid rgba(37, 33, 29, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.58);
+}
+
+.admin-mode-stat strong {
+  color: var(--ink);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.admin-mode-stat span {
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-badge {
@@ -1445,7 +1479,7 @@ canvas {
 
 .admin-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
   gap: 8px;
 }
 
