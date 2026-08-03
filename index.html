@@ -70,7 +70,7 @@
               <strong id="scoreText">0</strong>
             </div>
             <div>
-              <span>남은 시간</span>
+              <span id="timeLabel">남은 시간</span>
               <strong id="timeText">45</strong>
             </div>
             <div>
@@ -150,12 +150,9 @@
                     <i class="guide-icon clipper"></i>바리깡 -1
                   </button>
                 </div>
-                <div class="guide-group good bomb-guide" aria-label="생존과 회복 아이템" hidden>
-                  <button class="guide-item good" type="button" data-tooltip="살아남는 동안 1초마다 1점이 올라갑니다.">
-                    <i class="guide-icon timer"></i>생존 +1
-                  </button>
+                <div class="guide-group good bomb-guide" aria-label="회복 아이템" hidden>
                   <button class="guide-item good" type="button" data-tooltip="먹으면 목숨이 1개 늘어납니다.">
-                    <i class="guide-icon heart"></i>하트 +1
+                    <span class="guide-icon heart" aria-hidden="true">❤️</span>하트 +1
                   </button>
                 </div>
                 <div class="guide-group bad bomb-guide" aria-label="폭탄피하기 위험 요소" hidden>

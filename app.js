@@ -73,6 +73,7 @@ const resetMyScoreButton = document.querySelector("#resetMyScoreButton");
 const deleteMyAccountButton = document.querySelector("#deleteMyAccountButton");
 const accountActionMessage = document.querySelector("#accountActionMessage");
 const scoreText = document.querySelector("#scoreText");
+const timeLabel = document.querySelector("#timeLabel");
 const timeText = document.querySelector("#timeText");
 const bestText = document.querySelector("#bestText");
 const speedModeBadge = document.querySelector("#speedModeBadge");
@@ -230,8 +231,12 @@ function getGameModeLabel(mode = currentGameMode) {
   return mode === CatnyamEngine.GAME_MODES.BOMB ? "폭탄피하기" : "츄르먹기";
 }
 
+function isBombMode(mode = currentGameMode) {
+  return mode === CatnyamEngine.GAME_MODES.BOMB;
+}
+
 function canUseGameMode(mode) {
-  return mode !== CatnyamEngine.GAME_MODES.BOMB || isAdmin(currentUser);
+  return !isBombMode(mode) || isAdmin(currentUser);
 }
 
 function ensureAllowedGameMode() {
@@ -246,10 +251,10 @@ function ensureAllowedGameMode() {
 
 function updateGameModeUI() {
   ensureAllowedGameMode();
-  const isBombMode = currentGameMode === CatnyamEngine.GAME_MODES.BOMB;
+  const bombMode = isBombMode();
 
   gameModeButtons.forEach((button) => {
-    const isLocked = button.dataset.gameMode === CatnyamEngine.GAME_MODES.BOMB && !isAdmin(currentUser);
+    const isLocked = isBombMode(button.dataset.gameMode) && !isAdmin(currentUser);
     const isActive = button.dataset.gameMode === currentGameMode;
     button.hidden = isLocked;
     button.disabled = isLocked;
@@ -258,14 +263,24 @@ function updateGameModeUI() {
   });
 
   itemGuide.querySelectorAll(".churu-guide").forEach((group) => {
-    group.hidden = isBombMode;
+    group.hidden = bombMode;
   });
   itemGuide.querySelectorAll(".bomb-guide").forEach((group) => {
-    group.hidden = !isBombMode;
+    group.hidden = !bombMode;
   });
 
-  rankingTitle.textContent = isBombMode ? "폭탄피하기 랭킹" : "츄르 랭킹";
+  timeLabel.textContent = bombMode ? "생존 시간" : "남은 시간";
+  rankingTitle.textContent = bombMode ? "폭탄피하기 랭킹" : "츄르 랭킹";
   recentPlayTitle.textContent = "최근 플레이";
+}
+
+function updateTimeDisplay() {
+  if (game.gameMode === CatnyamEngine.GAME_MODES.BOMB) {
+    timeText.textContent = Math.floor(game.elapsed);
+    return;
+  }
+
+  timeText.textContent = Math.ceil(game.timeLeft);
 }
 
 function setGameMode(mode) {
@@ -300,10 +315,10 @@ function setGameMode(mode) {
   recentPlayList.innerHTML = "";
   game = createGameState(`${currentGameMode}-preview`, currentGameMode);
   scoreText.textContent = "0";
-  timeText.textContent = GAME_SECONDS;
   bestText.textContent = "0";
   clearModes();
   updateGameModeUI();
+  updateTimeDisplay();
   renderRanking();
   showGameOverlay("게임 시작");
   drawIntro();
@@ -408,7 +423,6 @@ function showGameFor(user) {
   profileBox.hidden = false;
   updateProfileName();
   scoreText.textContent = "0";
-  timeText.textContent = GAME_SECONDS;
   bestText.textContent = currentUser.bestScore || 0;
   changeUsernameForm.reset();
   changeNicknameForm.reset();
@@ -421,6 +435,7 @@ function showGameFor(user) {
   setAccountActionMessage("");
   setAdminMessage("");
   updateGameModeUI();
+  updateTimeDisplay();
   renderRanking();
   startRankingRefresh();
   updateModeBadges();
@@ -1489,7 +1504,7 @@ async function startGame() {
   game.paused = false;
   hideGameOverlay();
   scoreText.textContent = "0";
-  timeText.textContent = GAME_SECONDS;
+  updateTimeDisplay();
   clearMovementInput();
   updateModeBadges();
   lastFrame = performance.now();
@@ -1543,6 +1558,7 @@ async function submitScore(score) {
         gameMode: currentGameMode,
         sessionId: game.gameSession.id,
         sessionToken: game.gameSession.token,
+        steps: game.step,
         inputLog: game.inputLog,
       },
     });
@@ -1585,7 +1601,7 @@ function returnToGameHome() {
   resetShareStatus();
   game = createGameState();
   scoreText.textContent = "0";
-  timeText.textContent = GAME_SECONDS;
+  updateTimeDisplay();
   updateModeBadges();
   showGameOverlay("게임 시작");
   drawIntro();
@@ -1687,18 +1703,27 @@ function update(delta) {
   });
   game.scorePopups = game.scorePopups.filter((popup) => popup.age < popup.duration);
 
-  while (game.stepAccumulator >= CatnyamEngine.STEP_SECONDS && game.timeLeft > 0) {
+  while (game.stepAccumulator >= CatnyamEngine.STEP_SECONDS && isGameInProgress()) {
     const direction = getMovementDirection();
     recordInputDirection(direction);
     handleEngineEvents(CatnyamEngine.stepGame(game, direction));
     game.stepAccumulator -= CatnyamEngine.STEP_SECONDS;
   }
 
-  timeText.textContent = Math.ceil(game.timeLeft);
+  updateTimeDisplay();
   updateModeBadges();
-  if (game.timeLeft <= 0) {
+
+  if (isGameFinished()) {
     finishGame();
   }
+}
+
+function isGameInProgress() {
+  return game.gameMode === CatnyamEngine.GAME_MODES.BOMB ? !game.gameOver : game.timeLeft > 0;
+}
+
+function isGameFinished() {
+  return game.gameMode === CatnyamEngine.GAME_MODES.BOMB ? game.gameOver : game.timeLeft <= 0;
 }
 
 function getMovementDirection() {
@@ -1986,19 +2011,25 @@ function drawBombModeHearts() {
     return;
   }
 
+  const heartSize = 28;
+  const heartGap = 39;
   const visibleHearts = Math.min(hearts, 8);
-  const hudWidth = 24 + visibleHearts * 31 + (hearts > visibleHearts ? 42 : 0);
+  const hudLeft = 18;
+  const hudTop = 16;
+  const hudHeight = 54;
+  const hudWidth = 28 + visibleHearts * heartGap + (hearts > visibleHearts ? 44 : 0);
+  const heartY = hudTop + hudHeight / 2;
 
   ctx.save();
   ctx.fillStyle = "rgba(255, 255, 255, 0.76)";
   ctx.strokeStyle = "rgba(239, 111, 143, 0.22)";
   ctx.lineWidth = 2;
-  roundRect(18, 18, hudWidth, 42, 12);
+  roundRect(hudLeft, hudTop, hudWidth, hudHeight, 14);
   ctx.fill();
   ctx.stroke();
 
   for (let index = 0; index < visibleHearts; index += 1) {
-    drawLifeHeart(40 + index * 31, 39, 20);
+    drawLifeHeart(hudLeft + 27 + index * heartGap, heartY, heartSize);
   }
 
   if (hearts > visibleHearts) {
@@ -2006,7 +2037,7 @@ function drawBombModeHearts() {
     ctx.font = "900 18px Jua, Nunito, sans-serif";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText(`+${hearts - visibleHearts}`, 40 + visibleHearts * 31, 39);
+    ctx.fillText(`+${hearts - visibleHearts}`, hudLeft + 27 + visibleHearts * heartGap, heartY);
   }
 
   ctx.restore();

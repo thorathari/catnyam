@@ -11,9 +11,10 @@ const {
 } = require("../server/db");
 
 const GAME_SECONDS = 45;
-const MIN_PLAY_MS = (GAME_SECONDS - 5) * 1000;
-const SESSION_TTL_MS = 30 * 60 * 1000;
-const MAX_ACCEPTED_SCORE = 5000;
+const CHURU_MIN_PLAY_MS = (GAME_SECONDS - 5) * 1000;
+const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
+const SUBMIT_CLOCK_SKEW_MS = 3000;
+const MAX_ACCEPTED_SCORE = 100000;
 
 function normalizeGameMode(mode) {
   return CatnyamEngine.normalizeGameMode(mode);
@@ -73,11 +74,11 @@ async function createGameSession(user, gameMode) {
     token,
     seed,
     gameMode: normalizedMode,
-    minSubmitAfterMs: MIN_PLAY_MS,
+    minSubmitAfterMs: normalizedMode === CatnyamEngine.GAME_MODES.BOMB ? 0 : CHURU_MIN_PLAY_MS,
   };
 }
 
-async function validateGameSession(user, sessionId, sessionToken, score, inputLog, gameMode) {
+async function validateGameSession(user, sessionId, sessionToken, score, inputLog, gameMode, steps) {
   if (!sessionId || !sessionToken) {
     return { error: "게임 시작 토큰이 필요합니다." };
   }
@@ -104,8 +105,10 @@ async function validateGameSession(user, sessionId, sessionToken, score, inputLo
   const now = Date.now();
   const startedAt = new Date(session.started_at).getTime();
   const expiresAt = new Date(session.expires_at).getTime();
+  const sessionGameMode = normalizeGameMode(session.game_mode);
+  const requestedGameMode = normalizeGameMode(gameMode);
 
-  if (Number.isNaN(startedAt) || now - startedAt < MIN_PLAY_MS) {
+  if (sessionGameMode !== CatnyamEngine.GAME_MODES.BOMB && (Number.isNaN(startedAt) || now - startedAt < CHURU_MIN_PLAY_MS)) {
     return { error: "게임 시간이 너무 짧습니다." };
   }
 
@@ -117,9 +120,6 @@ async function validateGameSession(user, sessionId, sessionToken, score, inputLo
     return { error: "게임 세션 seed가 없습니다. Supabase SQL Editor에서 supabase/schema.sql을 다시 실행해주세요." };
   }
 
-  const sessionGameMode = normalizeGameMode(session.game_mode);
-  const requestedGameMode = normalizeGameMode(gameMode);
-
   if (!canUseGameMode(user, sessionGameMode)) {
     return { error: "폭탄피하기 모드는 현재 관리자만 이용할 수 있습니다." };
   }
@@ -128,7 +128,25 @@ async function validateGameSession(user, sessionId, sessionToken, score, inputLo
     return { error: "게임 모드 검증에 실패했습니다." };
   }
 
-  const simulation = CatnyamEngine.simulateGame(session.seed, inputLog, { mode: sessionGameMode });
+  const simulationOptions = { mode: sessionGameMode };
+
+  if (sessionGameMode === CatnyamEngine.GAME_MODES.BOMB) {
+    const submittedSteps = Number(steps);
+
+    if (!Number.isInteger(submittedSteps) || submittedSteps <= 0) {
+      return { error: "폭탄피하기 종료 시간이 올바르지 않습니다." };
+    }
+
+    const submittedPlayMs = submittedSteps * CatnyamEngine.STEP_SECONDS * 1000;
+
+    if (Number.isNaN(startedAt) || submittedPlayMs - (now - startedAt) > SUBMIT_CLOCK_SKEW_MS) {
+      return { error: "폭탄피하기 플레이 시간이 올바르지 않습니다." };
+    }
+
+    simulationOptions.steps = submittedSteps;
+  }
+
+  const simulation = CatnyamEngine.simulateGame(session.seed, inputLog, simulationOptions);
 
   if (simulation.error) {
     return { error: simulation.error };
@@ -171,7 +189,7 @@ module.exports = async function handler(req, res) {
     }
 
     const body = await readJson(req);
-    const { action, score, sessionId, sessionToken, inputLog, gameMode } = body;
+    const { action, score, sessionId, sessionToken, inputLog, gameMode, steps } = body;
 
     if (action === "start-game") {
       const normalizedMode = normalizeGameMode(gameMode);
@@ -198,7 +216,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const validation = await validateGameSession(user, sessionId, sessionToken, numericScore, inputLog, gameMode);
+    const validation = await validateGameSession(user, sessionId, sessionToken, numericScore, inputLog, gameMode, steps);
 
     if (validation.error) {
       sendJson(res, 400, { message: validation.error });

@@ -14,17 +14,19 @@
   };
   const STEP_SECONDS = 1 / 60;
   const TOTAL_STEPS = Math.round(GAME_SECONDS / STEP_SECONDS);
+  const MAX_BOMB_STEPS = Math.round((3 * 60 * 60) / STEP_SECONDS);
   const CANVAS_WIDTH = 900;
   const CANVAS_HEIGHT = 560;
   const CAT_BASE_WIDTH = 104;
   const CAT_BASE_HEIGHT = 74;
   const CAT_BASE_Y = CANVAS_HEIGHT - 84;
   const CAT_BASE_SPEED = 520;
-  const MAX_INPUT_EVENTS = TOTAL_STEPS + 1;
+  const MAX_CHURU_INPUT_EVENTS = TOTAL_STEPS + 1;
+  const MAX_BOMB_INPUT_EVENTS = 20000;
   const TIME_EPSILON = 1e-9;
   const BOMB_START_HEARTS = 3;
   const BOMB_RAIN_INTERVAL = 10;
-  const SURVIVAL_SCORE_INTERVAL = 1;
+  const SURVIVAL_SCORE_INTERVAL = 0.3;
 
   function normalizeGameMode(mode) {
     return mode === GAME_MODES.BOMB ? GAME_MODES.BOMB : GAME_MODES.CHURU;
@@ -98,7 +100,7 @@
       rng,
       step: 0,
       score: 0,
-      timeLeft: GAME_SECONDS,
+      timeLeft: gameMode === GAME_MODES.BOMB ? Number.POSITIVE_INFINITY : GAME_SECONDS,
       elapsed: 0,
       nextDropAt: 0,
       nextDropId: 1,
@@ -275,18 +277,28 @@
   }
 
   function spawnBombAvoidDrop(state) {
+    const pressure = Math.min(1, state.elapsed / 90);
     addDrop(state, "bomb", {
       width: 38,
       height: 38,
-      speed: 155 + state.rng() * 95 + state.elapsed * 1.55,
+      speed: 155 + state.rng() * 95 + state.elapsed * 1.65,
     });
 
-    if (state.elapsed > 16 && state.rng() < 0.24) {
+    if (state.elapsed > 10 && state.rng() < 0.2 + pressure * 0.42) {
       addDrop(state, "bomb", {
         width: 38,
         height: 38,
         y: -80 - state.rng() * 80,
-        speed: 170 + state.rng() * 110 + state.elapsed * 1.8,
+        speed: 170 + state.rng() * 110 + state.elapsed * 1.9,
+      });
+    }
+
+    if (state.elapsed > 34 && state.rng() < pressure * 0.28) {
+      addDrop(state, "bomb", {
+        width: 38,
+        height: 38,
+        y: -140 - state.rng() * 120,
+        speed: 185 + state.rng() * 120 + state.elapsed * 2,
       });
     }
   }
@@ -301,7 +313,7 @@
   }
 
   function spawnBombRain(state, events) {
-    const count = 9 + Math.min(4, Math.floor(state.elapsed / 15));
+    const count = 7 + Math.min(3, Math.floor(state.elapsed / 30));
 
     for (let index = 0; index < count; index += 1) {
       const lane = (index + 0.16 + state.rng() * 0.68) / count;
@@ -321,14 +333,14 @@
   function spawnBombAvoidDrops(state, events) {
     if (state.elapsed >= state.nextDropAt) {
       spawnBombAvoidDrop(state);
-      state.nextDropAt = state.elapsed + Math.max(0.42, 0.9 - state.elapsed * 0.006);
+      state.nextDropAt = state.elapsed + Math.max(0.2, 0.78 - state.elapsed * 0.0065);
     }
 
     if (state.heartSpawned < state.heartSpawnLimit && state.elapsed >= state.nextHeartAt) {
       spawnHeartDrop(state);
     }
 
-    while (state.elapsed >= state.nextBombRainAt && state.nextBombRainAt < GAME_SECONDS) {
+    while (state.elapsed >= state.nextBombRainAt) {
       spawnBombRain(state, events);
     }
   }
@@ -482,18 +494,23 @@
   function stepGame(state, direction = 0, delta = STEP_SECONDS) {
     const events = [];
 
-    if (state.timeLeft <= 0) {
+    if ((state.gameMode === GAME_MODES.BOMB && state.gameOver) || state.timeLeft <= 0) {
       return events;
     }
 
     const safeDirection = clamp(Number(direction) || 0, -1, 1);
-    const stepDelta = Math.min(delta, Math.max(0, GAME_SECONDS - state.elapsed));
+    const stepDelta = state.gameMode === GAME_MODES.BOMB ? delta : Math.min(delta, Math.max(0, GAME_SECONDS - state.elapsed));
     state.elapsed += stepDelta;
-    state.timeLeft = Math.max(0, GAME_SECONDS - state.elapsed);
 
-    if (state.timeLeft <= TIME_EPSILON) {
-      state.elapsed = GAME_SECONDS;
-      state.timeLeft = 0;
+    if (state.gameMode === GAME_MODES.BOMB) {
+      state.timeLeft = Number.POSITIVE_INFINITY;
+    } else {
+      state.timeLeft = Math.max(0, GAME_SECONDS - state.elapsed);
+
+      if (state.timeLeft <= TIME_EPSILON) {
+        state.elapsed = GAME_SECONDS;
+        state.timeLeft = 0;
+      }
     }
 
     const speedMultiplier = isSpeedModeActive(state) ? 1.75 : 1;
@@ -555,8 +572,11 @@
     return events;
   }
 
-  function normalizeInputLog(inputLog) {
-    if (!Array.isArray(inputLog) || inputLog.length > MAX_INPUT_EVENTS) {
+  function normalizeInputLog(inputLog, options = {}) {
+    const maxInputEvents = options.maxInputEvents || MAX_CHURU_INPUT_EVENTS;
+    const maxStep = options.maxStep || TOTAL_STEPS;
+
+    if (!Array.isArray(inputLog) || inputLog.length > maxInputEvents) {
       return { error: "입력 로그가 올바르지 않습니다." };
     }
 
@@ -567,7 +587,7 @@
       const step = Number(entry?.step);
       const direction = Number(entry?.direction);
 
-      if (!Number.isInteger(step) || step < 0 || step >= TOTAL_STEPS || step <= previousStep) {
+      if (!Number.isInteger(step) || step < 0 || step > maxStep || step <= previousStep) {
         return { error: "입력 로그 순서가 올바르지 않습니다." };
       }
 
@@ -583,7 +603,15 @@
   }
 
   function simulateGame(seed, inputLog, options = {}) {
-    const normalized = normalizeInputLog(inputLog);
+    const gameMode = normalizeGameMode(options.mode);
+    const requestedSteps = Number(options.steps);
+    const maxStep = gameMode === GAME_MODES.BOMB
+      ? requestedSteps
+      : TOTAL_STEPS - 1;
+    const normalized = normalizeInputLog(inputLog, {
+      maxInputEvents: gameMode === GAME_MODES.BOMB ? MAX_BOMB_INPUT_EVENTS : MAX_CHURU_INPUT_EVENTS,
+      maxStep,
+    });
 
     if (normalized.error) {
       return {
@@ -591,17 +619,30 @@
       };
     }
 
-    const state = createGameState({ seed, mode: options.mode });
+    const state = createGameState({ seed, mode: gameMode });
     let direction = 0;
     let logIndex = 0;
+    const totalSteps = gameMode === GAME_MODES.BOMB ? requestedSteps : TOTAL_STEPS;
 
-    for (let step = 0; step < TOTAL_STEPS; step += 1) {
+    if (gameMode === GAME_MODES.BOMB && (!Number.isInteger(totalSteps) || totalSteps <= 0 || totalSteps > MAX_BOMB_STEPS)) {
+      return { error: "폭탄피하기 플레이 시간이 올바르지 않습니다." };
+    }
+
+    for (let step = 0; step < totalSteps; step += 1) {
       while (logIndex < normalized.inputLog.length && normalized.inputLog[logIndex].step === step) {
         direction = normalized.inputLog[logIndex].direction;
         logIndex += 1;
       }
 
       stepGame(state, direction);
+
+      if (gameMode === GAME_MODES.BOMB && state.gameOver) {
+        break;
+      }
+    }
+
+    if (gameMode === GAME_MODES.BOMB && !state.gameOver) {
+      return { error: "폭탄피하기가 아직 종료되지 않았습니다." };
     }
 
     return {
@@ -617,6 +658,7 @@
     BOMB_START_HEARTS,
     GAME_SECONDS,
     GAME_MODES,
+    MAX_BOMB_STEPS,
     STEP_SECONDS,
     TOTAL_STEPS,
     CANVAS_WIDTH,
