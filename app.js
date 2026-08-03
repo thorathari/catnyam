@@ -1789,7 +1789,7 @@ function getResultShareText(score) {
   const nickname = getUserDisplayName(currentUser) || "플레이어";
   const modeLabel = getShareModeLabel();
 
-  return `Cat Nyam ${modeLabel}에서 ${nickname}님이 ${score}점 달성!\n츄르 잡으러 도전해봐냥`;
+  return `Cat Nyam ${modeLabel} 모드로 ${nickname}님이 ${score}점 달성!\n츄르 잡으러 도전해봐냥`;
 }
 
 function getFullResultShareText(score) {
