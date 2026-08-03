@@ -355,7 +355,7 @@
   }
 
   function spawnBombRain(state, events) {
-    const count = 3 + Math.min(1, Math.floor(state.elapsed / 90));
+    const count = 4 + Math.min(1, Math.floor(state.elapsed / 90));
 
     for (let index = 0; index < count; index += 1) {
       const lane = (index + 0.16 + state.rng() * 0.68) / count;

@@ -20,6 +20,36 @@ function getGameModeFilter(gameMode) {
   return `game_mode=eq.${encodeURIComponent(normalizeGameMode(gameMode))}`;
 }
 
+function isMissingPlaySecondsColumn(error) {
+  return /play_seconds/i.test(error.message || "");
+}
+
+function getPlaySeconds(scoreRow) {
+  const seconds = Number(scoreRow?.play_seconds);
+
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return null;
+  }
+
+  return Math.floor(seconds);
+}
+
+async function getScoresWithPlaySeconds(pathWithPlaySeconds, pathWithoutPlaySeconds) {
+  try {
+    return await supabaseRequest(pathWithPlaySeconds, {
+      prefer: "",
+    });
+  } catch (error) {
+    if (!isMissingPlaySecondsColumn(error)) {
+      throw error;
+    }
+
+    return supabaseRequest(pathWithoutPlaySeconds, {
+      prefer: "",
+    });
+  }
+}
+
 function getDisplayName(user) {
   return String(user.nickname || "").trim() || user.username;
 }
@@ -78,12 +108,14 @@ async function buildPlayerHistoryPayload(user, gameMode) {
   const normalizedMode = normalizeGameMode(gameMode);
   const modeFilter = getGameModeFilter(normalizedMode);
   const scoreBaseFilter = `user_id=eq.${encodeURIComponent(user.id)}&${modeFilter}`;
-  const scores = await supabaseRequest(`scores?${scoreBaseFilter}&select=id,score,created_at,game_mode&order=created_at.desc&limit=${MAX_HISTORY}`, {
-    prefer: "",
-  });
-  const allScores = await supabaseRequest(`scores?${scoreBaseFilter}&select=id,score&order=score.desc,created_at.asc&limit=${MAX_RANKING_ROWS}`, {
-    prefer: "",
-  });
+  const scores = await getScoresWithPlaySeconds(
+    `scores?${scoreBaseFilter}&select=id,score,created_at,game_mode,play_seconds&order=created_at.desc&limit=${MAX_HISTORY}`,
+    `scores?${scoreBaseFilter}&select=id,score,created_at,game_mode&order=created_at.desc&limit=${MAX_HISTORY}`,
+  );
+  const allScores = await getScoresWithPlaySeconds(
+    `scores?${scoreBaseFilter}&select=id,score,play_seconds&order=score.desc,created_at.asc&limit=${MAX_RANKING_ROWS}`,
+    `scores?${scoreBaseFilter}&select=id,score&order=score.desc,created_at.asc&limit=${MAX_RANKING_ROWS}`,
+  );
   const { start, end } = getKstDayRange();
   const todayScores = await supabaseRequest(`scores?${scoreBaseFilter}&select=id&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&limit=${MAX_DAILY_SCORES}`, {
     prefer: "",
@@ -92,6 +124,7 @@ async function buildPlayerHistoryPayload(user, gameMode) {
     id: scoreRow.id,
     score: scoreRow.score || 0,
     gameMode: normalizeGameMode(scoreRow.game_mode),
+    playSeconds: getPlaySeconds(scoreRow),
     createdAt: scoreRow.created_at,
   }));
 
@@ -99,6 +132,7 @@ async function buildPlayerHistoryPayload(user, gameMode) {
     user: {
       ...mapAllTimeRanking(user),
       bestScore: allScores[0]?.score || 0,
+      playSeconds: getPlaySeconds(allScores[0]),
       gamesPlayed: user.games_played || 0,
       createdAt: user.created_at,
       updatedAt: user.updated_at,
@@ -194,6 +228,7 @@ function buildDailyRankings(scores, users) {
         role: user.role,
         score,
         bestScore: score,
+        playSeconds: getPlaySeconds(scoreRow),
         createdAt: scoreRow.created_at,
       });
     }
@@ -219,6 +254,7 @@ function buildRecentPlays(scores, users) {
         nickname: getDisplayName(user),
         score: scoreRow.score || 0,
         gameMode: normalizeGameMode(scoreRow.game_mode),
+        playSeconds: getPlaySeconds(scoreRow),
         createdAt: scoreRow.created_at,
       };
     })
@@ -252,15 +288,18 @@ module.exports = async function handler(req, res) {
     const users = await supabaseRequest(`users?select=*&order=best_score.desc,username.asc&limit=${MAX_RANKING_ROWS}`, {
       prefer: "",
     });
-    const scores = await supabaseRequest(`scores?select=user_id,score,created_at&${modeFilter}&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&order=score.desc,created_at.asc&limit=${MAX_DAILY_SCORES}`, {
-      prefer: "",
-    });
-    const allScores = await supabaseRequest(`scores?select=user_id,score,created_at&${modeFilter}&order=score.desc,created_at.asc&limit=${MAX_RANKING_ROWS}`, {
-      prefer: "",
-    });
-    const recentScores = await supabaseRequest(`scores?select=user_id,score,created_at,game_mode&${modeFilter}&order=created_at.desc&limit=${MAX_RECENT_PLAYS}`, {
-      prefer: "",
-    });
+    const scores = await getScoresWithPlaySeconds(
+      `scores?select=user_id,score,created_at,play_seconds&${modeFilter}&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&order=score.desc,created_at.asc&limit=${MAX_DAILY_SCORES}`,
+      `scores?select=user_id,score,created_at&${modeFilter}&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}&order=score.desc,created_at.asc&limit=${MAX_DAILY_SCORES}`,
+    );
+    const allScores = await getScoresWithPlaySeconds(
+      `scores?select=user_id,score,created_at,play_seconds&${modeFilter}&order=score.desc,created_at.asc&limit=${MAX_RANKING_ROWS}`,
+      `scores?select=user_id,score,created_at&${modeFilter}&order=score.desc,created_at.asc&limit=${MAX_RANKING_ROWS}`,
+    );
+    const recentScores = await getScoresWithPlaySeconds(
+      `scores?select=user_id,score,created_at,game_mode,play_seconds&${modeFilter}&order=created_at.desc&limit=${MAX_RECENT_PLAYS}`,
+      `scores?select=user_id,score,created_at,game_mode&${modeFilter}&order=created_at.desc&limit=${MAX_RECENT_PLAYS}`,
+    );
     const dailyRankings = buildDailyRankings(scores, users);
     const allTimeRankings = buildDailyRankings(allScores, users);
     const recentPlays = buildRecentPlays(recentScores, users);

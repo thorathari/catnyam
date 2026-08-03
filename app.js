@@ -234,6 +234,39 @@ function getGameModeLabel(mode = currentGameMode) {
   return mode === CatnyamEngine.GAME_MODES.BOMB ? "폭탄피하기" : "츄르먹기";
 }
 
+function getSurvivalSeconds(play) {
+  const seconds = Number(play?.playSeconds);
+
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return null;
+  }
+
+  return Math.floor(seconds);
+}
+
+function shouldShowSurvivalTime(play, mode = currentGameMode) {
+  return CatnyamEngine.normalizeGameMode(play?.gameMode || mode) === CatnyamEngine.GAME_MODES.BOMB && getSurvivalSeconds(play) !== null;
+}
+
+function formatSurvivalTime(play) {
+  const totalSeconds = getSurvivalSeconds(play) || 0;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return minutes > 0 ? `${minutes}분 ${seconds}초` : `${seconds}초`;
+}
+
+function appendSurvivalTime(parent, play, mode = currentGameMode) {
+  if (!shouldShowSurvivalTime(play, mode)) {
+    return;
+  }
+
+  const survival = document.createElement("small");
+  survival.className = "survival-time";
+  survival.textContent = `생존 ${formatSurvivalTime(play)}`;
+  parent.append(survival);
+}
+
 function getModeScoreStats(account, mode) {
   return account?.scoreStats?.[mode] || {
     bestScore: 0,
@@ -957,7 +990,15 @@ function appendRankingItem(rankValue, accountInfo, scoreValue, rankDelta = 0) {
   }
 
   renderRankChange(rankChange, account ? rankDelta : 0);
-  score.textContent = scoreValue;
+  score.textContent = "";
+  const scoreNumber = document.createElement("span");
+  scoreNumber.textContent = scoreValue;
+  score.append(scoreNumber);
+
+  if (account) {
+    appendSurvivalTime(score, account, currentGameMode);
+  }
+
   item.append(rank, name, rankChange, score);
   rankingList.append(item);
 }
@@ -1054,6 +1095,7 @@ function appendRecentPlayItem(play) {
   time.dateTime = play.createdAt || "";
   time.append(relativeTime, exactTime);
   score.textContent = `${play.score || 0}점`;
+  appendSurvivalTime(score, play);
   main.append(name, time);
   item.append(main, score);
   recentPlayList.append(item);
@@ -1171,6 +1213,7 @@ function renderPlayerHistory(data) {
     deleteButton.addEventListener("click", () => deletePlayerHistoryRecord(play, deleteButton));
     date.textContent = formatPlayDate(play.createdAt);
     score.textContent = `${play.score || 0}점`;
+    appendSurvivalTime(score, play, stats.gameMode);
     scoreRow.append(score, deleteButton);
     item.append(date, scoreRow);
     playerHistoryList.append(item);

@@ -1191,8 +1191,12 @@ canvas {
 }
 
 .player-history-score {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
   color: var(--berry);
   font-weight: 900;
+  line-height: 1.12;
 }
 
 .player-history-score-row {
@@ -1277,7 +1281,20 @@ canvas {
 }
 
 .ranking-list .score {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
   color: var(--berry);
+  line-height: 1.12;
+  white-space: nowrap;
+}
+
+.survival-time {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .ranking-list .rank-change {
@@ -1360,8 +1377,12 @@ canvas {
 }
 
 .recent-play-score {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
   color: var(--berry);
   font-weight: 900;
+  line-height: 1.12;
   white-space: nowrap;
 }
 

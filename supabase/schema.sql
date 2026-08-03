@@ -34,11 +34,15 @@ create table if not exists public.scores (
   user_id uuid not null references public.users(id) on delete cascade,
   score integer not null check (score >= 0),
   game_mode text not null default 'churu' check (game_mode in ('churu', 'bomb')),
+  play_seconds integer check (play_seconds is null or play_seconds >= 0),
   created_at timestamptz not null default now()
 );
 
 alter table public.scores
   add column if not exists game_mode text;
+
+alter table public.scores
+  add column if not exists play_seconds integer;
 
 update public.scores
 set game_mode = 'churu'
@@ -52,6 +56,14 @@ do $$
 begin
   alter table public.scores
     add constraint scores_game_mode_check check (game_mode in ('churu', 'bomb'));
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  alter table public.scores
+    add constraint scores_play_seconds_check check (play_seconds is null or play_seconds >= 0);
 exception
   when duplicate_object then null;
 end $$;

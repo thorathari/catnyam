@@ -45,6 +45,29 @@ function timingSafeEqualText(left, right) {
   return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
+function isMissingPlaySecondsColumn(error) {
+  return /play_seconds/i.test(error.message || "");
+}
+
+async function insertScore(scoreRow) {
+  try {
+    await supabaseRequest("scores", {
+      method: "POST",
+      body: scoreRow,
+    });
+  } catch (error) {
+    if (!Object.hasOwn(scoreRow, "play_seconds") || !isMissingPlaySecondsColumn(error)) {
+      throw error;
+    }
+
+    const { play_seconds: playSeconds, ...fallbackScoreRow } = scoreRow;
+    await supabaseRequest("scores", {
+      method: "POST",
+      body: fallbackScoreRow,
+    });
+  }
+}
+
 async function createGameSession(user, gameMode) {
   const sessionId = crypto.randomUUID();
   const token = crypto.randomBytes(32).toString("base64url");
@@ -168,7 +191,11 @@ async function validateGameSession(user, sessionId, sessionToken, score, inputLo
     return { error: "이미 제출된 게임 세션입니다." };
   }
 
-  return { score: simulation.score, gameMode: sessionGameMode };
+  return {
+    score: simulation.score,
+    gameMode: sessionGameMode,
+    playSeconds: sessionGameMode === CatnyamEngine.GAME_MODES.BOMB ? Math.max(0, Math.floor(simulation.elapsed || 0)) : null,
+  };
 }
 
 module.exports = async function handler(req, res) {
@@ -232,13 +259,11 @@ module.exports = async function handler(req, res) {
 
     const verifiedScore = validation.score;
 
-    await supabaseRequest("scores", {
-      method: "POST",
-      body: {
-        user_id: user.id,
-        score: verifiedScore,
-        game_mode: validation.gameMode,
-      },
+    await insertScore({
+      user_id: user.id,
+      score: verifiedScore,
+      game_mode: validation.gameMode,
+      play_seconds: validation.playSeconds,
     });
 
     const bestScore = Math.max(user.best_score || 0, verifiedScore);
