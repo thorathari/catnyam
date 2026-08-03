@@ -27,7 +27,7 @@
   const BOMB_START_HEARTS = 3;
   const BOMB_RAIN_INTERVAL = 15;
   const BOMB_CATNIP_WINDOW_SECONDS = 40;
-  const BOMB_GOLD_WINDOW_SECONDS = 3;
+  const BOMB_GOLD_WINDOW_SECONDS = 2;
   const SURVIVAL_SCORE_INTERVAL = 0.1;
 
   function normalizeGameMode(mode) {
@@ -345,10 +345,17 @@
     addDrop(state, "gold", {
       speed: 155 + state.rng() * 85 + state.elapsed * 0.75,
     });
+
+    if (state.rng() < 0.35) {
+      addDrop(state, "gold", {
+        y: -95 - state.rng() * 80,
+        speed: 165 + state.rng() * 95 + state.elapsed * 0.8,
+      });
+    }
   }
 
   function spawnBombRain(state, events) {
-    const count = 4 + Math.min(1, Math.floor(state.elapsed / 60));
+    const count = 3 + Math.min(1, Math.floor(state.elapsed / 90));
 
     for (let index = 0; index < count; index += 1) {
       const lane = (index + 0.16 + state.rng() * 0.68) / count;
@@ -357,7 +364,7 @@
         height: 38,
         x: 34 + lane * (CANVAS_WIDTH - 68),
         y: -50 - state.rng() * 260,
-        speed: 205 + state.rng() * 125 + state.elapsed * 1.7,
+        speed: 285 + state.rng() * 145 + state.elapsed * 2.25,
       });
     }
 

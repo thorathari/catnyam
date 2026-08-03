@@ -1863,8 +1863,8 @@ function handleEngineEvents(events) {
     }
 
     if (event.type === "rain") {
-      setCatBubble("폭탄비!", 1.2);
-      triggerCanvasHighlight("danger");
+      setCatBubble("폭탄비!", 2);
+      triggerCanvasHighlight("danger", 2);
     }
   });
 }
@@ -1932,7 +1932,14 @@ function setMultiplierBubble() {
   };
 }
 
-function triggerCanvasHighlight(type) {
+function triggerCanvasHighlight(type, duration = 0) {
+  if (duration > 0) {
+    game.canvasHighlight = {
+      type,
+      until: game.elapsed + duration,
+    };
+  }
+
   canvasWrap.classList.remove("mode-highlight", "danger-highlight", "catnip-highlight");
   void canvasWrap.offsetWidth;
   const className = type === "catnip"
@@ -2066,12 +2073,15 @@ function clearModes() {
     text: "",
     until: 0,
   };
+  game.canvasHighlight = null;
   updateModeBadges();
 }
 
 function updateCanvasHighlight() {
-  const catnipActive = isCatnipModeActive();
-  const dangerActive = !catnipActive && (isHideModeActive() || isClipperModeActive());
+  const timedHighlight = game.canvasHighlight?.until >= game.elapsed ? game.canvasHighlight.type : "";
+  const forceDanger = timedHighlight === "danger";
+  const catnipActive = !forceDanger && (timedHighlight === "catnip" || isCatnipModeActive());
+  const dangerActive = forceDanger || (!catnipActive && (isHideModeActive() || isClipperModeActive()));
   const modeActive = !catnipActive && !dangerActive && (isSpeedModeActive() || isPurrModeActive() || isTunaModeActive());
   canvasWrap.classList.toggle("catnip-highlight", catnipActive);
   canvasWrap.classList.toggle("danger-highlight", dangerActive);
