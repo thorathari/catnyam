@@ -1397,22 +1397,33 @@ canvas {
 .admin-account {
   display: grid;
   gap: 10px;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.72);
 }
 
 .admin-account-main {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
+  min-height: 42px;
+  border-radius: 8px;
+  padding: 4px 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.admin-account-main:hover,
+.admin-account-main:focus-visible {
+  background: rgba(119, 216, 186, 0.16);
+  outline: none;
 }
 
 .admin-account-name {
   border: 0;
-  padding: 0;
+  padding: 4px 0;
   min-width: 0;
   overflow: hidden;
   color: var(--ink);
@@ -1425,12 +1436,44 @@ canvas {
   white-space: nowrap;
 }
 
+.admin-account-toggle-icon {
+  position: relative;
+  display: block;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(255, 250, 242, 0.74);
+}
+
+.admin-account-toggle-icon::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 8px;
+  height: 8px;
+  border-right: 3px solid var(--ink);
+  border-bottom: 3px solid var(--ink);
+  transform: translate(-50%, -50%) rotate(45deg);
+  transition: transform 0.18s ease;
+}
+
+.admin-account.is-open .admin-account-toggle-icon::before {
+  top: 55%;
+  transform: translate(-50%, -50%) rotate(225deg);
+}
+
 .admin-account-name:hover,
 .admin-account-name:focus-visible {
   color: #d94f80;
   outline: none;
   text-decoration: underline;
   text-underline-offset: 3px;
+}
+
+.admin-account-details {
+  display: grid;
+  gap: 10px;
 }
 
 .admin-account-meta {
@@ -1479,7 +1522,7 @@ canvas {
 
 .admin-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1503,6 +1546,8 @@ canvas {
   min-height: 38px;
   padding: 0 10px;
   font-size: 0.88rem;
+  line-height: 1.15;
+  white-space: normal;
 }
 
 @media (max-width: 900px) {

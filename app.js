@@ -113,6 +113,7 @@ let rankingRequestInFlight = false;
 let rankingRefreshQueued = false;
 let activePlayerHistoryAccount = null;
 let lastFinishedScore = null;
+const expandedAdminAccountIds = new Set();
 let game = createGameState();
 
 async function requestApi(path, options = {}) {
@@ -1245,11 +1246,13 @@ function renderAdminAccount(account) {
   const item = document.createElement("div");
   const main = document.createElement("div");
   const name = document.createElement("button");
+  const toggleIcon = document.createElement("span");
   const meta = document.createElement("span");
   const renameForm = document.createElement("form");
   const renameInput = document.createElement("input");
   const renameButton = document.createElement("button");
   const actions = document.createElement("div");
+  const details = document.createElement("div");
   const churuScoreResetButton = document.createElement("button");
   const bombScoreResetButton = document.createElement("button");
   const resetButton = document.createElement("button");
@@ -1258,9 +1261,11 @@ function renderAdminAccount(account) {
   item.className = "admin-account";
   main.className = "admin-account-main";
   name.className = "admin-account-name";
+  toggleIcon.className = "admin-account-toggle-icon";
   meta.className = "admin-account-meta";
   renameForm.className = "admin-rename-row";
   actions.className = "admin-actions";
+  details.className = "admin-account-details";
   renameButton.className = "secondary-button";
   churuScoreResetButton.className = "secondary-button";
   bombScoreResetButton.className = "secondary-button";
@@ -1268,10 +1273,45 @@ function renderAdminAccount(account) {
   deleteButton.className = "danger-button";
 
   const displayName = getUserDisplayName(account);
+  const detailId = `admin-account-details-${account.id}`;
+  const setExpanded = (isExpanded) => {
+    item.classList.toggle("is-open", isExpanded);
+    details.hidden = !isExpanded;
+    main.setAttribute("aria-expanded", String(isExpanded));
+
+    if (isExpanded) {
+      expandedAdminAccountIds.add(account.id);
+    } else {
+      expandedAdminAccountIds.delete(account.id);
+    }
+  };
+
+  main.tabIndex = 0;
+  main.setAttribute("role", "button");
+  main.setAttribute("aria-controls", detailId);
+  main.addEventListener("click", () => {
+    setExpanded(!expandedAdminAccountIds.has(account.id));
+  });
+  main.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") {
+      return;
+    }
+
+    event.preventDefault();
+    setExpanded(!expandedAdminAccountIds.has(account.id));
+  });
+  toggleIcon.setAttribute("aria-hidden", "true");
+  details.id = detailId;
   name.type = "button";
   name.textContent = `${displayName}(${account.username})`;
   name.setAttribute("aria-label", `${displayName} 계정 정보 보기`);
-  name.addEventListener("click", () => openPlayerHistory(account));
+  name.addEventListener("click", (event) => {
+    event.stopPropagation();
+    openPlayerHistory(account);
+  });
+  name.addEventListener("keydown", (event) => {
+    event.stopPropagation();
+  });
   meta.replaceChildren(
     createAdminModeStat(CatnyamEngine.GAME_MODES.CHURU, getModeScoreStats(account, CatnyamEngine.GAME_MODES.CHURU)),
     createAdminModeStat(CatnyamEngine.GAME_MODES.BOMB, getModeScoreStats(account, CatnyamEngine.GAME_MODES.BOMB)),
@@ -1297,11 +1337,11 @@ function renderAdminAccount(account) {
     const badge = document.createElement("span");
     badge.className = "admin-badge";
     badge.textContent = "관리자";
-    main.append(name, badge);
+    main.append(name, badge, toggleIcon);
     resetButton.disabled = true;
     deleteButton.disabled = true;
   } else {
-    main.append(name);
+    main.append(name, toggleIcon);
     resetButton.addEventListener("click", () => resetAccountPassword(account.id, account.username));
     deleteButton.addEventListener("click", () => deleteAccount(account.id, account.username));
   }
@@ -1313,7 +1353,9 @@ function renderAdminAccount(account) {
 
   renameForm.append(renameInput, renameButton);
   actions.append(churuScoreResetButton, bombScoreResetButton, resetButton, deleteButton);
-  item.append(main, meta, renameForm, actions);
+  details.append(meta, renameForm, actions);
+  item.append(main, details);
+  setExpanded(expandedAdminAccountIds.has(account.id));
   adminList.append(item);
 }
 
