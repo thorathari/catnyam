@@ -40,12 +40,16 @@ create table if not exists public.game_sessions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,
   token_hash text not null,
+  seed text not null,
   started_at timestamptz not null default now(),
   expires_at timestamptz not null,
   submitted_at timestamptz,
   submitted_score integer,
   created_at timestamptz not null default now()
 );
+
+alter table public.game_sessions
+  add column if not exists seed text;
 
 create index if not exists users_best_score_idx
   on public.users (best_score desc, username asc);

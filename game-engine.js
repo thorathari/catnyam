@@ -1,0 +1,503 @@
+(function attachGameEngine(root, factory) {
+  const engine = factory();
+
+  if (typeof module === "object" && module.exports) {
+    module.exports = engine;
+  }
+
+  root.CatnyamEngine = engine;
+})(typeof globalThis !== "undefined" ? globalThis : this, function createGameEngine() {
+  const GAME_SECONDS = 45;
+  const STEP_SECONDS = 1 / 60;
+  const TOTAL_STEPS = Math.round(GAME_SECONDS / STEP_SECONDS);
+  const CANVAS_WIDTH = 900;
+  const CANVAS_HEIGHT = 560;
+  const CAT_BASE_WIDTH = 104;
+  const CAT_BASE_HEIGHT = 74;
+  const CAT_BASE_Y = CANVAS_HEIGHT - 84;
+  const CAT_BASE_SPEED = 520;
+  const MAX_INPUT_EVENTS = TOTAL_STEPS + 1;
+  const TIME_EPSILON = 1e-9;
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function hashSeed(seed) {
+    let hash = 1779033703 ^ seed.length;
+
+    for (let index = 0; index < seed.length; index += 1) {
+      hash = Math.imul(hash ^ seed.charCodeAt(index), 3432918353);
+      hash = (hash << 13) | (hash >>> 19);
+    }
+
+    return function nextHash() {
+      hash = Math.imul(hash ^ (hash >>> 16), 2246822507);
+      hash = Math.imul(hash ^ (hash >>> 13), 3266489909);
+      hash ^= hash >>> 16;
+      return hash >>> 0;
+    };
+  }
+
+  function createRng(seed) {
+    const nextHash = hashSeed(String(seed || "catnyam"));
+    let a = nextHash();
+    let b = nextHash();
+    let c = nextHash();
+    let d = nextHash();
+
+    return function random() {
+      a >>>= 0;
+      b >>>= 0;
+      c >>>= 0;
+      d >>>= 0;
+
+      const sum = (a + b) | 0;
+      a = b ^ (b >>> 9);
+      b = (c + (c << 3)) | 0;
+      c = (c << 21) | (c >>> 11);
+      d = (d + 1) | 0;
+      const result = (sum + d) | 0;
+      c = (c + result) | 0;
+
+      return (result >>> 0) / 4294967296;
+    };
+  }
+
+  function createGameState(options = {}) {
+    const seed = String(options.seed || "catnyam-local");
+    const rng = createRng(seed);
+
+    return {
+      seed,
+      rng,
+      step: 0,
+      score: 0,
+      timeLeft: GAME_SECONDS,
+      elapsed: 0,
+      nextDropAt: 0,
+      nextDropId: 1,
+      drops: [],
+      modes: {
+        speedUntil: 0,
+        hideUntil: 0,
+        purrUntil: 0,
+        catnipUntil: 0,
+        tunaUntil: 0,
+        clipperUntil: 0,
+      },
+      specialSpawns: {
+        tuna: 0,
+        clipper: 0,
+      },
+      specialSpawnLimits: {
+        tuna: Math.floor(rng() * 4),
+        clipper: Math.floor(rng() * 4),
+      },
+      cat: {
+        x: CANVAS_WIDTH / 2,
+        y: CAT_BASE_Y,
+        width: CAT_BASE_WIDTH,
+        height: CAT_BASE_HEIGHT,
+        speed: CAT_BASE_SPEED,
+      },
+    };
+  }
+
+  function isSpeedModeActive(state) {
+    return state.modes.speedUntil > state.elapsed;
+  }
+
+  function isHideModeActive(state) {
+    return state.modes.hideUntil > state.elapsed;
+  }
+
+  function isPurrModeActive(state) {
+    return state.modes.purrUntil > state.elapsed;
+  }
+
+  function isCatnipModeActive(state) {
+    return state.modes.catnipUntil > state.elapsed;
+  }
+
+  function isTunaModeActive(state) {
+    return state.modes.tunaUntil > state.elapsed;
+  }
+
+  function isClipperModeActive(state) {
+    return state.modes.clipperUntil > state.elapsed;
+  }
+
+  function getCatScale(state) {
+    return isCatnipModeActive(state) ? 2 : 1;
+  }
+
+  function getCatWidth(state) {
+    return state.cat.width * getCatScale(state);
+  }
+
+  function getCatHeight(state) {
+    return state.cat.height * getCatScale(state);
+  }
+
+  function canSpawnLimitedDrop(state, kind) {
+    return state.specialSpawns[kind] < state.specialSpawnLimits[kind];
+  }
+
+  function noteDropSpawned(state, kind) {
+    if (kind === "tuna" || kind === "clipper") {
+      state.specialSpawns[kind] += 1;
+    }
+  }
+
+  function pickWeightedKind(state, entries) {
+    const totalWeight = entries.reduce((total, [, weight]) => total + weight, 0);
+    let roll = state.rng() * totalWeight;
+
+    for (const [kind, weight] of entries) {
+      roll -= weight;
+
+      if (roll <= 0) {
+        return kind;
+      }
+    }
+
+    return "normal";
+  }
+
+  function getRandomDropKind(state) {
+    return pickWeightedKind(state, [
+      ["catnip", 0.035],
+      ["box", 0.04],
+      ["toy", 0.06],
+      ["hand", 0.06],
+      ["tuna", canSpawnLimitedDrop(state, "tuna") ? 0.045 : 0],
+      ["clipper", canSpawnLimitedDrop(state, "clipper") ? 0.045 : 0],
+      ["bomb", 0.135],
+      ["gold", 0.16],
+      ["normal", 0.51],
+    ]);
+  }
+
+  function addDrop(state, kind) {
+    const isGold = kind === "gold";
+    const isBomb = kind === "bomb";
+    const isToy = kind === "toy";
+    const isBox = kind === "box";
+    const isHand = kind === "hand";
+    const isCatnip = kind === "catnip";
+    const isTuna = kind === "tuna";
+    const isClipper = kind === "clipper";
+
+    noteDropSpawned(state, kind);
+    state.drops.push({
+      id: state.nextDropId,
+      x: 34 + state.rng() * (CANVAS_WIDTH - 68),
+      y: -40,
+      width: isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 44 : isCatnip ? 46 : isTuna ? 44 : isClipper ? 48 : isGold ? 34 : 28,
+      height: isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 42 : isClipper ? 34 : isGold ? 70 : 60,
+      speed: 170 + state.rng() * 145 + state.elapsed * 2.3,
+      rotation: state.rng() * Math.PI,
+      spin: (state.rng() - 0.5) * 3,
+      kind,
+    });
+    state.nextDropId += 1;
+  }
+
+  function spawnExtraChuruDrops(state) {
+    if (isTunaModeActive(state)) {
+      addDrop(state, "gold");
+
+      if (state.rng() < 0.7) {
+        addDrop(state, "gold");
+      }
+
+      return;
+    }
+
+    const roll = state.rng();
+
+    if (roll < 0.36) {
+      addDrop(state, "normal");
+    } else if (roll < 0.48) {
+      addDrop(state, "gold");
+    }
+  }
+
+  function spawnExtraBombDrops(state) {
+    if (isClipperModeActive(state)) {
+      addDrop(state, "bomb");
+
+      if (state.rng() < 0.7) {
+        addDrop(state, "bomb");
+      }
+
+      return;
+    }
+
+    if (state.rng() < 0.16) {
+      addDrop(state, "bomb");
+    }
+  }
+
+  function spawnDrop(state) {
+    const kind = getRandomDropKind(state);
+    addDrop(state, kind);
+    spawnExtraChuruDrops(state);
+    spawnExtraBombDrops(state);
+  }
+
+  function getScoreMultiplier(state) {
+    let multiplier = 1;
+
+    if (isPurrModeActive(state)) {
+      multiplier *= 2;
+    }
+
+    if (isCatnipModeActive(state)) {
+      multiplier *= 2;
+    }
+
+    return multiplier;
+  }
+
+  function getDropScore(state, drop) {
+    if (drop.kind === "bomb") {
+      return -3;
+    }
+
+    const baseScore = drop.kind === "gold" ? 5 : 2;
+    return baseScore * getScoreMultiplier(state);
+  }
+
+  function applyScoreDelta(state, scoreDelta, events) {
+    state.score = Math.max(0, state.score + scoreDelta);
+    events.push({
+      type: "score",
+      scoreDelta,
+      score: state.score,
+      x: state.cat.x,
+      y: state.cat.y,
+    });
+  }
+
+  function applyModeItem(state, drop, events) {
+    if (drop.kind === "toy") {
+      state.modes.speedUntil = state.elapsed + 5;
+      events.push({ type: "mode", kind: "toy" });
+      return true;
+    }
+
+    if (drop.kind === "box") {
+      state.modes.hideUntil = state.elapsed + 3;
+      events.push({ type: "mode", kind: "box" });
+      return true;
+    }
+
+    if (drop.kind === "hand") {
+      state.modes.purrUntil = state.elapsed + 5;
+      events.push({ type: "mode", kind: "hand", multiplier: getScoreMultiplier(state) });
+      return true;
+    }
+
+    if (drop.kind === "catnip") {
+      state.modes.catnipUntil = state.elapsed + 5;
+      events.push({ type: "mode", kind: "catnip", multiplier: getScoreMultiplier(state) });
+      return true;
+    }
+
+    if (drop.kind === "tuna") {
+      state.modes.tunaUntil = state.elapsed + 5;
+      applyScoreDelta(state, 1, events);
+      events.push({ type: "mode", kind: "tuna" });
+      return true;
+    }
+
+    if (drop.kind === "clipper") {
+      state.modes.clipperUntil = state.elapsed + 5;
+      applyScoreDelta(state, -1, events);
+      events.push({ type: "mode", kind: "clipper" });
+      return true;
+    }
+
+    return false;
+  }
+
+  function isDebuffDrop(drop) {
+    return drop.kind === "bomb" || drop.kind === "box" || drop.kind === "clipper";
+  }
+
+  function knockAwayDrop(state, drop, events) {
+    const direction = drop.x >= state.cat.x ? 1 : -1;
+    drop.knocked = true;
+    drop.vx = direction * (380 + state.rng() * 130);
+    drop.vy = -360 - state.rng() * 120;
+    drop.spin = direction * (7 + state.rng() * 4);
+    events.push({ type: "bounce", kind: drop.kind });
+  }
+
+  function isDropVisible(drop) {
+    return drop.y < CANVAS_HEIGHT + 90 && drop.x > -90 && drop.x < CANVAS_WIDTH + 90;
+  }
+
+  function collides(state, drop) {
+    const catLeft = state.cat.x - getCatWidth(state) / 2;
+    const catRight = state.cat.x + getCatWidth(state) / 2;
+    const catTop = state.cat.y - getCatHeight(state) / 2;
+    const catBottom = state.cat.y + getCatHeight(state) / 2;
+    const dropLeft = drop.x - drop.width / 2;
+    const dropRight = drop.x + drop.width / 2;
+    const dropTop = drop.y - drop.height / 2;
+    const dropBottom = drop.y + drop.height / 2;
+
+    return dropRight > catLeft && dropLeft < catRight && dropBottom > catTop && dropTop < catBottom;
+  }
+
+  function stepGame(state, direction = 0, delta = STEP_SECONDS) {
+    const events = [];
+
+    if (state.timeLeft <= 0) {
+      return events;
+    }
+
+    const safeDirection = clamp(Number(direction) || 0, -1, 1);
+    const stepDelta = Math.min(delta, Math.max(0, GAME_SECONDS - state.elapsed));
+    state.elapsed += stepDelta;
+    state.timeLeft = Math.max(0, GAME_SECONDS - state.elapsed);
+
+    if (state.timeLeft <= TIME_EPSILON) {
+      state.elapsed = GAME_SECONDS;
+      state.timeLeft = 0;
+    }
+
+    const speedMultiplier = isSpeedModeActive(state) ? 1.75 : 1;
+    state.cat.x += safeDirection * state.cat.speed * speedMultiplier * stepDelta;
+    state.cat.x = clamp(state.cat.x, getCatWidth(state) / 2 + 12, CANVAS_WIDTH - getCatWidth(state) / 2 - 12);
+
+    if (state.elapsed >= state.nextDropAt) {
+      spawnDrop(state);
+      state.nextDropAt = state.elapsed + Math.max(0.32, 0.82 - state.elapsed * 0.008);
+    }
+
+    state.drops.forEach((drop) => {
+      if (drop.knocked) {
+        drop.x += drop.vx * stepDelta;
+        drop.y += drop.vy * stepDelta;
+        drop.vy += 620 * stepDelta;
+        drop.rotation += drop.spin * stepDelta * 2.8;
+        return;
+      }
+
+      drop.y += drop.speed * stepDelta;
+      drop.rotation += drop.spin * stepDelta;
+    });
+
+    state.drops = state.drops.filter((drop) => {
+      if (drop.knocked) {
+        return isDropVisible(drop);
+      }
+
+      if (collides(state, drop)) {
+        if (isHideModeActive(state) && !isCatnipModeActive(state)) {
+          return true;
+        }
+
+        if (isCatnipModeActive(state) && isDebuffDrop(drop)) {
+          knockAwayDrop(state, drop, events);
+          return true;
+        }
+
+        if (applyModeItem(state, drop, events)) {
+          return false;
+        }
+
+        applyScoreDelta(state, getDropScore(state, drop), events);
+        return false;
+      }
+
+      return isDropVisible(drop);
+    });
+
+    state.step += 1;
+    return events;
+  }
+
+  function normalizeInputLog(inputLog) {
+    if (!Array.isArray(inputLog) || inputLog.length > MAX_INPUT_EVENTS) {
+      return { error: "입력 로그가 올바르지 않습니다." };
+    }
+
+    let previousStep = -1;
+    const normalized = [];
+
+    for (const entry of inputLog) {
+      const step = Number(entry?.step);
+      const direction = Number(entry?.direction);
+
+      if (!Number.isInteger(step) || step < 0 || step >= TOTAL_STEPS || step <= previousStep) {
+        return { error: "입력 로그 순서가 올바르지 않습니다." };
+      }
+
+      if (!Number.isInteger(direction) || direction < -1 || direction > 1) {
+        return { error: "입력 방향 값이 올바르지 않습니다." };
+      }
+
+      normalized.push({ step, direction });
+      previousStep = step;
+    }
+
+    return { inputLog: normalized };
+  }
+
+  function simulateGame(seed, inputLog) {
+    const normalized = normalizeInputLog(inputLog);
+
+    if (normalized.error) {
+      return {
+        error: normalized.error,
+      };
+    }
+
+    const state = createGameState({ seed });
+    let direction = 0;
+    let logIndex = 0;
+
+    for (let step = 0; step < TOTAL_STEPS; step += 1) {
+      while (logIndex < normalized.inputLog.length && normalized.inputLog[logIndex].step === step) {
+        direction = normalized.inputLog[logIndex].direction;
+        logIndex += 1;
+      }
+
+      stepGame(state, direction);
+    }
+
+    return {
+      score: state.score,
+      steps: state.step,
+      elapsed: state.elapsed,
+    };
+  }
+
+  return {
+    GAME_SECONDS,
+    STEP_SECONDS,
+    TOTAL_STEPS,
+    CANVAS_WIDTH,
+    CANVAS_HEIGHT,
+    createGameState,
+    createRng,
+    getCatHeight,
+    getCatWidth,
+    getCatScale,
+    getScoreMultiplier,
+    isCatnipModeActive,
+    isClipperModeActive,
+    isHideModeActive,
+    isPurrModeActive,
+    isSpeedModeActive,
+    isTunaModeActive,
+    normalizeInputLog,
+    simulateGame,
+    stepGame,
+  };
+});

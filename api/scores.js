@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const CatnyamEngine = require("../game-engine");
 
 const {
   readJson,
@@ -38,6 +39,7 @@ function timingSafeEqualText(left, right) {
 async function createGameSession(user) {
   const sessionId = crypto.randomUUID();
   const token = crypto.randomBytes(32).toString("base64url");
+  const seed = crypto.randomBytes(16).toString("hex");
   const now = Date.now();
 
   try {
@@ -47,6 +49,7 @@ async function createGameSession(user) {
         id: sessionId,
         user_id: user.id,
         token_hash: hashGameToken(token),
+        seed,
         started_at: new Date(now).toISOString(),
         expires_at: new Date(now + SESSION_TTL_MS).toISOString(),
       },
@@ -58,17 +61,18 @@ async function createGameSession(user) {
   return {
     id: sessionId,
     token,
+    seed,
     minSubmitAfterMs: MIN_PLAY_MS,
   };
 }
 
-async function validateGameSession(user, sessionId, sessionToken, score) {
+async function validateGameSession(user, sessionId, sessionToken, score, inputLog) {
   if (!sessionId || !sessionToken) {
-    return "게임 시작 토큰이 필요합니다.";
+    return { error: "게임 시작 토큰이 필요합니다." };
   }
 
   if (score > MAX_ACCEPTED_SCORE) {
-    return "점수 값이 비정상적으로 높습니다.";
+    return { error: "점수 값이 비정상적으로 높습니다." };
   }
 
   const sessions = await supabaseRequest(`game_sessions?id=eq.${encodeURIComponent(sessionId)}&user_id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`, {
@@ -77,13 +81,13 @@ async function validateGameSession(user, sessionId, sessionToken, score) {
   const session = sessions?.[0];
 
   if (!session) {
-    return "게임 세션을 찾을 수 없습니다.";
+    return { error: "게임 세션을 찾을 수 없습니다." };
   }
 
   const expectedHash = hashGameToken(sessionToken);
 
   if (!timingSafeEqualText(expectedHash, session.token_hash)) {
-    return "게임 세션 토큰이 올바르지 않습니다.";
+    return { error: "게임 세션 토큰이 올바르지 않습니다." };
   }
 
   const now = Date.now();
@@ -91,11 +95,25 @@ async function validateGameSession(user, sessionId, sessionToken, score) {
   const expiresAt = new Date(session.expires_at).getTime();
 
   if (Number.isNaN(startedAt) || now - startedAt < MIN_PLAY_MS) {
-    return "게임 시간이 너무 짧습니다.";
+    return { error: "게임 시간이 너무 짧습니다." };
   }
 
   if (Number.isNaN(expiresAt) || now > expiresAt) {
-    return "게임 세션이 만료되었습니다.";
+    return { error: "게임 세션이 만료되었습니다." };
+  }
+
+  if (!session.seed) {
+    return { error: "게임 세션 seed가 없습니다. Supabase SQL Editor에서 supabase/schema.sql을 다시 실행해주세요." };
+  }
+
+  const simulation = CatnyamEngine.simulateGame(session.seed, inputLog);
+
+  if (simulation.error) {
+    return { error: simulation.error };
+  }
+
+  if (simulation.score !== score) {
+    return { error: "점수 검증에 실패했습니다." };
   }
 
   const usedSession = await supabaseRequest(`game_sessions?id=eq.${encodeURIComponent(session.id)}&user_id=eq.${encodeURIComponent(user.id)}&submitted_at=is.null`, {
@@ -107,10 +125,10 @@ async function validateGameSession(user, sessionId, sessionToken, score) {
   });
 
   if (!usedSession || usedSession.length === 0) {
-    return "이미 제출된 게임 세션입니다.";
+    return { error: "이미 제출된 게임 세션입니다." };
   }
 
-  return "";
+  return { score: simulation.score };
 }
 
 module.exports = async function handler(req, res) {
@@ -131,7 +149,7 @@ module.exports = async function handler(req, res) {
     }
 
     const body = await readJson(req);
-    const { action, score, sessionId, sessionToken } = body;
+    const { action, score, sessionId, sessionToken, inputLog } = body;
 
     if (action === "start-game") {
       const gameSession = await createGameSession(user);
@@ -151,22 +169,24 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const sessionError = await validateGameSession(user, sessionId, sessionToken, numericScore);
+    const validation = await validateGameSession(user, sessionId, sessionToken, numericScore, inputLog);
 
-    if (sessionError) {
-      sendJson(res, 400, { message: sessionError });
+    if (validation.error) {
+      sendJson(res, 400, { message: validation.error });
       return;
     }
+
+    const verifiedScore = validation.score;
 
     await supabaseRequest("scores", {
       method: "POST",
       body: {
         user_id: user.id,
-        score: numericScore,
+        score: verifiedScore,
       },
     });
 
-    const bestScore = Math.max(user.best_score || 0, numericScore);
+    const bestScore = Math.max(user.best_score || 0, verifiedScore);
     const updated = await supabaseRequest(`users?id=eq.${encodeURIComponent(user.id)}`, {
       method: "PATCH",
       body: {

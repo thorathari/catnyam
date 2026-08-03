@@ -88,7 +88,6 @@ let authMode = "login";
 let currentUser = null;
 let animationId = null;
 let lastFrame = 0;
-let nextDropAt = 0;
 let touchDirection = 0;
 let rankingMode = "daily";
 let rankingData = {
@@ -142,15 +141,15 @@ async function requestApi(path, options = {}) {
   return data;
 }
 
-function createGameState() {
+function createGameState(seed = "catnyam-local") {
   return {
+    ...CatnyamEngine.createGameState({ seed }),
     running: false,
     paused: false,
     gameSession: null,
-    score: 0,
-    timeLeft: GAME_SECONDS,
-    elapsed: 0,
-    drops: [],
+    stepAccumulator: 0,
+    inputLog: [],
+    lastInputDirection: 0,
     scorePopups: [],
     reaction: {
       type: "neutral",
@@ -163,29 +162,6 @@ function createGameState() {
     emphasisBubble: {
       text: "",
       until: 0,
-    },
-    modes: {
-      speedUntil: 0,
-      hideUntil: 0,
-      purrUntil: 0,
-      catnipUntil: 0,
-      tunaUntil: 0,
-      clipperUntil: 0,
-    },
-    specialSpawns: {
-      tuna: 0,
-      clipper: 0,
-    },
-    specialSpawnLimits: {
-      tuna: Math.floor(Math.random() * 4),
-      clipper: Math.floor(Math.random() * 4),
-    },
-    cat: {
-      x: canvas.width / 2,
-      y: canvas.height - 84,
-      width: 104,
-      height: 74,
-      speed: 520,
     },
   };
 }
@@ -1380,7 +1356,7 @@ async function startGame() {
     });
     gameSession = data.gameSession;
 
-    if (!gameSession?.id || !gameSession?.token) {
+    if (!gameSession?.id || !gameSession?.token || !gameSession?.seed) {
       throw new Error("게임 시작 토큰을 받을 수 없습니다.");
     }
   } catch (error) {
@@ -1395,7 +1371,7 @@ async function startGame() {
   stopGame();
   lastFinishedScore = null;
   resetShareStatus();
-  game = createGameState();
+  game = createGameState(gameSession.seed);
   game.gameSession = gameSession;
   game.running = true;
   game.paused = false;
@@ -1405,7 +1381,6 @@ async function startGame() {
   clearMovementInput();
   updateModeBadges();
   lastFrame = performance.now();
-  nextDropAt = 0;
   animationId = requestAnimationFrame(loop);
   startButton.disabled = false;
   pauseRestartButton.disabled = false;
@@ -1455,6 +1430,7 @@ async function submitScore(score) {
         score,
         sessionId: game.gameSession.id,
         sessionToken: game.gameSession.token,
+        inputLog: game.inputLog,
       },
     });
     currentUser = data.user;
@@ -1588,34 +1564,7 @@ function loop(now) {
 }
 
 function update(delta) {
-  game.elapsed += delta;
-  game.timeLeft = Math.max(0, GAME_SECONDS - game.elapsed);
-  timeText.textContent = Math.ceil(game.timeLeft);
-
-  const keyboardDirection = (keys.has("ArrowRight") || keys.has("d") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("a") ? 1 : 0);
-  const direction = touchDirection || keyboardDirection;
-  const speedMultiplier = isSpeedModeActive() ? 1.75 : 1;
-  game.cat.x += direction * game.cat.speed * speedMultiplier * delta;
-  game.cat.x = clamp(game.cat.x, getCatWidth() / 2 + 12, canvas.width - getCatWidth() / 2 - 12);
-  updateModeBadges();
-
-  if (game.elapsed >= nextDropAt) {
-    spawnDrop();
-    nextDropAt = game.elapsed + Math.max(0.32, 0.82 - game.elapsed * 0.008);
-  }
-
-  game.drops.forEach((drop) => {
-    if (drop.knocked) {
-      drop.x += drop.vx * delta;
-      drop.y += drop.vy * delta;
-      drop.vy += 620 * delta;
-      drop.rotation += drop.spin * delta * 2.8;
-      return;
-    }
-
-    drop.y += drop.speed * delta;
-    drop.rotation += drop.spin * delta;
-  });
+  game.stepAccumulator += delta;
 
   game.scorePopups.forEach((popup) => {
     popup.age += delta;
@@ -1623,232 +1572,90 @@ function update(delta) {
   });
   game.scorePopups = game.scorePopups.filter((popup) => popup.age < popup.duration);
 
-  game.drops = game.drops.filter((drop) => {
-    if (drop.knocked) {
-      return isDropVisible(drop);
-    }
+  while (game.stepAccumulator >= CatnyamEngine.STEP_SECONDS && game.timeLeft > 0) {
+    const direction = getMovementDirection();
+    recordInputDirection(direction);
+    handleEngineEvents(CatnyamEngine.stepGame(game, direction));
+    game.stepAccumulator -= CatnyamEngine.STEP_SECONDS;
+  }
 
-    if (collides(drop)) {
-      if (isHideModeActive() && !isCatnipModeActive()) {
-        return true;
-      }
-
-      if (isCatnipModeActive() && isDebuffDrop(drop)) {
-        knockAwayDrop(drop);
-        setCatReaction("good");
-        return true;
-      }
-
-      if (applyModeItem(drop)) {
-        return false;
-      }
-
-      const scoreDelta = getDropScore(drop);
-      setCatReaction(scoreDelta < 0 ? "bad" : "good");
-      applyScoreDelta(scoreDelta);
-      return false;
-    }
-
-    return isDropVisible(drop);
-  });
-
+  timeText.textContent = Math.ceil(game.timeLeft);
+  updateModeBadges();
   if (game.timeLeft <= 0) {
     finishGame();
   }
 }
 
-function spawnDrop() {
-  const kind = getRandomDropKind();
-  addDrop(kind);
-
-  spawnExtraChuruDrops();
-  spawnExtraBombDrops();
+function getMovementDirection() {
+  const keyboardDirection = (keys.has("ArrowRight") || keys.has("d") ? 1 : 0) - (keys.has("ArrowLeft") || keys.has("a") ? 1 : 0);
+  return touchDirection || keyboardDirection;
 }
 
-function spawnExtraChuruDrops() {
-  if (isTunaModeActive()) {
-    addDrop("gold");
-
-    if (Math.random() < 0.7) {
-      addDrop("gold");
-    }
-
+function recordInputDirection(direction) {
+  if (direction === game.lastInputDirection) {
     return;
   }
 
-  const roll = Math.random();
-
-  if (roll < 0.36) {
-    addDrop("normal");
-  } else if (roll < 0.48) {
-    addDrop("gold");
-  }
+  game.inputLog.push({
+    step: game.step,
+    direction,
+  });
+  game.lastInputDirection = direction;
 }
 
-function spawnExtraBombDrops() {
-  if (isClipperModeActive()) {
-    addDrop("bomb");
-
-    if (Math.random() < 0.7) {
-      addDrop("bomb");
+function handleEngineEvents(events) {
+  events.forEach((event) => {
+    if (event.type === "score") {
+      scoreText.textContent = event.score;
+      setCatReaction(event.scoreDelta < 0 ? "bad" : "good");
+      addScorePopup(event.scoreDelta);
+      return;
     }
 
-    return;
-  }
+    if (event.type === "bounce") {
+      setCatReaction("good");
+      setCatBubble("통통!", 0.9);
+      return;
+    }
 
-  if (Math.random() < 0.16) {
-    addDrop("bomb");
-  }
-}
-
-function addDrop(kind) {
-  const isGold = kind === "gold";
-  const isBomb = kind === "bomb";
-  const isToy = kind === "toy";
-  const isBox = kind === "box";
-  const isHand = kind === "hand";
-  const isCatnip = kind === "catnip";
-  const isTuna = kind === "tuna";
-  const isClipper = kind === "clipper";
-  noteDropSpawned(kind);
-  game.drops.push({
-    x: 34 + Math.random() * (canvas.width - 68),
-    y: -40,
-    width: isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 44 : isCatnip ? 46 : isTuna ? 44 : isClipper ? 48 : isGold ? 34 : 28,
-    height: isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 42 : isClipper ? 34 : isGold ? 70 : 60,
-    speed: 170 + Math.random() * 145 + game.elapsed * 2.3,
-    rotation: Math.random() * Math.PI,
-    spin: (Math.random() - 0.5) * 3,
-    kind,
+    if (event.type === "mode") {
+      handleModeEvent(event.kind);
+    }
   });
 }
 
-function canSpawnLimitedDrop(kind) {
-  return game.specialSpawns[kind] < game.specialSpawnLimits[kind];
-}
-
-function noteDropSpawned(kind) {
-  if (kind === "tuna" || kind === "clipper") {
-    game.specialSpawns[kind] += 1;
-  }
-}
-
-function pickWeightedKind(entries) {
-  const totalWeight = entries.reduce((total, [, weight]) => total + weight, 0);
-  let roll = Math.random() * totalWeight;
-
-  for (const [kind, weight] of entries) {
-    roll -= weight;
-
-    if (roll <= 0) {
-      return kind;
-    }
-  }
-
-  return "normal";
-}
-
-function getRandomDropKind() {
-  return pickWeightedKind([
-    ["catnip", 0.035],
-    ["box", 0.04],
-    ["toy", 0.06],
-    ["hand", 0.06],
-    ["tuna", canSpawnLimitedDrop("tuna") ? 0.045 : 0],
-    ["clipper", canSpawnLimitedDrop("clipper") ? 0.045 : 0],
-    ["bomb", 0.135],
-    ["gold", 0.16],
-    ["normal", 0.51],
-  ]);
-}
-
-function getDropScore(drop) {
-  if (drop.kind === "bomb") {
-    return -3;
-  }
-
-  const baseScore = drop.kind === "gold" ? 5 : 2;
-  return baseScore * getScoreMultiplier();
-}
-
-function getScoreMultiplier() {
-  let multiplier = 1;
-
-  if (isPurrModeActive()) {
-    multiplier *= 2;
-  }
-
-  if (isCatnipModeActive()) {
-    multiplier *= 2;
-  }
-
-  return multiplier;
-}
-
-function applyScoreDelta(scoreDelta) {
-  game.score = Math.max(0, game.score + scoreDelta);
-  scoreText.textContent = game.score;
-  addScorePopup(scoreDelta);
-}
-
-function applyModeItem(drop) {
-  if (drop.kind === "toy") {
-    game.modes.speedUntil = game.elapsed + 5;
+function handleModeEvent(kind) {
+  if (kind === "toy") {
     setCatReaction("good");
     setCatBubble("우다다모드!", 1.5);
     triggerCanvasHighlight("mode");
-    updateModeBadges();
-    return true;
-  }
-
-  if (drop.kind === "box") {
-    game.modes.hideUntil = game.elapsed + 3;
+  } else if (kind === "box") {
     setCatBubble("건들지마라냥!", 3);
     triggerCanvasHighlight("danger");
-    updateModeBadges();
-    return true;
-  }
-
-  if (drop.kind === "hand") {
-    game.modes.purrUntil = game.elapsed + 5;
+  } else if (kind === "hand") {
     setCatReaction("good");
     setMultiplierBubble();
     triggerCanvasHighlight("mode");
-    updateModeBadges();
-    return true;
-  }
-
-  if (drop.kind === "catnip") {
-    game.modes.catnipUntil = game.elapsed + 5;
+  } else if (kind === "catnip") {
     setCatReaction("good");
     setMultiplierBubble();
     setCatBubble("캣닢파워!", 1.6);
     triggerCanvasHighlight("catnip");
-    updateModeBadges();
-    return true;
-  }
-
-  if (drop.kind === "tuna") {
-    game.modes.tunaUntil = game.elapsed + 5;
-    applyScoreDelta(1);
+  } else if (kind === "tuna") {
     setCatReaction("good");
     setCatBubble("애교모드!", 1.6);
     triggerCanvasHighlight("mode");
-    updateModeBadges();
-    return true;
-  }
-
-  if (drop.kind === "clipper") {
-    game.modes.clipperUntil = game.elapsed + 5;
-    applyScoreDelta(-1);
+  } else if (kind === "clipper") {
     setCatReaction("bad");
     setCatBubble("위이이잉!!!", 1.6);
     triggerCanvasHighlight("danger");
-    updateModeBadges();
-    return true;
   }
 
-  return false;
+  updateModeBadges();
+}
+
+function getScoreMultiplier() {
+  return CatnyamEngine.getScoreMultiplier(game);
 }
 
 function setCatReaction(type) {
@@ -1900,23 +1707,6 @@ function addScorePopup(scoreDelta) {
   });
 }
 
-function isDebuffDrop(drop) {
-  return drop.kind === "bomb" || drop.kind === "box" || drop.kind === "clipper";
-}
-
-function knockAwayDrop(drop) {
-  const direction = drop.x >= game.cat.x ? 1 : -1;
-  drop.knocked = true;
-  drop.vx = direction * (380 + Math.random() * 130);
-  drop.vy = -360 - Math.random() * 120;
-  drop.spin = direction * (7 + Math.random() * 4);
-  setCatBubble("통통!", 0.9);
-}
-
-function isDropVisible(drop) {
-  return drop.y < canvas.height + 90 && drop.x > -90 && drop.x < canvas.width + 90;
-}
-
 function getCatBubbleText() {
   if (game.bubble?.text && game.bubble.until >= game.elapsed) {
     return game.bubble.text;
@@ -1938,39 +1728,39 @@ function getCatReaction() {
 }
 
 function isSpeedModeActive() {
-  return game.modes.speedUntil > game.elapsed;
+  return CatnyamEngine.isSpeedModeActive(game);
 }
 
 function isHideModeActive() {
-  return game.modes.hideUntil > game.elapsed;
+  return CatnyamEngine.isHideModeActive(game);
 }
 
 function isPurrModeActive() {
-  return game.modes.purrUntil > game.elapsed;
+  return CatnyamEngine.isPurrModeActive(game);
 }
 
 function isCatnipModeActive() {
-  return game.modes.catnipUntil > game.elapsed;
+  return CatnyamEngine.isCatnipModeActive(game);
 }
 
 function isTunaModeActive() {
-  return game.modes.tunaUntil > game.elapsed;
+  return CatnyamEngine.isTunaModeActive(game);
 }
 
 function isClipperModeActive() {
-  return game.modes.clipperUntil > game.elapsed;
+  return CatnyamEngine.isClipperModeActive(game);
 }
 
 function getCatScale() {
-  return isCatnipModeActive() ? 2 : 1;
+  return CatnyamEngine.getCatScale(game);
 }
 
 function getCatWidth() {
-  return game.cat.width * getCatScale();
+  return CatnyamEngine.getCatWidth(game);
 }
 
 function getCatHeight() {
-  return game.cat.height * getCatScale();
+  return CatnyamEngine.getCatHeight(game);
 }
 
 function getCatRotation() {
@@ -2668,10 +2458,6 @@ function roundRect(x, y, width, height, radius) {
   ctx.arcTo(x, y + height, x, y, r);
   ctx.arcTo(x, y, x + width, y, r);
   ctx.closePath();
-}
-
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
 }
 
 function getControlKey(key) {
