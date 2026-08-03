@@ -1800,7 +1800,9 @@ function handleModeEvent(kind) {
     triggerCanvasHighlight("mode");
   } else if (kind === "catnip") {
     setCatReaction("good");
-    setMultiplierBubble();
+    if (game.gameMode !== CatnyamEngine.GAME_MODES.BOMB) {
+      setMultiplierBubble();
+    }
     setCatBubble("캣닢파워!", 1.6);
     triggerCanvasHighlight("catnip");
   } else if (kind === "tuna") {
@@ -2013,12 +2015,15 @@ function drawBombModeHearts() {
 
   const heartSize = 28;
   const heartGap = 39;
+  const horizontalPadding = 20;
   const visibleHearts = Math.min(hearts, 8);
   const hudLeft = 18;
   const hudTop = 16;
   const hudHeight = 54;
-  const hudWidth = 28 + visibleHearts * heartGap + (hearts > visibleHearts ? 44 : 0);
+  const heartGroupWidth = heartSize + (visibleHearts - 1) * heartGap;
+  const hudWidth = horizontalPadding * 2 + heartGroupWidth + (hearts > visibleHearts ? 44 : 0);
   const heartY = hudTop + hudHeight / 2;
+  const firstHeartX = hudLeft + horizontalPadding + heartSize / 2;
 
   ctx.save();
   ctx.fillStyle = "rgba(255, 255, 255, 0.76)";
@@ -2029,7 +2034,7 @@ function drawBombModeHearts() {
   ctx.stroke();
 
   for (let index = 0; index < visibleHearts; index += 1) {
-    drawLifeHeart(hudLeft + 27 + index * heartGap, heartY, heartSize);
+    drawLifeHeart(firstHeartX + index * heartGap, heartY, heartSize);
   }
 
   if (hearts > visibleHearts) {
@@ -2037,7 +2042,7 @@ function drawBombModeHearts() {
     ctx.font = "900 18px Jua, Nunito, sans-serif";
     ctx.textAlign = "left";
     ctx.textBaseline = "middle";
-    ctx.fillText(`+${hearts - visibleHearts}`, hudLeft + 27 + visibleHearts * heartGap, heartY);
+    ctx.fillText(`+${hearts - visibleHearts}`, firstHeartX + visibleHearts * heartGap, heartY);
   }
 
   ctx.restore();

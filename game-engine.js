@@ -26,10 +26,28 @@
   const TIME_EPSILON = 1e-9;
   const BOMB_START_HEARTS = 3;
   const BOMB_RAIN_INTERVAL = 10;
+  const BOMB_CATNIP_WINDOW_SECONDS = 40;
+  const BOMB_GOLD_WINDOW_SECONDS = 16;
   const SURVIVAL_SCORE_INTERVAL = 0.3;
 
   function normalizeGameMode(mode) {
     return mode === GAME_MODES.BOMB ? GAME_MODES.BOMB : GAME_MODES.CHURU;
+  }
+
+  function createWindowDropSchedule(rng, windowSeconds, chance) {
+    return {
+      windowStart: 0,
+      windowSeconds,
+      chance,
+      dropAt: rng() < chance ? rng() * windowSeconds : null,
+    };
+  }
+
+  function advanceWindowDropSchedule(state, schedule) {
+    schedule.windowStart += schedule.windowSeconds;
+    schedule.dropAt = state.rng() < schedule.chance
+      ? schedule.windowStart + state.rng() * schedule.windowSeconds
+      : null;
   }
 
   function clamp(value, min, max) {
@@ -90,6 +108,10 @@
         heartSpawnLimit: rng() < 0.68 ? 1 : 0,
         heartSpawned: 0,
         nextHeartAt: 6 + rng() * 24,
+        bombSpecialSchedules: {
+          catnip: createWindowDropSchedule(rng, BOMB_CATNIP_WINDOW_SECONDS, 0.72),
+          gold: createWindowDropSchedule(rng, BOMB_GOLD_WINDOW_SECONDS, 0.42),
+        },
         gameOver: false,
       }
       : {};
@@ -284,7 +306,7 @@
       speed: 155 + state.rng() * 95 + state.elapsed * 1.65,
     });
 
-    if (state.elapsed > 10 && state.rng() < 0.2 + pressure * 0.42) {
+    if (state.elapsed > 8 && state.rng() < 0.3 + pressure * 0.5) {
       addDrop(state, "bomb", {
         width: 38,
         height: 38,
@@ -293,7 +315,7 @@
       });
     }
 
-    if (state.elapsed > 34 && state.rng() < pressure * 0.28) {
+    if (state.elapsed > 28 && state.rng() < pressure * 0.38) {
       addDrop(state, "bomb", {
         width: 38,
         height: 38,
@@ -312,8 +334,21 @@
     state.nextHeartAt = Number.POSITIVE_INFINITY;
   }
 
+  function spawnBombModeCatnipDrop(state) {
+    addDrop(state, "catnip", {
+      speed: 145 + state.rng() * 75 + state.elapsed * 0.55,
+      rotation: 0,
+    });
+  }
+
+  function spawnBombModeGoldDrop(state) {
+    addDrop(state, "gold", {
+      speed: 155 + state.rng() * 85 + state.elapsed * 0.75,
+    });
+  }
+
   function spawnBombRain(state, events) {
-    const count = 7 + Math.min(3, Math.floor(state.elapsed / 30));
+    const count = 5 + Math.min(2, Math.floor(state.elapsed / 45));
 
     for (let index = 0; index < count; index += 1) {
       const lane = (index + 0.16 + state.rng() * 0.68) / count;
@@ -333,15 +368,33 @@
   function spawnBombAvoidDrops(state, events) {
     if (state.elapsed >= state.nextDropAt) {
       spawnBombAvoidDrop(state);
-      state.nextDropAt = state.elapsed + Math.max(0.2, 0.78 - state.elapsed * 0.0065);
+      state.nextDropAt = state.elapsed + Math.max(0.14, 0.62 - state.elapsed * 0.006);
     }
 
     if (state.heartSpawned < state.heartSpawnLimit && state.elapsed >= state.nextHeartAt) {
       spawnHeartDrop(state);
     }
 
+    maybeSpawnBombModeWindowDrop(state, state.bombSpecialSchedules?.catnip, spawnBombModeCatnipDrop);
+    maybeSpawnBombModeWindowDrop(state, state.bombSpecialSchedules?.gold, spawnBombModeGoldDrop);
+
     while (state.elapsed >= state.nextBombRainAt) {
       spawnBombRain(state, events);
+    }
+  }
+
+  function maybeSpawnBombModeWindowDrop(state, schedule, spawnDrop) {
+    if (!schedule) {
+      return;
+    }
+
+    while (state.elapsed >= schedule.windowStart + schedule.windowSeconds) {
+      advanceWindowDropSchedule(state, schedule);
+    }
+
+    if (schedule.dropAt !== null && state.elapsed >= schedule.dropAt) {
+      spawnDrop(state);
+      advanceWindowDropSchedule(state, schedule);
     }
   }
 
@@ -443,7 +496,22 @@
       return false;
     }
 
+    if (drop.kind === "catnip") {
+      applyModeItem(state, drop, events);
+      return false;
+    }
+
+    if (drop.kind === "gold") {
+      applyScoreDelta(state, 5, events);
+      return false;
+    }
+
     if (drop.kind === "bomb") {
+      if (isCatnipModeActive(state)) {
+        knockAwayDrop(state, drop, events);
+        return true;
+      }
+
       state.hearts = Math.max(0, state.hearts - 1);
       applyScoreDelta(state, -3, events, "bomb");
       events.push({
