@@ -91,6 +91,7 @@ const canvas = document.querySelector("#gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const REMEMBER_LOGIN_KEY = "catnyam_auto_login";
+const SHARE_PAGE_URL = "https://catnyam.vercel.app/";
 const RANKING_REFRESH_MS = 15000;
 const keys = new Set();
 let authMode = "login";
@@ -115,6 +116,8 @@ let rankingRefreshQueued = false;
 let activePlayerHistoryAccount = null;
 let lastFinishedScore = null;
 let lastFinishedGameMode = null;
+let lastFinishedRanking = null;
+let lastFinishedSessionId = null;
 const expandedAdminAccountIds = new Set();
 let game = createGameState();
 
@@ -361,6 +364,8 @@ function setGameMode(mode) {
   currentGameMode = nextMode;
   lastFinishedScore = null;
   lastFinishedGameMode = null;
+  lastFinishedRanking = null;
+  lastFinishedSessionId = null;
   resetShareStatus();
   rankingData = {
     daily: [],
@@ -1626,6 +1631,8 @@ async function startGame() {
   stopGame();
   lastFinishedScore = null;
   lastFinishedGameMode = null;
+  lastFinishedRanking = null;
+  lastFinishedSessionId = null;
   resetShareStatus();
   currentGameMode = CatnyamEngine.normalizeGameMode(gameSession.gameMode || currentGameMode);
   updateGameModeUI();
@@ -1664,6 +1671,8 @@ function finishGame() {
   const finalScore = game.score;
   lastFinishedScore = finalScore;
   lastFinishedGameMode = game.gameMode;
+  lastFinishedRanking = null;
+  lastFinishedSessionId = game.gameSession?.id || null;
   stopGame();
   clearModes();
   drawFinish();
@@ -1683,6 +1692,8 @@ async function submitScore(score) {
 
   const finishedGame = game;
   const submittedGameMode = finishedGame.gameMode;
+  const submittedSessionId = finishedGame.gameSession.id;
+  shareResultButton.disabled = true;
 
   try {
     const data = await requestApi("/api/scores", {
@@ -1698,11 +1709,18 @@ async function submitScore(score) {
       },
     });
     currentUser = data.user;
+    if (lastFinishedSessionId === submittedSessionId) {
+      lastFinishedRanking = data.shareRanking || null;
+    }
     bestText.textContent = currentUser.bestScore || 0;
     renderRanking();
   } catch (error) {
     console.warn("Score save failed:", error);
     showGameOverlay("다시하기", `${score}점 · 저장 실패: ${error.message}`, "result");
+  } finally {
+    if (lastFinishedSessionId === submittedSessionId) {
+      shareResultButton.disabled = false;
+    }
   }
 }
 
@@ -1735,6 +1753,8 @@ function returnToGameHome() {
   stopGame();
   lastFinishedScore = null;
   lastFinishedGameMode = null;
+  lastFinishedRanking = null;
+  lastFinishedSessionId = null;
   resetShareStatus();
   game = createGameState();
   scoreText.textContent = "0";
@@ -1778,7 +1798,7 @@ function hideGameOverlay() {
 }
 
 function getSharePageUrl() {
-  return `${window.location.origin}${window.location.pathname}`;
+  return SHARE_PAGE_URL;
 }
 
 function getShareModeLabel() {
@@ -1790,8 +1810,19 @@ function getShareModeLabel() {
 function getResultShareText(score) {
   const nickname = getUserDisplayName(currentUser) || "플레이어";
   const modeLabel = getShareModeLabel();
+  const ranking = lastFinishedRanking;
+  const rank = Number(ranking?.rank);
+  const isRankingScore = Number(ranking?.rankingScore) === Number(score);
 
-  return `Cat Nyam ${modeLabel} 모드로 ${nickname}님이 ${score}점 달성!\n츄르 잡으러 도전해봐냥`;
+  if (Number.isInteger(rank) && rank > 0 && isRankingScore) {
+    const rankMessage = ranking.overtakenNickname
+      ? `${ranking.overtakenNickname}님을 제끼고 ${rank}위의 자리를 차지했다냥!`
+      : `전체 랭킹 ${rank}위의 자리를 차지했다냥!`;
+
+    return `Cat Nyam ${modeLabel} 모드로 ${nickname}님이 ${score}점을 달성하여\n${rankMessage}\n지금 당장 츄르 잡으러 가봐라냥!`;
+  }
+
+  return `Cat Nyam ${modeLabel} 모드로 ${nickname}님이 ${score}점을 달성했다냥!\n지금 당장 츄르 잡으러 가봐라냥!`;
 }
 
 function getFullResultShareText(score) {

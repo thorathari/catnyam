@@ -15,6 +15,7 @@ const CHURU_MIN_PLAY_MS = (GAME_SECONDS - 5) * 1000;
 const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
 const SUBMIT_CLOCK_SKEW_MS = 3000;
 const MAX_ACCEPTED_SCORE = 500000;
+const MAX_SHARE_RANKING_ROWS = 10000;
 
 function normalizeGameMode(mode) {
   return CatnyamEngine.normalizeGameMode(mode);
@@ -22,6 +23,55 @@ function normalizeGameMode(mode) {
 
 function canUseGameMode(user, mode) {
   return Boolean(user && mode);
+}
+
+function getDisplayName(user) {
+  return String(user.nickname || "").trim() || user.username;
+}
+
+async function getShareRanking(userId, gameMode) {
+  const normalizedMode = normalizeGameMode(gameMode);
+  const [users, scores] = await Promise.all([
+    supabaseRequest(`users?select=id,username,nickname&limit=${MAX_SHARE_RANKING_ROWS}`, {
+      prefer: "",
+    }),
+    supabaseRequest(`scores?select=user_id,score&game_mode=eq.${encodeURIComponent(normalizedMode)}&order=score.desc&limit=${MAX_SHARE_RANKING_ROWS}`, {
+      prefer: "",
+    }),
+  ]);
+  const usersById = new Map(users.map((account) => [account.id, account]));
+  const bestByUser = new Map();
+
+  scores.forEach((scoreRow) => {
+    if (!usersById.has(scoreRow.user_id)) {
+      return;
+    }
+
+    const score = Number(scoreRow.score) || 0;
+    const previous = bestByUser.get(scoreRow.user_id);
+
+    if (!previous || score > previous.score) {
+      bestByUser.set(scoreRow.user_id, {
+        id: scoreRow.user_id,
+        nickname: getDisplayName(usersById.get(scoreRow.user_id)),
+        score,
+      });
+    }
+  });
+
+  const rankings = Array.from(bestByUser.values())
+    .sort((left, right) => right.score - left.score || left.nickname.localeCompare(right.nickname, "ko"));
+  const rankingIndex = rankings.findIndex((account) => account.id === userId);
+
+  if (rankingIndex < 0) {
+    return null;
+  }
+
+  return {
+    rank: rankingIndex + 1,
+    rankingScore: rankings[rankingIndex].score,
+    overtakenNickname: rankings[rankingIndex + 1]?.nickname || null,
+  };
 }
 
 function getSessionSecret() {
@@ -276,7 +326,18 @@ module.exports = async function handler(req, res) {
       },
     });
 
-    sendJson(res, 200, { user: sanitizeUser(updated[0]) });
+    let shareRanking = null;
+
+    try {
+      shareRanking = await getShareRanking(user.id, validation.gameMode);
+    } catch (error) {
+      console.warn("Share ranking lookup failed:", error);
+    }
+
+    sendJson(res, 200, {
+      user: sanitizeUser(updated[0]),
+      shareRanking,
+    });
   } catch (error) {
     sendJson(res, 500, { message: error.message });
   }
