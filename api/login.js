@@ -1,4 +1,5 @@
 const {
+  clearSessionCookie,
   getUserByUsername,
   readJson,
   requireUser,
@@ -42,6 +43,17 @@ module.exports = async function handler(req, res) {
     if (req.method === "GET") {
       const user = await requireUser(req, res);
       if (!user) return;
+
+      const hasLastLoginColumn = Object.prototype.hasOwnProperty.call(user, "last_login_at");
+
+      if (hasLastLoginColumn && !user.last_login_at) {
+        clearSessionCookie(res);
+        sendJson(res, 401, {
+          code: "FRESH_LOGIN_REQUIRED",
+          message: "최종접속일 등록을 위해 다시 로그인해주세요.",
+        });
+        return;
+      }
 
       setSessionCookie(res, user);
       sendJson(res, 200, { user: sanitizeUser(user) });
