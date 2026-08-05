@@ -1939,7 +1939,8 @@ function handleModeEvent(kind) {
     triggerCanvasHighlight("mode");
   } else if (kind === "box") {
     setCatBubble("건들지마라냥!", 3);
-    triggerCanvasHighlight(game.gameMode === CatnyamEngine.GAME_MODES.BOMB ? "mode" : "danger");
+    const isBombHideout = game.gameMode === CatnyamEngine.GAME_MODES.BOMB;
+    triggerCanvasHighlight(isBombHideout ? "mode" : "danger", isBombHideout ? 3 : 0);
   } else if (kind === "hand") {
     setCatReaction("good");
     setMultiplierBubble();
@@ -2149,11 +2150,12 @@ function clearModes() {
 
 function updateCanvasHighlight() {
   const timedHighlight = game.canvasHighlight?.until >= game.elapsed ? game.canvasHighlight.type : "";
-  const forceDanger = timedHighlight === "danger";
   const hideIsBuff = game.gameMode === CatnyamEngine.GAME_MODES.BOMB && isHideModeActive();
+  const forceDanger = timedHighlight === "danger" && !hideIsBuff;
+  const forceMode = timedHighlight === "mode";
   const catnipActive = !forceDanger && (timedHighlight === "catnip" || isCatnipModeActive());
   const dangerActive = forceDanger || (!catnipActive && ((!hideIsBuff && isHideModeActive()) || isClipperModeActive()));
-  const modeActive = !catnipActive && !dangerActive && (hideIsBuff || isSpeedModeActive() || isPurrModeActive() || isTunaModeActive());
+  const modeActive = !catnipActive && !dangerActive && (forceMode || hideIsBuff || isSpeedModeActive() || isPurrModeActive() || isTunaModeActive());
   canvasWrap.classList.toggle("catnip-highlight", catnipActive);
   canvasWrap.classList.toggle("danger-highlight", dangerActive);
   canvasWrap.classList.toggle("mode-highlight", modeActive);

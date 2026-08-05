@@ -106,7 +106,7 @@
         nextDropAt: 0.4,
         nextBombRainAt: BOMB_RAIN_INTERVAL,
         nextSurvivalScoreAt: SURVIVAL_SCORE_INTERVAL,
-        heartSpawnLimit: rng() < 0.68 ? 1 : 0,
+        heartSpawnLimit: rng() < 0.8 ? 1 : 0,
         heartSpawned: 0,
         nextHeartAt: 6 + rng() * 24,
         bombSpecialSchedules: {
