@@ -661,6 +661,20 @@ canvas {
   min-height: 76px;
 }
 
+.guide-group.good.fixed-guide-rows,
+.guide-group.bad.fixed-guide-rows {
+  flex-flow: column nowrap;
+  align-items: center;
+  justify-content: center;
+}
+
+.guide-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .guide-item {
   position: relative;
   display: inline-flex;
@@ -1760,6 +1774,10 @@ canvas {
     min-height: 24px;
     gap: 5px;
     padding: 0 7px;
+  }
+
+  .guide-row {
+    gap: 5px;
   }
 
   .guide-item::after {
