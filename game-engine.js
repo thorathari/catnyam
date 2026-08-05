@@ -30,8 +30,14 @@
   const BOMB_FIRST_HEART_MAX_SECONDS = 30;
   const BOMB_HEART_MIN_INTERVAL = 25;
   const BOMB_HEART_MAX_INTERVAL = 55;
-  const BOMB_BOX_WINDOW_SECONDS = 30;
-  const BOMB_CATNIP_WINDOW_SECONDS = 40;
+  const BOMB_FIRST_CATNIP_MIN_SECONDS = 8;
+  const BOMB_FIRST_CATNIP_MAX_SECONDS = 24;
+  const BOMB_CATNIP_MIN_INTERVAL = 18;
+  const BOMB_CATNIP_MAX_INTERVAL = 38;
+  const BOMB_FIRST_BOX_MIN_SECONDS = 10;
+  const BOMB_FIRST_BOX_MAX_SECONDS = 28;
+  const BOMB_BOX_MIN_INTERVAL = 20;
+  const BOMB_BOX_MAX_INTERVAL = 42;
   const BOMB_GOLD_WINDOW_SECONDS = 1;
   const SURVIVAL_SCORE_INTERVAL = 0.1;
 
@@ -112,9 +118,11 @@
         nextSurvivalScoreAt: SURVIVAL_SCORE_INTERVAL,
         nextHeartAt: BOMB_FIRST_HEART_MIN_SECONDS
           + rng() * (BOMB_FIRST_HEART_MAX_SECONDS - BOMB_FIRST_HEART_MIN_SECONDS),
+        nextCatnipAt: BOMB_FIRST_CATNIP_MIN_SECONDS
+          + rng() * (BOMB_FIRST_CATNIP_MAX_SECONDS - BOMB_FIRST_CATNIP_MIN_SECONDS),
+        nextBoxAt: BOMB_FIRST_BOX_MIN_SECONDS
+          + rng() * (BOMB_FIRST_BOX_MAX_SECONDS - BOMB_FIRST_BOX_MIN_SECONDS),
         bombSpecialSchedules: {
-          box: createWindowDropSchedule(rng, BOMB_BOX_WINDOW_SECONDS, 0.55),
-          catnip: createWindowDropSchedule(rng, BOMB_CATNIP_WINDOW_SECONDS, 0.72),
           gold: createWindowDropSchedule(rng, BOMB_GOLD_WINDOW_SECONDS, 1),
         },
         gameOver: false,
@@ -353,6 +361,8 @@
       speed: 145 + state.rng() * 75 + state.elapsed * 0.55,
       rotation: 0,
     });
+    state.nextCatnipAt = state.elapsed + BOMB_CATNIP_MIN_INTERVAL
+      + state.rng() * (BOMB_CATNIP_MAX_INTERVAL - BOMB_CATNIP_MIN_INTERVAL);
   }
 
   function spawnBombModeBoxDrop(state) {
@@ -360,6 +370,8 @@
       speed: 150 + state.rng() * 75 + state.elapsed * 0.55,
       rotation: 0,
     });
+    state.nextBoxAt = state.elapsed + BOMB_BOX_MIN_INTERVAL
+      + state.rng() * (BOMB_BOX_MAX_INTERVAL - BOMB_BOX_MIN_INTERVAL);
   }
 
   function spawnBombModeGoldDrop(state) {
@@ -403,8 +415,14 @@
       spawnHeartDrop(state);
     }
 
-    maybeSpawnBombModeWindowDrop(state, state.bombSpecialSchedules?.box, spawnBombModeBoxDrop);
-    maybeSpawnBombModeWindowDrop(state, state.bombSpecialSchedules?.catnip, spawnBombModeCatnipDrop);
+    if (state.elapsed >= state.nextCatnipAt) {
+      spawnBombModeCatnipDrop(state);
+    }
+
+    if (state.elapsed >= state.nextBoxAt) {
+      spawnBombModeBoxDrop(state);
+    }
+
     maybeSpawnBombModeWindowDrop(state, state.bombSpecialSchedules?.gold, spawnBombModeGoldDrop);
 
     while (state.elapsed >= state.nextBombRainAt) {
