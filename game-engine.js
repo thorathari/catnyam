@@ -26,6 +26,10 @@
   const TIME_EPSILON = 1e-9;
   const BOMB_START_HEARTS = 3;
   const BOMB_RAIN_INTERVAL = 15;
+  const BOMB_FIRST_HEART_MIN_SECONDS = 8;
+  const BOMB_FIRST_HEART_MAX_SECONDS = 30;
+  const BOMB_HEART_MIN_INTERVAL = 25;
+  const BOMB_HEART_MAX_INTERVAL = 55;
   const BOMB_BOX_WINDOW_SECONDS = 30;
   const BOMB_CATNIP_WINDOW_SECONDS = 40;
   const BOMB_GOLD_WINDOW_SECONDS = 1;
@@ -106,9 +110,8 @@
         nextDropAt: 0.4,
         nextBombRainAt: BOMB_RAIN_INTERVAL,
         nextSurvivalScoreAt: SURVIVAL_SCORE_INTERVAL,
-        heartSpawnLimit: rng() < 0.8 ? 1 : 0,
-        heartSpawned: 0,
-        nextHeartAt: 6 + rng() * 24,
+        nextHeartAt: BOMB_FIRST_HEART_MIN_SECONDS
+          + rng() * (BOMB_FIRST_HEART_MAX_SECONDS - BOMB_FIRST_HEART_MIN_SECONDS),
         bombSpecialSchedules: {
           box: createWindowDropSchedule(rng, BOMB_BOX_WINDOW_SECONDS, 0.55),
           catnip: createWindowDropSchedule(rng, BOMB_CATNIP_WINDOW_SECONDS, 0.72),
@@ -341,8 +344,8 @@
       speed: 155 + state.rng() * 80,
       rotation: 0,
     });
-    state.heartSpawned += 1;
-    state.nextHeartAt = Number.POSITIVE_INFINITY;
+    state.nextHeartAt = state.elapsed + BOMB_HEART_MIN_INTERVAL
+      + state.rng() * (BOMB_HEART_MAX_INTERVAL - BOMB_HEART_MIN_INTERVAL);
   }
 
   function spawnBombModeCatnipDrop(state) {
@@ -396,7 +399,7 @@
       state.nextDropAt = state.elapsed + Math.max(0.24, 0.5 - state.elapsed * 0.0015);
     }
 
-    if (state.heartSpawned < state.heartSpawnLimit && state.elapsed >= state.nextHeartAt) {
+    if (state.elapsed >= state.nextHeartAt) {
       spawnHeartDrop(state);
     }
 
