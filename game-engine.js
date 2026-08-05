@@ -26,6 +26,7 @@
   const TIME_EPSILON = 1e-9;
   const BOMB_START_HEARTS = 3;
   const BOMB_RAIN_INTERVAL = 15;
+  const BOMB_BOX_WINDOW_SECONDS = 30;
   const BOMB_CATNIP_WINDOW_SECONDS = 40;
   const BOMB_GOLD_WINDOW_SECONDS = 1;
   const SURVIVAL_SCORE_INTERVAL = 0.1;
@@ -109,6 +110,7 @@
         heartSpawned: 0,
         nextHeartAt: 6 + rng() * 24,
         bombSpecialSchedules: {
+          box: createWindowDropSchedule(rng, BOMB_BOX_WINDOW_SECONDS, 0.55),
           catnip: createWindowDropSchedule(rng, BOMB_CATNIP_WINDOW_SECONDS, 0.72),
           gold: createWindowDropSchedule(rng, BOMB_GOLD_WINDOW_SECONDS, 1),
         },
@@ -299,14 +301,14 @@
   }
 
   function spawnBombAvoidDrop(state) {
-    const pressure = Math.min(1, state.elapsed / 90);
+    const pressure = Math.min(1, state.elapsed / 180);
     addDrop(state, "bomb", {
       width: 38,
       height: 38,
       speed: 155 + state.rng() * 95 + state.elapsed * 1.65,
     });
 
-    if (state.elapsed > 1.5 && state.rng() < 0.24 + pressure * 0.18) {
+    if (state.elapsed > 1.5 && state.rng() < 0.24 + pressure * 0.12) {
       addDrop(state, "bomb", {
         width: 38,
         height: 38,
@@ -315,7 +317,7 @@
       });
     }
 
-    if (state.elapsed > 7 && state.rng() < 0.34 + pressure * 0.42) {
+    if (state.elapsed > 7 && state.rng() < 0.34 + pressure * 0.24) {
       addDrop(state, "bomb", {
         width: 38,
         height: 38,
@@ -324,7 +326,7 @@
       });
     }
 
-    if (state.elapsed > 30 && state.rng() < pressure * 0.28) {
+    if (state.elapsed > 30 && state.rng() < pressure * 0.12) {
       addDrop(state, "bomb", {
         width: 38,
         height: 38,
@@ -346,6 +348,13 @@
   function spawnBombModeCatnipDrop(state) {
     addDrop(state, "catnip", {
       speed: 145 + state.rng() * 75 + state.elapsed * 0.55,
+      rotation: 0,
+    });
+  }
+
+  function spawnBombModeBoxDrop(state) {
+    addDrop(state, "box", {
+      speed: 150 + state.rng() * 75 + state.elapsed * 0.55,
       rotation: 0,
     });
   }
@@ -384,13 +393,14 @@
   function spawnBombAvoidDrops(state, events) {
     if (state.elapsed >= state.nextDropAt) {
       spawnBombAvoidDrop(state);
-      state.nextDropAt = state.elapsed + Math.max(0.14, 0.5 - state.elapsed * 0.0048);
+      state.nextDropAt = state.elapsed + Math.max(0.24, 0.5 - state.elapsed * 0.0015);
     }
 
     if (state.heartSpawned < state.heartSpawnLimit && state.elapsed >= state.nextHeartAt) {
       spawnHeartDrop(state);
     }
 
+    maybeSpawnBombModeWindowDrop(state, state.bombSpecialSchedules?.box, spawnBombModeBoxDrop);
     maybeSpawnBombModeWindowDrop(state, state.bombSpecialSchedules?.catnip, spawnBombModeCatnipDrop);
     maybeSpawnBombModeWindowDrop(state, state.bombSpecialSchedules?.gold, spawnBombModeGoldDrop);
 
@@ -507,6 +517,16 @@
   }
 
   function handleBombAvoidCollision(state, drop, events) {
+    if (drop.kind === "box") {
+      applyModeItem(state, drop, events);
+      return false;
+    }
+
+    if (isHideModeActive(state)) {
+      knockAwayDrop(state, drop, events);
+      return true;
+    }
+
     if (drop.kind === "heart") {
       state.hearts += 1;
       events.push({
