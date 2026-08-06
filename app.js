@@ -1930,7 +1930,9 @@ function handleEngineEvents(events) {
     }
 
     if (event.type === "bounce") {
-      setCatReaction("good");
+      if (!isHideModeActive()) {
+        setCatReaction("good");
+      }
       setCatBubble("통통!", 0.9);
       return;
     }
@@ -1965,29 +1967,26 @@ function handleEngineEvents(events) {
 
 function handleModeEvent(kind) {
   if (kind === "toy") {
-    setCatReaction("good");
+    setCollectedItemReaction("good");
     setCatBubble("우다다모드!", 1.5);
     triggerCanvasHighlight("mode");
   } else if (kind === "box") {
     setCatBubble("건들지마라냥!", 3);
-    const isBombHideout = game.gameMode === CatnyamEngine.GAME_MODES.BOMB;
-    if (isBombHideout) {
-      setCatReaction("box-open", 0.55);
-    }
-    triggerCanvasHighlight(isBombHideout ? "mode" : "danger", isBombHideout ? 3 : 0);
+    setCatReaction("box-open", 0.55);
+    triggerCanvasHighlight("mode", 3);
   } else if (kind === "hand") {
-    setCatReaction("good");
+    setCollectedItemReaction("good");
     setMultiplierBubble();
     triggerCanvasHighlight("mode");
   } else if (kind === "catnip") {
-    setCatReaction("good");
+    setCollectedItemReaction("good");
     if (game.gameMode !== CatnyamEngine.GAME_MODES.BOMB) {
       setMultiplierBubble();
     }
     setCatBubble("캣닢파워!", 1.6);
     triggerCanvasHighlight("catnip");
   } else if (kind === "tuna") {
-    setCatReaction("good");
+    setCollectedItemReaction("good");
     setCatBubble("애교모드!", 1.6);
     triggerCanvasHighlight("mode");
   } else if (kind === "clipper") {
@@ -2011,9 +2010,7 @@ function setCatReaction(type, duration = 0.45) {
 }
 
 function setCollectedItemReaction(type) {
-  const openHideout = game.gameMode === CatnyamEngine.GAME_MODES.BOMB
-    && isHideModeActive()
-    && !isCatnipModeActive();
+  const openHideout = isHideModeActive();
   setCatReaction(openHideout ? "box-open" : type, openHideout ? 0.55 : 0.45);
 }
 
@@ -2079,10 +2076,12 @@ function getCatEmphasisBubbleText() {
 }
 
 function getCatReaction() {
+  if (isHideModeActive() && game.reaction?.type === "box-open" && game.reaction.until >= game.elapsed) {
+    return "box-open";
+  }
+
   if (isHideModeActive() && !isCatnipModeActive()) {
-    return game.reaction?.type === "box-open" && game.reaction.until >= game.elapsed
-      ? "box-open"
-      : "box";
+    return "box";
   }
 
   return game.reaction?.until >= game.elapsed ? game.reaction.type : "neutral";
@@ -2193,7 +2192,7 @@ function clearModes() {
 
 function updateCanvasHighlight() {
   const timedHighlight = game.canvasHighlight?.until >= game.elapsed ? game.canvasHighlight.type : "";
-  const hideIsBuff = game.gameMode === CatnyamEngine.GAME_MODES.BOMB && isHideModeActive();
+  const hideIsBuff = isHideModeActive();
   const forceDanger = timedHighlight === "danger" && !hideIsBuff;
   const forceMode = timedHighlight === "mode";
   const catnipActive = !forceDanger && (timedHighlight === "catnip" || isCatnipModeActive());
@@ -2207,7 +2206,11 @@ function updateCanvasHighlight() {
 function draw() {
   drawWorld();
   game.drops.forEach(drawChuru);
-  drawCat(game.cat.x, game.cat.y, getCatWidth(), getCatHeight(), getCatReaction(), getCatRotation());
+  const catReaction = getCatReaction();
+  const boxReaction = catReaction === "box" || catReaction === "box-open";
+  const drawWidth = boxReaction ? game.cat.width : getCatWidth();
+  const drawHeight = boxReaction ? game.cat.height : getCatHeight();
+  drawCat(game.cat.x, game.cat.y, drawWidth, drawHeight, catReaction, getCatRotation());
   game.scorePopups.forEach(drawScorePopup);
   drawBombModeHearts();
 }

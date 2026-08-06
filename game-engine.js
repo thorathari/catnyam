@@ -527,7 +527,7 @@
   }
 
   function isDebuffDrop(drop) {
-    return drop.kind === "bomb" || drop.kind === "box" || drop.kind === "clipper";
+    return drop.kind === "bomb" || drop.kind === "clipper";
   }
 
   function applySurvivalScore(state, events) {
@@ -677,7 +677,8 @@
           return handleBombAvoidCollision(state, drop, events);
         }
 
-        if (isHideModeActive(state) && !isCatnipModeActive(state)) {
+        if (isHideModeActive(state) && !isCatnipModeActive(state) && isDebuffDrop(drop)) {
+          knockAwayDrop(state, drop, events);
           return true;
         }
 

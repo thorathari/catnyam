@@ -328,7 +328,7 @@ button:disabled {
 }
 
 .mode-badge.hide {
-  background: rgba(190, 139, 82, 0.28);
+  background: rgba(255, 216, 79, 0.55);
 }
 
 .mode-badge.purr {
