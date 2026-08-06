@@ -73,6 +73,17 @@ async function getShareRanking(userId, gameMode) {
   };
 }
 
+async function getPersonalBestScore(userId, gameMode) {
+  const scores = await supabaseRequest(
+    `scores?user_id=eq.${encodeURIComponent(userId)}&game_mode=eq.${encodeURIComponent(normalizeGameMode(gameMode))}&select=score&order=score.desc,created_at.asc&limit=1`,
+    {
+      prefer: "",
+    },
+  );
+
+  return Number(scores?.[0]?.score) || 0;
+}
+
 function getSessionSecret() {
   const secret = process.env.SESSION_SECRET;
 
@@ -303,6 +314,8 @@ module.exports = async function handler(req, res) {
     }
 
     const verifiedScore = validation.score;
+    const previousPersonalBest = await getPersonalBestScore(user.id, validation.gameMode);
+    const isPersonalBest = verifiedScore > 0 && verifiedScore >= previousPersonalBest;
 
     await insertScore({
       user_id: user.id,
@@ -325,6 +338,9 @@ module.exports = async function handler(req, res) {
 
     try {
       shareRanking = await getShareRanking(user.id, validation.gameMode);
+      if (shareRanking) {
+        shareRanking.isPersonalBest = isPersonalBest;
+      }
     } catch (error) {
       console.warn("Share ranking lookup failed:", error);
     }

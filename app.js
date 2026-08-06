@@ -1813,8 +1813,9 @@ function getResultShareText(score) {
   const ranking = lastFinishedRanking;
   const rank = Number(ranking?.rank);
   const isRankingScore = Number(ranking?.rankingScore) === Number(score);
+  const shouldUseRankingMessage = ranking?.isPersonalBest === true || isRankingScore;
 
-  if (Number.isInteger(rank) && rank > 0 && isRankingScore) {
+  if (Number.isInteger(rank) && rank > 0 && shouldUseRankingMessage) {
     const rankMessage = ranking.overtakenNickname
       ? `${ranking.overtakenNickname}님을 제끼고 ${rank}위의 자리를 차지했다냥!`
       : `전체 랭킹 ${rank}위의 자리를 차지했다냥!`;
