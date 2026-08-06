@@ -2724,13 +2724,20 @@ function drawBoxItem(drop) {
 }
 
 function drawHandItem(drop) {
-  const emojiSize = Math.floor(Math.min(drop.width, drop.height) * 0.96);
+  const emojiSize = Math.floor(Math.min(drop.width, drop.height) * 1.08);
+  const handEmoji = "🫲🏻";
 
   ctx.save();
+  ctx.globalAlpha = 1;
   ctx.font = `${emojiSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("🫲", 0, emojiSize * 0.04);
+  ctx.strokeStyle = "rgba(142, 92, 66, 0.72)";
+  ctx.lineWidth = 3;
+  ctx.lineJoin = "round";
+  ctx.strokeText(handEmoji, 0, emojiSize * 0.04);
+  ctx.fillStyle = "#ffc8a2";
+  ctx.fillText(handEmoji, 0, emojiSize * 0.04);
   ctx.restore();
 }
 
