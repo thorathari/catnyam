@@ -1774,7 +1774,13 @@ canvas {
   }
 
   .guide-group.good.churu-guide.fixed-guide-rows {
-    max-width: min(290px, 100%);
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: auto;
+    max-width: min(318px, 100%);
   }
 
   .guide-group.bad {
@@ -1800,6 +1806,10 @@ canvas {
 
   .churu-guide.fixed-guide-rows .guide-row {
     flex-wrap: wrap;
+  }
+
+  .guide-group.good.churu-guide.fixed-guide-rows .guide-row {
+    display: contents;
   }
 
   .guide-item::after {
@@ -1856,5 +1866,11 @@ canvas {
 
   .admin-rename-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 430px) and (max-width: 560px) {
+  .guide-group.good.churu-guide.fixed-guide-rows {
+    max-width: min(430px, 100%);
   }
 }
