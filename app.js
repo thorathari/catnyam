@@ -2812,44 +2812,35 @@ function drawBoxCat(width, height, isOpen = false) {
     ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = "#ffcf8a";
-    ctx.beginPath();
-    ctx.ellipse(0, -height * 0.34, width * 0.24, height * 0.24, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(-width * 0.2, -height * 0.44);
-    ctx.lineTo(-width * 0.13, -height * 0.64);
-    ctx.lineTo(-width * 0.04, -height * 0.45);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.beginPath();
-    ctx.moveTo(width * 0.2, -height * 0.44);
-    ctx.lineTo(width * 0.13, -height * 0.64);
-    ctx.lineTo(width * 0.04, -height * 0.45);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = "#38302d";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#ffcf8a";
+    ctx.lineWidth = width * 0.13;
     ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.arc(-width * 0.09, -height * 0.37, 5, 0.15 * Math.PI, 0.85 * Math.PI);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(width * 0.09, -height * 0.37, 5, 0.15 * Math.PI, 0.85 * Math.PI);
-    ctx.stroke();
+    [-1, 1].forEach((side) => {
+      const pawX = side * width * 0.26;
+      const pawY = -height * 0.46;
 
-    ctx.fillStyle = "#38302d";
-    ctx.beginPath();
-    ctx.ellipse(0, -height * 0.27, 7, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(side * width * 0.09, -height * 0.16);
+      ctx.quadraticCurveTo(side * width * 0.17, -height * 0.31, pawX, pawY);
+      ctx.stroke();
 
-    ctx.fillStyle = "#ef6f8f";
-    ctx.beginPath();
-    ctx.ellipse(0, -height * 0.25, 4, 2.5, 0, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.fillStyle = "#ffcf8a";
+      ctx.beginPath();
+      ctx.ellipse(pawX, pawY, width * 0.1, height * 0.09, side * 0.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(142, 92, 66, 0.5)";
+      ctx.lineWidth = 1.6;
+      [-1, 0, 1].forEach((toe) => {
+        ctx.beginPath();
+        ctx.moveTo(pawX + toe * 4, pawY - 2);
+        ctx.lineTo(pawX + toe * 4 - side, pawY + 2);
+        ctx.stroke();
+      });
+
+      ctx.strokeStyle = "#ffcf8a";
+      ctx.lineWidth = width * 0.13;
+    });
   } else {
     ctx.fillStyle = "#e0aa68";
     ctx.beginPath();
