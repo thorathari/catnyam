@@ -1,4 +1,4 @@
-const GAME_SECONDS = 45;
+const GAME_SECONDS = 60;
 
 const authPanel = document.querySelector("#authPanel");
 const gamePanel = document.querySelector("#gamePanel");
@@ -1949,6 +1949,14 @@ function handleEngineEvents(events) {
       return;
     }
 
+    if (event.type === "time") {
+      setCollectedItemReaction("good");
+      setCatBubble(`${event.seconds || CatnyamEngine.CHURU_TIMER_SECONDS}초 추가!!!`, 1.3);
+      triggerCanvasHighlight("mode");
+      updateTimeDisplay();
+      return;
+    }
+
     if (event.type === "life") {
       setCatReaction("bad");
       setCatBubble(event.hearts <= 0 ? "털썩..." : "아야!", 1.1);
@@ -2381,6 +2389,12 @@ function drawChuru(drop) {
     return;
   }
 
+  if (drop.kind === "timer") {
+    drawTimerItem(drop);
+    ctx.restore();
+    return;
+  }
+
   drawChuruPouch(drop);
 
   ctx.restore();
@@ -2493,6 +2507,53 @@ function drawHeartItem(drop) {
   ctx.fillStyle = "rgba(255, 255, 255, 0.54)";
   ctx.beginPath();
   ctx.ellipse(-7, -9, 5, 2.8, -0.55, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawTimerItem(drop) {
+  const size = Math.min(drop.width, drop.height);
+  const radius = size / 2;
+
+  ctx.save();
+  ctx.fillStyle = "rgba(119, 216, 186, 0.2)";
+  ctx.beginPath();
+  ctx.arc(0, 0, radius + 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#fffaf2";
+  ctx.strokeStyle = "#288466";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.78, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#77d8ba";
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.12, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "#288466";
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, -radius * 0.42);
+  ctx.moveTo(0, 0);
+  ctx.lineTo(radius * 0.34, radius * 0.2);
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(40, 132, 102, 0.5)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.56, -Math.PI * 0.36, Math.PI * 0.18);
+  ctx.stroke();
+
+  ctx.fillStyle = "#ffd84f";
+  ctx.beginPath();
+  ctx.arc(-radius * 0.42, -radius * 0.7, radius * 0.18, 0, Math.PI * 2);
+  ctx.arc(radius * 0.42, -radius * 0.7, radius * 0.18, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }

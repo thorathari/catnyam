@@ -7,7 +7,7 @@
 
   root.CatnyamEngine = engine;
 })(typeof globalThis !== "undefined" ? globalThis : this, function createGameEngine() {
-  const GAME_SECONDS = 45;
+  const GAME_SECONDS = 60;
   const GAME_MODES = {
     CHURU: "churu",
     BOMB: "bomb",
@@ -21,9 +21,16 @@
   const CAT_BASE_HEIGHT = 74;
   const CAT_BASE_Y = CANVAS_HEIGHT - 84;
   const CAT_BASE_SPEED = 520;
-  const MAX_CHURU_INPUT_EVENTS = TOTAL_STEPS + 1;
+  const CHURU_MAX_PLAY_SECONDS = 5 * 60;
+  const MAX_CHURU_STEPS = Math.round(CHURU_MAX_PLAY_SECONDS / STEP_SECONDS);
+  const MAX_CHURU_INPUT_EVENTS = MAX_CHURU_STEPS + 1;
   const MAX_BOMB_INPUT_EVENTS = 20000;
   const TIME_EPSILON = 1e-9;
+  const CHURU_TIMER_SECONDS = 5;
+  const CHURU_FIRST_TIMER_MIN_SECONDS = 8;
+  const CHURU_FIRST_TIMER_MAX_SECONDS = 30;
+  const CHURU_TIMER_MIN_INTERVAL = 25;
+  const CHURU_TIMER_MAX_INTERVAL = 55;
   const BOMB_START_HEARTS = 3;
   const BOMB_RAIN_INTERVAL = 15;
   const BOMB_FIRST_HEART_MIN_SECONDS = 8;
@@ -110,6 +117,13 @@
     const seed = String(options.seed || "catnyam-local");
     const gameMode = normalizeGameMode(options.mode);
     const rng = createRng(seed);
+    const churuModeState = gameMode === GAME_MODES.CHURU
+      ? {
+        durationSeconds: GAME_SECONDS,
+        nextTimerAt: CHURU_FIRST_TIMER_MIN_SECONDS
+          + rng() * (CHURU_FIRST_TIMER_MAX_SECONDS - CHURU_FIRST_TIMER_MIN_SECONDS),
+      }
+      : {};
     const bombModeState = gameMode === GAME_MODES.BOMB
       ? {
         hearts: BOMB_START_HEARTS,
@@ -136,6 +150,7 @@
       step: 0,
       score: 0,
       timeLeft: gameMode === GAME_MODES.BOMB ? Number.POSITIVE_INFINITY : GAME_SECONDS,
+      durationSeconds: gameMode === GAME_MODES.BOMB ? Number.POSITIVE_INFINITY : GAME_SECONDS,
       elapsed: 0,
       nextDropAt: 0,
       nextDropId: 1,
@@ -163,6 +178,7 @@
         height: CAT_BASE_HEIGHT,
         speed: CAT_BASE_SPEED,
       },
+      ...churuModeState,
       ...bombModeState,
     };
   }
@@ -252,14 +268,15 @@
     const isTuna = kind === "tuna";
     const isClipper = kind === "clipper";
     const isHeart = kind === "heart";
+    const isTimer = kind === "timer";
 
     noteDropSpawned(state, kind);
     state.drops.push({
       id: state.nextDropId,
       x: options.x ?? 34 + state.rng() * (CANVAS_WIDTH - 68),
       y: options.y ?? -40,
-      width: options.width ?? (isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 44 : isClipper ? 48 : isHeart ? 42 : isGold ? 34 : 28),
-      height: options.height ?? (isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 42 : isClipper ? 34 : isHeart ? 38 : isGold ? 70 : 60),
+      width: options.width ?? (isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 44 : isClipper ? 48 : isHeart ? 42 : isTimer ? 42 : isGold ? 34 : 28),
+      height: options.height ?? (isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 42 : isClipper ? 34 : isHeart ? 38 : isTimer ? 42 : isGold ? 70 : 60),
       speed: options.speed ?? 170 + state.rng() * 145 + state.elapsed * 2.3,
       rotation: options.rotation ?? state.rng() * Math.PI,
       spin: (state.rng() - 0.5) * 3,
@@ -345,6 +362,15 @@
         speed: 185 + state.rng() * 120 + state.elapsed * 2,
       });
     }
+  }
+
+  function spawnChuruTimerDrop(state) {
+    addDrop(state, "timer", {
+      speed: 150 + state.rng() * 80,
+      rotation: 0,
+    });
+    state.nextTimerAt = state.elapsed + CHURU_TIMER_MIN_INTERVAL
+      + state.rng() * (CHURU_TIMER_MAX_INTERVAL - CHURU_TIMER_MIN_INTERVAL);
   }
 
   function spawnHeartDrop(state) {
@@ -523,6 +549,17 @@
       return true;
     }
 
+    if (drop.kind === "timer" && state.gameMode === GAME_MODES.CHURU) {
+      state.durationSeconds += CHURU_TIMER_SECONDS;
+      state.timeLeft = Math.max(0, state.durationSeconds - state.elapsed);
+      events.push({
+        type: "time",
+        seconds: CHURU_TIMER_SECONDS,
+        timeLeft: state.timeLeft,
+      });
+      return true;
+    }
+
     return false;
   }
 
@@ -628,16 +665,17 @@
     }
 
     const safeDirection = clamp(Number(direction) || 0, -1, 1);
-    const stepDelta = state.gameMode === GAME_MODES.BOMB ? delta : Math.min(delta, Math.max(0, GAME_SECONDS - state.elapsed));
+    const durationSeconds = state.gameMode === GAME_MODES.BOMB ? Number.POSITIVE_INFINITY : state.durationSeconds;
+    const stepDelta = state.gameMode === GAME_MODES.BOMB ? delta : Math.min(delta, Math.max(0, durationSeconds - state.elapsed));
     state.elapsed += stepDelta;
 
     if (state.gameMode === GAME_MODES.BOMB) {
       state.timeLeft = Number.POSITIVE_INFINITY;
     } else {
-      state.timeLeft = Math.max(0, GAME_SECONDS - state.elapsed);
+      state.timeLeft = Math.max(0, state.durationSeconds - state.elapsed);
 
       if (state.timeLeft <= TIME_EPSILON) {
-        state.elapsed = GAME_SECONDS;
+        state.elapsed = state.durationSeconds;
         state.timeLeft = 0;
       }
     }
@@ -652,6 +690,10 @@
     } else if (state.elapsed >= state.nextDropAt) {
       spawnDrop(state);
       state.nextDropAt = state.elapsed + Math.max(0.32, 0.82 - state.elapsed * 0.008);
+    }
+
+    if (state.gameMode === GAME_MODES.CHURU && state.elapsed >= state.nextTimerAt) {
+      spawnChuruTimerDrop(state);
     }
 
     state.drops.forEach((drop) => {
@@ -735,9 +777,8 @@
   function simulateGame(seed, inputLog, options = {}) {
     const gameMode = normalizeGameMode(options.mode);
     const requestedSteps = Number(options.steps);
-    const maxStep = gameMode === GAME_MODES.BOMB
-      ? requestedSteps
-      : TOTAL_STEPS - 1;
+    const totalSteps = Number.isInteger(requestedSteps) ? requestedSteps : TOTAL_STEPS;
+    const maxStep = gameMode === GAME_MODES.BOMB ? totalSteps : totalSteps - 1;
     const normalized = normalizeInputLog(inputLog, {
       maxInputEvents: gameMode === GAME_MODES.BOMB ? MAX_BOMB_INPUT_EVENTS : MAX_CHURU_INPUT_EVENTS,
       maxStep,
@@ -752,10 +793,13 @@
     const state = createGameState({ seed, mode: gameMode });
     let direction = 0;
     let logIndex = 0;
-    const totalSteps = gameMode === GAME_MODES.BOMB ? requestedSteps : TOTAL_STEPS;
 
     if (gameMode === GAME_MODES.BOMB && (!Number.isInteger(totalSteps) || totalSteps <= 0 || totalSteps > MAX_BOMB_STEPS)) {
       return { error: "폭탄피하기 플레이 시간이 올바르지 않습니다." };
+    }
+
+    if (gameMode === GAME_MODES.CHURU && (!Number.isInteger(totalSteps) || totalSteps <= 0 || totalSteps > MAX_CHURU_STEPS)) {
+      return { error: "츄르먹기 플레이 시간이 올바르지 않습니다." };
     }
 
     for (let step = 0; step < totalSteps; step += 1) {
@@ -769,10 +813,22 @@
       if (gameMode === GAME_MODES.BOMB && state.gameOver) {
         break;
       }
+
+      if (gameMode === GAME_MODES.CHURU && state.timeLeft <= 0) {
+        break;
+      }
     }
 
     if (gameMode === GAME_MODES.BOMB && !state.gameOver) {
       return { error: "폭탄피하기가 아직 종료되지 않았습니다." };
+    }
+
+    if (gameMode === GAME_MODES.CHURU && state.timeLeft > 0) {
+      return { error: "츄르먹기가 아직 종료되지 않았습니다." };
+    }
+
+    if (state.step !== totalSteps) {
+      return { error: "플레이 시간이 올바르지 않습니다." };
     }
 
     return {
@@ -786,6 +842,7 @@
 
   return {
     BOMB_START_HEARTS,
+    CHURU_TIMER_SECONDS,
     GAME_SECONDS,
     GAME_MODES,
     MAX_BOMB_STEPS,

@@ -10,8 +10,7 @@ const {
   supabaseRequest,
 } = require("../server/db");
 
-const GAME_SECONDS = 45;
-const CHURU_MIN_PLAY_MS = (GAME_SECONDS - 5) * 1000;
+const CHURU_MIN_PLAY_MS = (CatnyamEngine.GAME_SECONDS - 5) * 1000;
 const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
 const SUBMIT_CLOCK_SKEW_MS = 3000;
 const MAX_ACCEPTED_SCORE = 500000;
@@ -201,23 +200,19 @@ async function validateGameSession(user, sessionId, sessionToken, score, inputLo
     return { error: "게임 모드 검증에 실패했습니다." };
   }
 
-  const simulationOptions = { mode: sessionGameMode };
+  const submittedSteps = Number(steps);
 
-  if (sessionGameMode === CatnyamEngine.GAME_MODES.BOMB) {
-    const submittedSteps = Number(steps);
-
-    if (!Number.isInteger(submittedSteps) || submittedSteps <= 0) {
-      return { error: "폭탄피하기 종료 시간이 올바르지 않습니다." };
-    }
-
-    const submittedPlayMs = submittedSteps * CatnyamEngine.STEP_SECONDS * 1000;
-
-    if (Number.isNaN(startedAt) || submittedPlayMs - (now - startedAt) > SUBMIT_CLOCK_SKEW_MS) {
-      return { error: "폭탄피하기 플레이 시간이 올바르지 않습니다." };
-    }
-
-    simulationOptions.steps = submittedSteps;
+  if (!Number.isInteger(submittedSteps) || submittedSteps <= 0) {
+    return { error: `${sessionGameMode === CatnyamEngine.GAME_MODES.BOMB ? "폭탄피하기" : "츄르먹기"} 종료 시간이 올바르지 않습니다.` };
   }
+
+  const submittedPlayMs = submittedSteps * CatnyamEngine.STEP_SECONDS * 1000;
+
+  if (Number.isNaN(startedAt) || submittedPlayMs - (now - startedAt) > SUBMIT_CLOCK_SKEW_MS) {
+    return { error: `${sessionGameMode === CatnyamEngine.GAME_MODES.BOMB ? "폭탄피하기" : "츄르먹기"} 플레이 시간이 올바르지 않습니다.` };
+  }
+
+  const simulationOptions = { mode: sessionGameMode, steps: submittedSteps };
 
   const simulation = CatnyamEngine.simulateGame(session.seed, inputLog, simulationOptions);
 
