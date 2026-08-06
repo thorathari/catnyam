@@ -712,6 +712,36 @@ canvas {
   flex-wrap: nowrap;
 }
 
+@media (min-width: 561px) {
+  .item-guide {
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .guide-group {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .guide-group.bad {
+    align-content: center;
+    align-items: center;
+    justify-content: center;
+    max-width: none;
+    min-height: 0;
+  }
+
+  .guide-group.good.bomb-guide.fixed-guide-rows {
+    flex-flow: row wrap;
+    max-width: none;
+  }
+
+  .guide-group.good.bomb-guide.fixed-guide-rows .guide-row {
+    display: contents;
+  }
+}
+
 .guide-item {
   position: relative;
   display: inline-flex;
