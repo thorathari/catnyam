@@ -633,7 +633,7 @@ canvas {
   align-items: flex-start;
   justify-content: center;
   gap: 14px;
-  max-width: min(680px, 100%);
+  max-width: min(760px, 100%);
   color: var(--ink);
   font-size: 0.92rem;
   font-weight: 900;
@@ -668,12 +668,20 @@ canvas {
   justify-content: center;
 }
 
+.guide-group.good.churu-guide.fixed-guide-rows {
+  max-width: none;
+}
+
 .guide-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 8px;
+}
+
+.churu-guide.fixed-guide-rows .guide-row {
+  flex-wrap: nowrap;
 }
 
 .guide-item {
@@ -1765,6 +1773,10 @@ canvas {
     max-width: min(270px, 100%);
   }
 
+  .guide-group.good.churu-guide.fixed-guide-rows {
+    max-width: min(290px, 100%);
+  }
+
   .guide-group.bad {
     flex-direction: row;
     align-items: center;
@@ -1784,6 +1796,10 @@ canvas {
 
   .guide-row {
     gap: 5px;
+  }
+
+  .churu-guide.fixed-guide-rows .guide-row {
+    flex-wrap: wrap;
   }
 
   .guide-item::after {
