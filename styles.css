@@ -878,17 +878,21 @@ canvas {
   display: inline-grid;
   place-items: center;
   flex: 0 0 auto;
-  width: 26px;
-  height: 24px;
+  width: 23px;
+  height: 23px;
   border-radius: 0;
+  color: #ffc8a2;
   background: transparent;
-  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-  font-size: 1.4rem;
+  font-family: "Segoe UI Symbol", "Arial Unicode MS", sans-serif;
+  font-size: 1.3rem;
+  font-style: normal;
+  font-weight: 400;
   line-height: 1;
+  -webkit-text-stroke: 0.8px rgba(194, 105, 75, 0.82);
 }
 
 .guide-icon.hand::before {
-  content: "🫲🏻";
+  content: "\270B\FE0E";
 }
 
 .guide-icon.hand::after {
@@ -1829,9 +1833,9 @@ canvas {
   }
 
   .guide-icon.hand {
-    width: 22px;
+    width: 20px;
     height: 20px;
-    font-size: 1.15rem;
+    font-size: 1.08rem;
   }
 
   .guide-icon.clipper {
