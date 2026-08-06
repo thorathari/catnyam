@@ -84,6 +84,7 @@ const purrModeBadge = document.querySelector("#purrModeBadge");
 const catnipModeBadge = document.querySelector("#catnipModeBadge");
 const tunaModeBadge = document.querySelector("#tunaModeBadge");
 const clipperModeBadge = document.querySelector("#clipperModeBadge");
+const skullModeBadge = document.querySelector("#skullModeBadge");
 const bombRainModeBadge = document.querySelector("#bombRainModeBadge");
 const heartModeBadge = document.querySelector("#heartModeBadge");
 const canvasWrap = document.querySelector("#canvasWrap");
@@ -1663,7 +1664,7 @@ function stopGame() {
   game.running = false;
   game.paused = false;
   pauseButton.hidden = true;
-  canvasWrap.classList.remove("mode-highlight", "danger-highlight", "catnip-highlight");
+  canvasWrap.classList.remove("mode-highlight", "danger-highlight", "catnip-highlight", "reverse-highlight");
   clearMovementInput();
 }
 
@@ -2015,6 +2016,10 @@ function handleModeEvent(kind) {
     setCatReaction("bad");
     setCatBubble("위이이잉!!!", 1.6);
     triggerCanvasHighlight("danger");
+  } else if (kind === "skull") {
+    setCatReaction("bad", 5);
+    setCatBubble("반대로 간다냥!", 5);
+    triggerCanvasHighlight("reverse", 5);
   }
 
   updateModeBadges();
@@ -2032,7 +2037,7 @@ function setCatReaction(type, duration = 0.45) {
 }
 
 function setCollectedItemReaction(type) {
-  const openHideout = isHideModeActive();
+  const openHideout = isHideModeActive() && !isCatnipModeActive();
   setCatReaction(openHideout ? "box-open" : type, openHideout ? 0.55 : 0.45);
 }
 
@@ -2064,13 +2069,15 @@ function triggerCanvasHighlight(type, duration = 0) {
     };
   }
 
-  canvasWrap.classList.remove("mode-highlight", "danger-highlight", "catnip-highlight");
+  canvasWrap.classList.remove("mode-highlight", "danger-highlight", "catnip-highlight", "reverse-highlight");
   void canvasWrap.offsetWidth;
   const className = type === "catnip"
     ? "catnip-highlight"
     : type === "danger"
       ? "danger-highlight"
-      : "mode-highlight";
+      : type === "reverse"
+        ? "reverse-highlight"
+        : "mode-highlight";
   canvasWrap.classList.add(className);
 }
 
@@ -2098,11 +2105,20 @@ function getCatEmphasisBubbleText() {
 }
 
 function getCatReaction() {
-  if (isHideModeActive() && game.reaction?.type === "box-open" && game.reaction.until >= game.elapsed) {
+  if (isHideModeActive() && !isCatnipModeActive() && game.reaction?.type === "box-open" && game.reaction.until >= game.elapsed) {
     return "box-open";
   }
 
-  if (isHideModeActive() && !isCatnipModeActive()) {
+  if (isCatnipModeActive()) {
+    const activeReaction = game.reaction?.until >= game.elapsed ? game.reaction.type : "neutral";
+    return activeReaction === "box-open" ? "good" : activeReaction;
+  }
+
+  if (isSkullModeActive()) {
+    return "bad";
+  }
+
+  if (isHideModeActive()) {
     return "box";
   }
 
@@ -2131,6 +2147,10 @@ function isTunaModeActive() {
 
 function isClipperModeActive() {
   return CatnyamEngine.isClipperModeActive(game);
+}
+
+function isSkullModeActive() {
+  return CatnyamEngine.isSkullModeActive(game);
 }
 
 function getCatScale() {
@@ -2166,6 +2186,7 @@ function updateModeBadges() {
     purrModeBadge.hidden = true;
     tunaModeBadge.hidden = true;
     clipperModeBadge.hidden = true;
+    updateModeBadge(skullModeBadge, isSkullModeActive(), `반대 ${getModeSecondsLeft(game.modes.skullUntil)}초`);
     updateModeBadge(catnipModeBadge, isCatnipModeActive(), `무적 ${getModeSecondsLeft(game.modes.catnipUntil)}초`);
     updateModeBadge(bombRainModeBadge, isBombRainActive(), `폭탄비 ${getModeSecondsLeft(game.bombRainUntil)}초`);
     heartModeBadge.hidden = true;
@@ -2179,6 +2200,7 @@ function updateModeBadges() {
   updateModeBadge(catnipModeBadge, isCatnipModeActive(), `캣닢 ${getModeSecondsLeft(game.modes.catnipUntil)}초`);
   updateModeBadge(tunaModeBadge, isTunaModeActive(), `애교 ${getModeSecondsLeft(game.modes.tunaUntil)}초`);
   updateModeBadge(clipperModeBadge, isClipperModeActive(), `위이잉 ${getModeSecondsLeft(game.modes.clipperUntil)}초`);
+  updateModeBadge(skullModeBadge, isSkullModeActive(), `반대 ${getModeSecondsLeft(game.modes.skullUntil)}초`);
   bombRainModeBadge.hidden = true;
   heartModeBadge.hidden = true;
   updateCanvasHighlight();
@@ -2199,6 +2221,7 @@ function clearModes() {
   game.modes.catnipUntil = 0;
   game.modes.tunaUntil = 0;
   game.modes.clipperUntil = 0;
+  game.modes.skullUntil = 0;
   game.bubble = {
     text: "",
     until: 0,
@@ -2215,12 +2238,15 @@ function clearModes() {
 function updateCanvasHighlight() {
   const timedHighlight = game.canvasHighlight?.until >= game.elapsed ? game.canvasHighlight.type : "";
   const hideIsBuff = isHideModeActive();
+  const forceReverse = timedHighlight === "reverse" || isSkullModeActive();
   const forceDanger = timedHighlight === "danger" && !hideIsBuff;
   const forceMode = timedHighlight === "mode";
-  const catnipActive = !forceDanger && (timedHighlight === "catnip" || isCatnipModeActive());
-  const dangerActive = forceDanger || (!catnipActive && ((!hideIsBuff && isHideModeActive()) || isClipperModeActive()));
-  const modeActive = !catnipActive && !dangerActive && (forceMode || hideIsBuff || isSpeedModeActive() || isPurrModeActive() || isTunaModeActive());
+  const catnipActive = timedHighlight === "catnip" || isCatnipModeActive();
+  const reverseActive = !catnipActive && forceReverse;
+  const dangerActive = !catnipActive && !reverseActive && (forceDanger || ((!hideIsBuff && isHideModeActive()) || isClipperModeActive()));
+  const modeActive = !catnipActive && !reverseActive && !dangerActive && (forceMode || hideIsBuff || isSpeedModeActive() || isPurrModeActive() || isTunaModeActive());
   canvasWrap.classList.toggle("catnip-highlight", catnipActive);
+  canvasWrap.classList.toggle("reverse-highlight", reverseActive);
   canvasWrap.classList.toggle("danger-highlight", dangerActive);
   canvasWrap.classList.toggle("mode-highlight", modeActive);
 }
@@ -2409,6 +2435,12 @@ function drawChuru(drop) {
     return;
   }
 
+  if (drop.kind === "skull") {
+    drawSkullItem(drop);
+    ctx.restore();
+    return;
+  }
+
   drawChuruPouch(drop);
 
   ctx.restore();
@@ -2568,6 +2600,66 @@ function drawTimerItem(drop) {
   ctx.beginPath();
   ctx.arc(-radius * 0.42, -radius * 0.7, radius * 0.18, 0, Math.PI * 2);
   ctx.arc(radius * 0.42, -radius * 0.7, radius * 0.18, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawSkullItem(drop) {
+  const size = Math.min(drop.width, drop.height);
+  const radius = size / 2;
+
+  ctx.save();
+  ctx.fillStyle = "rgba(126, 87, 194, 0.18)";
+  ctx.beginPath();
+  ctx.arc(0, 1, radius + 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  const skullGradient = ctx.createRadialGradient(-radius * 0.3, -radius * 0.38, 3, 0, 0, radius);
+  skullGradient.addColorStop(0, "#c9b7ff");
+  skullGradient.addColorStop(0.72, "#8f66dc");
+  skullGradient.addColorStop(1, "#6b46ba");
+
+  ctx.fillStyle = skullGradient;
+  ctx.strokeStyle = "rgba(62, 39, 112, 0.62)";
+  ctx.lineWidth = 2;
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  ctx.arc(0, -radius * 0.14, radius * 0.72, Math.PI * 0.02, Math.PI * 1.98);
+  ctx.lineTo(radius * 0.46, radius * 0.52);
+  ctx.lineTo(radius * 0.2, radius * 0.66);
+  ctx.lineTo(0, radius * 0.54);
+  ctx.lineTo(-radius * 0.2, radius * 0.66);
+  ctx.lineTo(-radius * 0.46, radius * 0.52);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#2f244b";
+  ctx.beginPath();
+  ctx.ellipse(-radius * 0.28, -radius * 0.16, radius * 0.16, radius * 0.2, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(radius * 0.28, -radius * 0.16, radius * 0.16, radius * 0.2, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(0, radius * 0.02);
+  ctx.lineTo(radius * 0.11, radius * 0.24);
+  ctx.lineTo(-radius * 0.11, radius * 0.24);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(47, 36, 75, 0.85)";
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = "round";
+  [-0.18, 0, 0.18].forEach((offset) => {
+    ctx.beginPath();
+    ctx.moveTo(radius * offset, radius * 0.43);
+    ctx.lineTo(radius * offset, radius * 0.58);
+    ctx.stroke();
+  });
+
+  ctx.fillStyle = "rgba(255, 250, 242, 0.5)";
+  ctx.beginPath();
+  ctx.ellipse(-radius * 0.28, -radius * 0.47, radius * 0.2, radius * 0.08, -0.42, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }

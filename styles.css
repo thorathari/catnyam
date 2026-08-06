@@ -349,6 +349,11 @@ button:disabled {
   background: #5d6876;
 }
 
+.mode-badge.skull {
+  color: white;
+  background: #7e57c2;
+}
+
 .mode-badge.rain {
   color: white;
   background: #d84b5f;
@@ -401,6 +406,15 @@ button:disabled {
   animation: catnipSparkle 0.54s ease-in-out infinite alternate;
 }
 
+.canvas-wrap.reverse-highlight::after {
+  border-color: rgba(126, 87, 194, 0.95);
+  box-shadow:
+    0 0 0 3px rgba(255, 250, 242, 0.72),
+    0 0 24px rgba(126, 87, 194, 0.96),
+    inset 0 0 22px rgba(126, 87, 194, 0.52);
+  animation: reverseSparkle 0.6s ease-in-out infinite alternate;
+}
+
 @keyframes borderSparkle {
   from {
     opacity: 0.72;
@@ -436,6 +450,20 @@ button:disabled {
     opacity: 1;
     filter: saturate(1.45);
     transform: scale(1.009);
+  }
+}
+
+@keyframes reverseSparkle {
+  from {
+    opacity: 0.74;
+    filter: saturate(1);
+    transform: scale(0.996);
+  }
+
+  to {
+    opacity: 1;
+    filter: saturate(1.35);
+    transform: scale(1.008);
   }
 }
 
@@ -955,6 +983,42 @@ canvas {
   height: 3px;
   border-radius: 999px;
   background: #5d6876;
+}
+
+.guide-icon.skull {
+  position: relative;
+  width: 19px;
+  height: 20px;
+  border-radius: 50% 50% 42% 42%;
+  background: #8f66dc;
+  box-shadow: inset -2px -3px 0 rgba(47, 36, 75, 0.18);
+}
+
+.guide-icon.skull::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 7px;
+  width: 4px;
+  height: 5px;
+  border-radius: 999px;
+  background: #2f244b;
+  box-shadow: 7px 0 0 #2f244b;
+}
+
+.guide-icon.skull::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  width: 3px;
+  height: 4px;
+  border-radius: 999px;
+  background: #2f244b;
+  box-shadow:
+    -4px 5px 0 -1px rgba(47, 36, 75, 0.85),
+    0 5px 0 -1px rgba(47, 36, 75, 0.85),
+    4px 5px 0 -1px rgba(47, 36, 75, 0.85);
 }
 
 .touch-controls {
@@ -1860,6 +1924,7 @@ canvas {
   .guide-icon.box,
   .guide-icon.catnip,
   .guide-icon.rain,
+  .guide-icon.skull,
   .guide-icon.timer,
   .guide-icon.tuna {
     width: 14px;
@@ -1886,6 +1951,25 @@ canvas {
   .guide-icon.clipper {
     width: 16px;
     height: 12px;
+  }
+
+  .guide-icon.skull::before {
+    left: 3px;
+    top: 5px;
+    width: 3px;
+    height: 4px;
+    box-shadow: 5px 0 0 #2f244b;
+  }
+
+  .guide-icon.skull::after {
+    left: 6px;
+    top: 9px;
+    width: 2px;
+    height: 3px;
+    box-shadow:
+      -3px 4px 0 -1px rgba(47, 36, 75, 0.85),
+      0 4px 0 -1px rgba(47, 36, 75, 0.85),
+      3px 4px 0 -1px rgba(47, 36, 75, 0.85);
   }
 
   .pause-actions {

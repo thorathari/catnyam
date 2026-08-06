@@ -45,6 +45,10 @@
   const BOMB_FIRST_BOX_MAX_SECONDS = 28;
   const BOMB_BOX_MIN_INTERVAL = 20;
   const BOMB_BOX_MAX_INTERVAL = 42;
+  const BOMB_FIRST_SKULL_MIN_SECONDS = 12;
+  const BOMB_FIRST_SKULL_MAX_SECONDS = 30;
+  const BOMB_SKULL_MIN_INTERVAL = 24;
+  const BOMB_SKULL_MAX_INTERVAL = 52;
   const BOMB_GOLD_WINDOW_SECONDS = 1;
   const SURVIVAL_SCORE_INTERVAL = 0.1;
 
@@ -136,6 +140,8 @@
           + rng() * (BOMB_FIRST_CATNIP_MAX_SECONDS - BOMB_FIRST_CATNIP_MIN_SECONDS),
         nextBoxAt: BOMB_FIRST_BOX_MIN_SECONDS
           + rng() * (BOMB_FIRST_BOX_MAX_SECONDS - BOMB_FIRST_BOX_MIN_SECONDS),
+        nextSkullAt: BOMB_FIRST_SKULL_MIN_SECONDS
+          + rng() * (BOMB_FIRST_SKULL_MAX_SECONDS - BOMB_FIRST_SKULL_MIN_SECONDS),
         bombSpecialSchedules: {
           gold: createWindowDropSchedule(rng, BOMB_GOLD_WINDOW_SECONDS, 1),
         },
@@ -162,6 +168,7 @@
         catnipUntil: 0,
         tunaUntil: 0,
         clipperUntil: 0,
+        skullUntil: 0,
       },
       specialSpawns: {
         tuna: 0,
@@ -205,6 +212,10 @@
 
   function isClipperModeActive(state) {
     return state.modes.clipperUntil > state.elapsed;
+  }
+
+  function isSkullModeActive(state) {
+    return state.modes.skullUntil > state.elapsed;
   }
 
   function getCatScale(state) {
@@ -252,9 +263,10 @@
       ["hand", 0.06],
       ["tuna", canSpawnLimitedDrop(state, "tuna") ? 0.045 : 0],
       ["clipper", canSpawnLimitedDrop(state, "clipper") ? 0.045 : 0],
+      ["skull", 0.045],
       ["bomb", 0.135],
       ["gold", 0.16],
-      ["normal", 0.51],
+      ["normal", 0.465],
     ]);
   }
 
@@ -269,14 +281,15 @@
     const isClipper = kind === "clipper";
     const isHeart = kind === "heart";
     const isTimer = kind === "timer";
+    const isSkull = kind === "skull";
 
     noteDropSpawned(state, kind);
     state.drops.push({
       id: state.nextDropId,
       x: options.x ?? 34 + state.rng() * (CANVAS_WIDTH - 68),
       y: options.y ?? -40,
-      width: options.width ?? (isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 44 : isClipper ? 48 : isHeart ? 42 : isTimer ? 42 : isGold ? 34 : 28),
-      height: options.height ?? (isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 42 : isClipper ? 34 : isHeart ? 38 : isTimer ? 42 : isGold ? 70 : 60),
+      width: options.width ?? (isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 44 : isClipper ? 48 : isHeart ? 42 : isTimer ? 42 : isSkull ? 44 : isGold ? 34 : 28),
+      height: options.height ?? (isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 42 : isClipper ? 34 : isHeart ? 38 : isTimer ? 42 : isSkull ? 44 : isGold ? 70 : 60),
       speed: options.speed ?? 170 + state.rng() * 145 + state.elapsed * 2.3,
       rotation: options.rotation ?? state.rng() * Math.PI,
       spin: (state.rng() - 0.5) * 3,
@@ -400,6 +413,15 @@
       + state.rng() * (BOMB_BOX_MAX_INTERVAL - BOMB_BOX_MIN_INTERVAL);
   }
 
+  function spawnBombModeSkullDrop(state) {
+    addDrop(state, "skull", {
+      speed: 155 + state.rng() * 85 + state.elapsed * 0.55,
+      rotation: 0,
+    });
+    state.nextSkullAt = state.elapsed + BOMB_SKULL_MIN_INTERVAL
+      + state.rng() * (BOMB_SKULL_MAX_INTERVAL - BOMB_SKULL_MIN_INTERVAL);
+  }
+
   function spawnBombModeGoldDrop(state) {
     addDrop(state, "gold", {
       speed: 155 + state.rng() * 85 + state.elapsed * 0.75,
@@ -447,6 +469,10 @@
 
     if (state.elapsed >= state.nextBoxAt) {
       spawnBombModeBoxDrop(state);
+    }
+
+    if (state.elapsed >= state.nextSkullAt) {
+      spawnBombModeSkullDrop(state);
     }
 
     maybeSpawnBombModeWindowDrop(state, state.bombSpecialSchedules?.gold, spawnBombModeGoldDrop);
@@ -560,11 +586,17 @@
       return true;
     }
 
+    if (drop.kind === "skull") {
+      state.modes.skullUntil = state.elapsed + 5;
+      events.push({ type: "mode", kind: "skull" });
+      return true;
+    }
+
     return false;
   }
 
   function isDebuffDrop(drop) {
-    return drop.kind === "bomb" || drop.kind === "clipper";
+    return drop.kind === "bomb" || drop.kind === "clipper" || drop.kind === "skull";
   }
 
   function applySurvivalScore(state, events) {
@@ -580,7 +612,12 @@
       return false;
     }
 
-    if (drop.kind === "bomb" && isHideModeActive(state)) {
+    if (isCatnipModeActive(state) && isDebuffDrop(drop)) {
+      knockAwayDrop(state, drop, events);
+      return true;
+    }
+
+    if (isHideModeActive(state) && isDebuffDrop(drop)) {
       knockAwayDrop(state, drop, events);
       return true;
     }
@@ -604,12 +641,12 @@
       return false;
     }
 
-    if (drop.kind === "bomb") {
-      if (isCatnipModeActive(state)) {
-        knockAwayDrop(state, drop, events);
-        return true;
-      }
+    if (drop.kind === "skull") {
+      applyModeItem(state, drop, events);
+      return false;
+    }
 
+    if (drop.kind === "bomb") {
       state.hearts = Math.max(0, state.hearts - 1);
       applyScoreDelta(state, -3, events, "bomb");
       events.push({
@@ -681,7 +718,8 @@
     }
 
     const speedMultiplier = isSpeedModeActive(state) ? 1.75 : 1;
-    state.cat.x += safeDirection * state.cat.speed * speedMultiplier * stepDelta;
+    const movementDirection = isSkullModeActive(state) ? -safeDirection : safeDirection;
+    state.cat.x += movementDirection * state.cat.speed * speedMultiplier * stepDelta;
     state.cat.x = clamp(state.cat.x, getCatWidth(state) / 2 + 12, CANVAS_WIDTH - getCatWidth(state) / 2 - 12);
 
     if (state.gameMode === GAME_MODES.BOMB) {
@@ -719,12 +757,12 @@
           return handleBombAvoidCollision(state, drop, events);
         }
 
-        if (isHideModeActive(state) && !isCatnipModeActive(state) && isDebuffDrop(drop)) {
+        if (isCatnipModeActive(state) && isDebuffDrop(drop)) {
           knockAwayDrop(state, drop, events);
           return true;
         }
 
-        if (isCatnipModeActive(state) && isDebuffDrop(drop)) {
+        if (isHideModeActive(state) && isDebuffDrop(drop)) {
           knockAwayDrop(state, drop, events);
           return true;
         }
@@ -860,6 +898,7 @@
     isClipperModeActive,
     isHideModeActive,
     isPurrModeActive,
+    isSkullModeActive,
     isSpeedModeActive,
     isTunaModeActive,
     normalizeGameMode,
