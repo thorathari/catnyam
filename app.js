@@ -2724,20 +2724,29 @@ function drawBoxItem(drop) {
 }
 
 function drawHandItem(drop) {
-  const emojiSize = Math.floor(Math.min(drop.width, drop.height) * 1.08);
-  const handEmoji = "🫲🏻";
+  const size = Math.min(drop.width, drop.height);
+  const scale = size / 26;
+  const handPath = new Path2D(
+    "M8 22c-2.5-1.3-4-3.7-4-6.6V12c0-1 .7-1.7 1.6-1.7S7.2 11 7.2 12v1V5.4c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V10 3.2c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6V10 4.3c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6v6.2-4.4c0-.9.7-1.6 1.6-1.6s1.6.7 1.6 1.6v8.2c0 4.4-3.6 7.9-8 7.9H10c-.7 0-1.4-.1-2-.2Z",
+  );
 
   ctx.save();
-  ctx.globalAlpha = 1;
-  ctx.font = `${emojiSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.strokeStyle = "rgba(142, 92, 66, 0.72)";
-  ctx.lineWidth = 3;
-  ctx.lineJoin = "round";
-  ctx.strokeText(handEmoji, 0, emojiSize * 0.04);
+  ctx.scale(scale, scale);
+  ctx.translate(-12, -12);
   ctx.fillStyle = "#ffc8a2";
-  ctx.fillText(handEmoji, 0, emojiSize * 0.04);
+  ctx.strokeStyle = "#c2694b";
+  ctx.lineWidth = 1.25;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.fill(handPath);
+  ctx.stroke(handPath);
+
+  ctx.strokeStyle = "rgba(255, 241, 225, 0.78)";
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(7.5, 15.2);
+  ctx.quadraticCurveTo(10.8, 13.2, 14.8, 14.6);
+  ctx.stroke();
   ctx.restore();
 }
 
