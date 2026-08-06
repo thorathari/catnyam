@@ -2815,31 +2815,35 @@ function drawBoxCat(width, height, isOpen = false) {
     ctx.strokeStyle = "#ffcf8a";
     ctx.lineWidth = width * 0.13;
     ctx.lineCap = "round";
-    [-1, 1].forEach((side) => {
-      const pawX = side * width * 0.26;
-      const pawY = -height * 0.46;
+    const pawX = width * 0.3;
+    const pawY = -height * 0.5;
 
+    ctx.beginPath();
+    ctx.moveTo(width * 0.07, -height * 0.16);
+    ctx.quadraticCurveTo(width * 0.18, -height * 0.31, pawX, pawY);
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffcf8a";
+    ctx.beginPath();
+    ctx.ellipse(pawX, pawY, width * 0.1, height * 0.09, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(142, 92, 66, 0.5)";
+    ctx.lineWidth = 1.6;
+    [-1, 0, 1].forEach((toe) => {
       ctx.beginPath();
-      ctx.moveTo(side * width * 0.09, -height * 0.16);
-      ctx.quadraticCurveTo(side * width * 0.17, -height * 0.31, pawX, pawY);
+      ctx.moveTo(pawX + toe * 4, pawY - 2);
+      ctx.lineTo(pawX + toe * 4 - 1, pawY + 2);
       ctx.stroke();
+    });
 
-      ctx.fillStyle = "#ffcf8a";
+    ctx.strokeStyle = "rgba(239, 111, 143, 0.68)";
+    ctx.lineWidth = 2;
+    [[0.12, -0.11], [0.16, 0.01]].forEach(([xOffset, yOffset]) => {
       ctx.beginPath();
-      ctx.ellipse(pawX, pawY, width * 0.1, height * 0.09, side * 0.2, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.strokeStyle = "rgba(142, 92, 66, 0.5)";
-      ctx.lineWidth = 1.6;
-      [-1, 0, 1].forEach((toe) => {
-        ctx.beginPath();
-        ctx.moveTo(pawX + toe * 4, pawY - 2);
-        ctx.lineTo(pawX + toe * 4 - side, pawY + 2);
-        ctx.stroke();
-      });
-
-      ctx.strokeStyle = "#ffcf8a";
-      ctx.lineWidth = width * 0.13;
+      ctx.moveTo(pawX + width * xOffset, pawY + height * yOffset);
+      ctx.lineTo(pawX + width * (xOffset + 0.08), pawY + height * (yOffset - 0.03));
+      ctx.stroke();
     });
   } else {
     ctx.fillStyle = "#e0aa68";
