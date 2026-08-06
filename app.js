@@ -2411,10 +2411,6 @@ function drawChuruPouch(drop) {
   const lightColor = isGold ? "#fff1a3" : "#ffc5a2";
   const outlineColor = isGold ? "rgba(116, 82, 16, 0.58)" : "rgba(123, 66, 49, 0.55)";
 
-  ctx.fillStyle = "rgba(37, 33, 29, 0.16)";
-  roundRect(-width * 0.46 + 3, -height * 0.43 + 4, width * 0.92, height * 0.88, width * 0.18);
-  ctx.fill();
-
   const pouchGradient = ctx.createLinearGradient(-width * 0.5, 0, width * 0.5, 0);
   pouchGradient.addColorStop(0, darkColor);
   pouchGradient.addColorStop(0.28, bodyColor);
@@ -2697,33 +2693,14 @@ function drawBoxItem(drop) {
   const bodyTop = -height * 0.24;
   const bodyHeight = height * 0.7;
 
-  ctx.fillStyle = "rgba(37, 33, 29, 0.17)";
-  ctx.beginPath();
-  ctx.ellipse(2, height * 0.42, width * 0.5, height * 0.15, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  const boxGradient = ctx.createLinearGradient(-width * 0.46, 0, width * 0.46, 0);
-  boxGradient.addColorStop(0, "#b9783f");
-  boxGradient.addColorStop(0.24, "#d89b59");
-  boxGradient.addColorStop(0.76, "#ca894c");
-  boxGradient.addColorStop(1, "#a96737");
-  ctx.fillStyle = boxGradient;
-  ctx.strokeStyle = "rgba(91, 55, 29, 0.62)";
-  ctx.lineWidth = 2;
+  ctx.fillStyle = "#c58b51";
+  ctx.strokeStyle = "rgba(92, 56, 30, 0.48)";
+  ctx.lineWidth = 1.5;
   roundRect(-width * 0.46, bodyTop, width * 0.92, bodyHeight, 5);
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = "rgba(108, 62, 31, 0.22)";
-  ctx.beginPath();
-  ctx.moveTo(width * 0.27, bodyTop);
-  ctx.lineTo(width * 0.46, bodyTop + 2);
-  ctx.lineTo(width * 0.46, bodyTop + bodyHeight - 5);
-  ctx.lineTo(width * 0.27, bodyTop + bodyHeight);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = "#e5b878";
+  ctx.fillStyle = "#e0aa68";
   ctx.beginPath();
   ctx.moveTo(-width * 0.46, bodyTop);
   ctx.lineTo(0, -height * 0.48);
@@ -2731,11 +2708,9 @@ function drawBoxItem(drop) {
   ctx.lineTo(0, -height * 0.06);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "rgba(91, 55, 29, 0.55)";
-  ctx.lineWidth = 1.7;
   ctx.stroke();
 
-  ctx.fillStyle = "rgba(255, 224, 164, 0.72)";
+  ctx.fillStyle = "#f4cc91";
   ctx.beginPath();
   ctx.moveTo(-width * 0.07, -height * 0.43);
   ctx.lineTo(width * 0.08, -height * 0.4);
@@ -2745,13 +2720,6 @@ function drawBoxItem(drop) {
   ctx.fill();
 
   drawPawMark(-width * 0.2, height * 0.16, Math.min(width, height) * 0.32, "rgba(92, 56, 30, 0.58)");
-
-  ctx.strokeStyle = "rgba(255, 228, 184, 0.42)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(-width * 0.37, bodyTop + 5);
-  ctx.lineTo(-width * 0.37, bodyTop + bodyHeight - 7);
-  ctx.stroke();
 }
 
 function drawHandItem(drop) {
@@ -2902,44 +2870,18 @@ function drawBoxCat(width, height, isOpen = false) {
   const bodyWidth = width * 0.84;
   const bodyHeight = height * 0.68;
 
-  ctx.fillStyle = "rgba(37, 33, 29, 0.14)";
-  ctx.beginPath();
-  ctx.ellipse(0, height / 2 + 9, width * 0.5, 13, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  const boxGradient = ctx.createLinearGradient(bodyX, 0, bodyX + bodyWidth, 0);
-  boxGradient.addColorStop(0, "#ae6e3b");
-  boxGradient.addColorStop(0.22, "#d69a57");
-  boxGradient.addColorStop(0.76, "#c78649");
-  boxGradient.addColorStop(1, "#9f6033");
-  ctx.fillStyle = boxGradient;
-  ctx.strokeStyle = "rgba(91, 55, 29, 0.68)";
-  ctx.lineWidth = 2.5;
+  ctx.fillStyle = "#c58b51";
+  ctx.strokeStyle = "rgba(92, 56, 30, 0.5)";
+  ctx.lineWidth = 2;
   roundRect(bodyX, bodyY, bodyWidth, bodyHeight, 8);
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = "rgba(91, 55, 29, 0.2)";
-  ctx.beginPath();
-  ctx.moveTo(width * 0.25, bodyY);
-  ctx.lineTo(width * 0.42, bodyY + 3);
-  ctx.lineTo(width * 0.42, bodyY + bodyHeight - 8);
-  ctx.lineTo(width * 0.25, bodyY + bodyHeight);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = "rgba(255, 224, 164, 0.66)";
+  ctx.fillStyle = "#f4cc91";
   roundRect(-width * 0.055, bodyY + 1, width * 0.11, bodyHeight - 2, 2);
   ctx.fill();
 
   drawPawMark(-width * 0.2, height * 0.15, Math.min(width, height) * 0.2, "rgba(91, 55, 29, 0.58)");
-
-  ctx.strokeStyle = "rgba(255, 232, 193, 0.36)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(bodyX + width * 0.07, bodyY + 8);
-  ctx.lineTo(bodyX + width * 0.07, bodyY + bodyHeight - 10);
-  ctx.stroke();
 
   if (isOpen) {
     ctx.fillStyle = "rgba(75, 43, 24, 0.82)";
@@ -2947,9 +2889,9 @@ function drawBoxCat(width, height, isOpen = false) {
     ctx.ellipse(0, bodyY + 2, width * 0.34, height * 0.1, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = "#e5b878";
-    ctx.strokeStyle = "rgba(91, 55, 29, 0.62)";
-    ctx.lineWidth = 2;
+    ctx.fillStyle = "#e0aa68";
+    ctx.strokeStyle = "rgba(92, 56, 30, 0.5)";
+    ctx.lineWidth = 1.8;
     ctx.lineJoin = "round";
     ctx.beginPath();
     ctx.moveTo(-width * 0.42, bodyY);
@@ -3014,9 +2956,9 @@ function drawBoxCat(width, height, isOpen = false) {
       ctx.stroke();
     });
   } else {
-    ctx.fillStyle = "#e5b878";
-    ctx.strokeStyle = "rgba(91, 55, 29, 0.62)";
-    ctx.lineWidth = 2;
+    ctx.fillStyle = "#e0aa68";
+    ctx.strokeStyle = "rgba(92, 56, 30, 0.5)";
+    ctx.lineWidth = 1.8;
     ctx.lineJoin = "round";
     ctx.beginPath();
     ctx.moveTo(-width * 0.42, bodyY);
@@ -3027,7 +2969,7 @@ function drawBoxCat(width, height, isOpen = false) {
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle = "rgba(255, 224, 164, 0.78)";
+    ctx.fillStyle = "#f4cc91";
     ctx.beginPath();
     ctx.moveTo(-width * 0.045, -height * 0.43);
     ctx.lineTo(width * 0.045, -height * 0.43);
@@ -3036,13 +2978,6 @@ function drawBoxCat(width, height, isOpen = false) {
     ctx.closePath();
     ctx.fill();
   }
-
-  ctx.strokeStyle = "rgba(91, 55, 29, 0.48)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, -height * 0.02);
-  ctx.lineTo(0, height * 0.38);
-  ctx.stroke();
 }
 
 function drawSpeechBubble(width, height, text) {
