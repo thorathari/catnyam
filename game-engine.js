@@ -543,7 +543,7 @@
       return false;
     }
 
-    if (isHideModeActive(state)) {
+    if (drop.kind === "bomb" && isHideModeActive(state)) {
       knockAwayDrop(state, drop, events);
       return true;
     }

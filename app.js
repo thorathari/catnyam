@@ -1923,7 +1923,7 @@ function handleEngineEvents(events) {
     if (event.type === "score") {
       scoreText.textContent = event.score;
       if (event.source !== "survival") {
-        setCatReaction(event.scoreDelta < 0 ? "bad" : "good");
+        setCollectedItemReaction(event.scoreDelta < 0 ? "bad" : "good");
         addScorePopup(event.scoreDelta);
       }
       return;
@@ -1941,7 +1941,7 @@ function handleEngineEvents(events) {
     }
 
     if (event.type === "heart") {
-      setCatReaction("good");
+      setCollectedItemReaction("good");
       setCatBubble("하트 +1", 1.1);
       updateModeBadges();
       return;
@@ -1971,6 +1971,9 @@ function handleModeEvent(kind) {
   } else if (kind === "box") {
     setCatBubble("건들지마라냥!", 3);
     const isBombHideout = game.gameMode === CatnyamEngine.GAME_MODES.BOMB;
+    if (isBombHideout) {
+      setCatReaction("box-open", 0.55);
+    }
     triggerCanvasHighlight(isBombHideout ? "mode" : "danger", isBombHideout ? 3 : 0);
   } else if (kind === "hand") {
     setCatReaction("good");
@@ -2000,11 +2003,18 @@ function getScoreMultiplier() {
   return CatnyamEngine.getScoreMultiplier(game);
 }
 
-function setCatReaction(type) {
+function setCatReaction(type, duration = 0.45) {
   game.reaction = {
     type,
-    until: game.elapsed + 0.45,
+    until: game.elapsed + duration,
   };
+}
+
+function setCollectedItemReaction(type) {
+  const openHideout = game.gameMode === CatnyamEngine.GAME_MODES.BOMB
+    && isHideModeActive()
+    && !isCatnipModeActive();
+  setCatReaction(openHideout ? "box-open" : type, openHideout ? 0.55 : 0.45);
 }
 
 function setCatBubble(text, duration) {
@@ -2070,7 +2080,9 @@ function getCatEmphasisBubbleText() {
 
 function getCatReaction() {
   if (isHideModeActive() && !isCatnipModeActive()) {
-    return "box";
+    return game.reaction?.type === "box-open" && game.reaction.until >= game.elapsed
+      ? "box-open"
+      : "box";
   }
 
   return game.reaction?.until >= game.elapsed ? game.reaction.type : "neutral";
@@ -2653,8 +2665,8 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
   ctx.save();
   ctx.translate(x, y);
 
-  if (reaction === "box") {
-    drawBoxCat(width, height);
+  if (reaction === "box" || reaction === "box-open") {
+    drawBoxCat(width, height, reaction === "box-open");
     const emphasisText = getCatEmphasisBubbleText();
     const bubbleText = getCatBubbleText();
 
@@ -2764,7 +2776,7 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
   ctx.restore();
 }
 
-function drawBoxCat(width, height) {
+function drawBoxCat(width, height, isOpen = false) {
   ctx.fillStyle = "rgba(37, 33, 29, 0.14)";
   ctx.beginPath();
   ctx.ellipse(0, height / 2 + 9, width * 0.5, 13, 0, 0, Math.PI * 2);
@@ -2774,14 +2786,77 @@ function drawBoxCat(width, height) {
   roundRect(-width * 0.42, -height * 0.22, width * 0.84, height * 0.68, 8);
   ctx.fill();
 
-  ctx.fillStyle = "#e0aa68";
-  ctx.beginPath();
-  ctx.moveTo(-width * 0.42, -height * 0.22);
-  ctx.lineTo(0, -height * 0.46);
-  ctx.lineTo(width * 0.42, -height * 0.22);
-  ctx.lineTo(0, -height * 0.08);
-  ctx.closePath();
-  ctx.fill();
+  if (isOpen) {
+    ctx.fillStyle = "rgba(92, 56, 30, 0.72)";
+    ctx.beginPath();
+    ctx.ellipse(0, -height * 0.2, width * 0.34, height * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#e0aa68";
+    ctx.beginPath();
+    ctx.moveTo(-width * 0.42, -height * 0.22);
+    ctx.lineTo(-width * 0.6, -height * 0.42);
+    ctx.lineTo(-width * 0.08, -height * 0.31);
+    ctx.lineTo(0, -height * 0.18);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(width * 0.42, -height * 0.22);
+    ctx.lineTo(width * 0.6, -height * 0.42);
+    ctx.lineTo(width * 0.08, -height * 0.31);
+    ctx.lineTo(0, -height * 0.18);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#ffcf8a";
+    ctx.beginPath();
+    ctx.ellipse(0, -height * 0.34, width * 0.24, height * 0.24, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(-width * 0.2, -height * 0.44);
+    ctx.lineTo(-width * 0.13, -height * 0.64);
+    ctx.lineTo(-width * 0.04, -height * 0.45);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(width * 0.2, -height * 0.44);
+    ctx.lineTo(width * 0.13, -height * 0.64);
+    ctx.lineTo(width * 0.04, -height * 0.45);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = "#38302d";
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(-width * 0.09, -height * 0.37, 5, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(width * 0.09, -height * 0.37, 5, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+
+    ctx.fillStyle = "#38302d";
+    ctx.beginPath();
+    ctx.ellipse(0, -height * 0.27, 7, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#ef6f8f";
+    ctx.beginPath();
+    ctx.ellipse(0, -height * 0.25, 4, 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = "#e0aa68";
+    ctx.beginPath();
+    ctx.moveTo(-width * 0.42, -height * 0.22);
+    ctx.lineTo(0, -height * 0.46);
+    ctx.lineTo(width * 0.42, -height * 0.22);
+    ctx.lineTo(0, -height * 0.08);
+    ctx.closePath();
+    ctx.fill();
+  }
 
   ctx.strokeStyle = "rgba(92, 56, 30, 0.45)";
   ctx.lineWidth = 3;
