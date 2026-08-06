@@ -2726,27 +2726,22 @@ function drawHandItem(drop) {
   const width = drop.width;
   const height = drop.height;
   const fingers = [
-    [-width * 0.06, -height * 0.19, -width * 0.43, -height * 0.2],
-    [-width * 0.08, -height * 0.07, -width * 0.49, -height * 0.07],
-    [-width * 0.08, height * 0.05, -width * 0.46, height * 0.07],
-    [-width * 0.03, height * 0.16, -width * 0.37, height * 0.2],
+    [-width * 0.23, height * 0.02, -width * 0.25, -height * 0.34],
+    [-width * 0.08, -height * 0.01, -width * 0.09, -height * 0.49],
+    [width * 0.08, -height * 0.01, width * 0.09, -height * 0.52],
+    [width * 0.23, height * 0.02, width * 0.25, -height * 0.38],
   ];
 
   ctx.save();
-  ctx.rotate(-0.14);
+  ctx.rotate(-0.18);
 
-  const strokeHand = (color, extraWidth = 0) => {
+  const drawOpenHandLayer = (color, extraWidth = 0, palmPadding = 0) => {
     ctx.strokeStyle = color;
+    ctx.fillStyle = color;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-
-    ctx.lineWidth = height * 0.34 + extraWidth;
-    ctx.beginPath();
-    ctx.moveTo(width * 0.49, height * 0.02);
-    ctx.lineTo(width * 0.04, height * 0.02);
-    ctx.stroke();
-
     ctx.lineWidth = height * 0.17 + extraWidth;
+
     fingers.forEach(([startX, startY, endX, endY]) => {
       ctx.beginPath();
       ctx.moveTo(startX, startY);
@@ -2755,25 +2750,36 @@ function drawHandItem(drop) {
     });
 
     ctx.beginPath();
-    ctx.moveTo(width * 0.02, height * 0.1);
-    ctx.quadraticCurveTo(-width * 0.08, height * 0.31, -width * 0.27, height * 0.34);
+    ctx.moveTo(-width * 0.22, height * 0.09);
+    ctx.quadraticCurveTo(-width * 0.37, height * 0.04, -width * 0.43, -height * 0.13);
     ctx.stroke();
+
+    ctx.beginPath();
+    ctx.ellipse(0, height * 0.12, width * 0.31 + palmPadding, height * 0.29 + palmPadding, 0, 0, Math.PI * 2);
+    ctx.fill();
   };
 
-  strokeHand("rgba(142, 92, 66, 0.42)", 4);
-  strokeHand("#ffc8a2");
+  drawOpenHandLayer("rgba(142, 92, 66, 0.42)", 4, 2);
+  drawOpenHandLayer("#ffc8a2");
 
-  ctx.fillStyle = "#efaa85";
-  roundRect(width * 0.35, -height * 0.17, width * 0.18, height * 0.36, 5);
-  ctx.fill();
+  ctx.strokeStyle = "rgba(142, 92, 66, 0.34)";
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.13, height * 0.12);
+  ctx.quadraticCurveTo(0, height * 0.22, width * 0.14, height * 0.1);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.14, height * 0.03);
+  ctx.quadraticCurveTo(-width * 0.21, -height * 0.03, -width * 0.27, -height * 0.08);
+  ctx.stroke();
 
   ctx.strokeStyle = "rgba(239, 111, 143, 0.7)";
   ctx.lineWidth = 2;
   ctx.lineCap = "round";
-  [-0.27, -0.08].forEach((offset) => {
+  [-0.12, 0.08].forEach((offset) => {
     ctx.beginPath();
-    ctx.moveTo(-width * 0.48, height * offset);
-    ctx.quadraticCurveTo(-width * 0.58, height * (offset + 0.06), -width * 0.61, height * (offset + 0.17));
+    ctx.moveTo(width * 0.39, height * offset);
+    ctx.quadraticCurveTo(width * 0.49, height * (offset + 0.05), width * 0.51, height * (offset + 0.17));
     ctx.stroke();
   });
 
