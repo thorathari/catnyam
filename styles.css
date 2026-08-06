@@ -870,7 +870,7 @@ canvas {
 .guide-icon.box {
   width: 18px;
   height: 16px;
-  border-radius: 3px;
+  border-radius: 0;
   background: #c58b51;
 }
 

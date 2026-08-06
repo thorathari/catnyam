@@ -2696,7 +2696,8 @@ function drawBoxItem(drop) {
   ctx.fillStyle = "#c58b51";
   ctx.strokeStyle = "rgba(92, 56, 30, 0.48)";
   ctx.lineWidth = 1.5;
-  roundRect(-width * 0.46, bodyTop, width * 0.92, bodyHeight, 5);
+  ctx.beginPath();
+  ctx.rect(-width * 0.46, bodyTop, width * 0.92, bodyHeight);
   ctx.fill();
   ctx.stroke();
 
@@ -2909,13 +2910,13 @@ function drawBoxCat(width, height, isOpen = false) {
   ctx.fillStyle = "#c58b51";
   ctx.strokeStyle = "rgba(92, 56, 30, 0.5)";
   ctx.lineWidth = 2;
-  roundRect(bodyX, bodyY, bodyWidth, bodyHeight, 8);
+  ctx.beginPath();
+  ctx.rect(bodyX, bodyY, bodyWidth, bodyHeight);
   ctx.fill();
   ctx.stroke();
 
   ctx.fillStyle = "#f4cc91";
-  roundRect(-width * 0.055, bodyY + 1, width * 0.11, bodyHeight - 2, 2);
-  ctx.fill();
+  ctx.fillRect(-width * 0.055, bodyY + 1, width * 0.11, bodyHeight - 2);
 
   drawPawMark(-width * 0.2, height * 0.15, Math.min(width, height) * 0.2, "rgba(91, 55, 29, 0.58)");
 
@@ -2953,17 +2954,17 @@ function drawBoxCat(width, height, isOpen = false) {
     const pawFur = "#ffcf8a";
     ctx.strokeStyle = pawOutline;
     ctx.lineWidth = width * 0.2;
-    ctx.lineCap = "round";
+    ctx.lineCap = "butt";
     ctx.lineJoin = "round";
     ctx.beginPath();
-    ctx.moveTo(-width * 0.02, bodyY - height * 0.01);
+    ctx.moveTo(width * 0.04, bodyY + height * 0.13);
     ctx.quadraticCurveTo(-width * 0.17, -height * 0.35, pawX, pawY);
     ctx.stroke();
 
     ctx.strokeStyle = pawFur;
     ctx.lineWidth = width * 0.145;
     ctx.beginPath();
-    ctx.moveTo(-width * 0.02, bodyY - height * 0.01);
+    ctx.moveTo(width * 0.04, bodyY + height * 0.13);
     ctx.quadraticCurveTo(-width * 0.17, -height * 0.35, pawX, pawY);
     ctx.stroke();
 
@@ -3000,15 +3001,15 @@ function drawBoxCat(width, height, isOpen = false) {
       ctx.fill();
     });
 
-    ctx.strokeStyle = "#c58b51";
-    ctx.lineWidth = height * 0.07;
-    ctx.beginPath();
-    ctx.ellipse(0, bodyY + 2, width * 0.33, height * 0.085, 0, 0, Math.PI);
-    ctx.stroke();
+    ctx.fillStyle = "#c58b51";
+    ctx.fillRect(bodyX + 1, bodyY, bodyWidth - 2, height * 0.16);
+    ctx.fillStyle = "#f4cc91";
+    ctx.fillRect(-width * 0.055, bodyY, width * 0.11, height * 0.16);
     ctx.strokeStyle = "rgba(92, 56, 30, 0.5)";
     ctx.lineWidth = 1.6;
     ctx.beginPath();
-    ctx.ellipse(0, bodyY + 2, width * 0.33, height * 0.085, 0, 0, Math.PI);
+    ctx.moveTo(bodyX, bodyY);
+    ctx.lineTo(bodyX + bodyWidth, bodyY);
     ctx.stroke();
   } else {
     ctx.fillStyle = "#e0aa68";
