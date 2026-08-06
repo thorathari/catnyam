@@ -15,6 +15,7 @@ const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
 const SUBMIT_CLOCK_SKEW_MS = 3000;
 const MAX_ACCEPTED_SCORE = 500000;
 const MAX_SHARE_RANKING_ROWS = 10000;
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 function normalizeGameMode(mode) {
   return CatnyamEngine.normalizeGameMode(mode);
@@ -28,13 +29,35 @@ function getDisplayName(user) {
   return String(user.nickname || "").trim() || user.username;
 }
 
-async function getShareRanking(userId, gameMode) {
+function getKstDayRange(now = new Date()) {
+  const kstNow = new Date(now.getTime() + KST_OFFSET_MS);
+  const startAsUtc = Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()) - KST_OFFSET_MS;
+
+  return {
+    start: new Date(startAsUtc).toISOString(),
+    end: new Date(startAsUtc + 24 * 60 * 60 * 1000).toISOString(),
+  };
+}
+
+function getShareScorePath(gameMode, scope = "allTime") {
+  const normalizedMode = normalizeGameMode(gameMode);
+  let path = `scores?select=user_id,score,created_at&game_mode=eq.${encodeURIComponent(normalizedMode)}`;
+
+  if (scope === "daily") {
+    const { start, end } = getKstDayRange();
+    path += `&created_at=gte.${encodeURIComponent(start)}&created_at=lt.${encodeURIComponent(end)}`;
+  }
+
+  return `${path}&order=score.desc,created_at.asc&limit=${MAX_SHARE_RANKING_ROWS}`;
+}
+
+async function getShareRanking(userId, gameMode, scope = "allTime") {
   const normalizedMode = normalizeGameMode(gameMode);
   const [users, scores] = await Promise.all([
     supabaseRequest(`users?select=id,username,nickname&limit=${MAX_SHARE_RANKING_ROWS}`, {
       prefer: "",
     }),
-    supabaseRequest(`scores?select=user_id,score&game_mode=eq.${encodeURIComponent(normalizedMode)}&order=score.desc&limit=${MAX_SHARE_RANKING_ROWS}`, {
+    supabaseRequest(getShareScorePath(normalizedMode, scope), {
       prefer: "",
     }),
   ]);
@@ -70,6 +93,7 @@ async function getShareRanking(userId, gameMode) {
     rank: rankingIndex + 1,
     rankingScore: rankings[rankingIndex].score,
     overtakenNickname: rankings[rankingIndex + 1]?.nickname || null,
+    scope,
   };
 }
 
@@ -335,9 +359,21 @@ module.exports = async function handler(req, res) {
     });
 
     let shareRanking = null;
+    let shareRankings = {
+      daily: null,
+      allTime: null,
+    };
 
     try {
-      shareRanking = await getShareRanking(user.id, validation.gameMode);
+      const [dailyShareRanking, allTimeShareRanking] = await Promise.all([
+        getShareRanking(user.id, validation.gameMode, "daily"),
+        getShareRanking(user.id, validation.gameMode, "allTime"),
+      ]);
+      shareRankings = {
+        daily: dailyShareRanking ? { ...dailyShareRanking, isPersonalBest } : null,
+        allTime: allTimeShareRanking ? { ...allTimeShareRanking, isPersonalBest } : null,
+      };
+      shareRanking = shareRankings.allTime;
       if (shareRanking) {
         shareRanking.isPersonalBest = isPersonalBest;
       }
@@ -348,6 +384,7 @@ module.exports = async function handler(req, res) {
     sendJson(res, 200, {
       user: sanitizeUser(updated[0]),
       shareRanking,
+      shareRankings,
     });
   } catch (error) {
     sendJson(res, 500, { message: error.message });

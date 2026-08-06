@@ -1710,7 +1710,7 @@ async function submitScore(score) {
     });
     currentUser = data.user;
     if (lastFinishedSessionId === submittedSessionId) {
-      lastFinishedRanking = data.shareRanking || null;
+      lastFinishedRanking = data.shareRankings || data.shareRanking || null;
     }
     bestText.textContent = currentUser.bestScore || 0;
     renderRanking();
@@ -1807,18 +1807,31 @@ function getShareModeLabel() {
   return mode === CatnyamEngine.GAME_MODES.BOMB ? "폭탄피하기" : "츄르먹기";
 }
 
+function getSelectedShareRanking() {
+  if (!lastFinishedRanking) {
+    return null;
+  }
+
+  if ("daily" in lastFinishedRanking || "allTime" in lastFinishedRanking) {
+    return lastFinishedRanking[rankingMode] || lastFinishedRanking.allTime || lastFinishedRanking.daily || null;
+  }
+
+  return lastFinishedRanking;
+}
+
 function getResultShareText(score) {
   const nickname = getUserDisplayName(currentUser) || "플레이어";
   const modeLabel = getShareModeLabel();
-  const ranking = lastFinishedRanking;
+  const ranking = getSelectedShareRanking();
   const rank = Number(ranking?.rank);
   const isRankingScore = Number(ranking?.rankingScore) === Number(score);
   const shouldUseRankingMessage = ranking?.isPersonalBest === true || isRankingScore;
 
   if (Number.isInteger(rank) && rank > 0 && shouldUseRankingMessage) {
+    const scopeLabel = ranking?.scope === "daily" ? "일일 랭킹" : "전체 랭킹";
     const rankMessage = ranking.overtakenNickname
       ? `${ranking.overtakenNickname}님을 제끼고 ${rank}위의 자리를 차지했다냥!`
-      : `전체 랭킹 ${rank}위의 자리를 차지했다냥!`;
+      : `${scopeLabel} ${rank}위의 자리를 차지했다냥!`;
 
     return `Cat Nyam ${modeLabel} 모드로 ${nickname}님이 ${score}점을 달성하여\n${rankMessage}\n지금 당장 츄르 잡으러 가봐라냥!`;
   }
