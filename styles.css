@@ -875,36 +875,22 @@ canvas {
 }
 
 .guide-icon.hand {
-  position: relative;
+  display: inline-grid;
+  place-items: center;
   width: 22px;
-  height: 14px;
-  border: 1px solid rgba(233, 139, 103, 0.7);
-  border-radius: 58% 48% 48% 52%;
-  background: #ffc8a2;
+  height: 22px;
+  border-radius: 0;
+  background: transparent;
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 .guide-icon.hand::before {
-  content: "";
-  position: absolute;
-  left: -4px;
-  top: 2px;
-  width: 9px;
-  height: 3px;
-  border-radius: 999px;
-  background: #ffc8a2;
-  box-shadow: 0 3px 0 #ffc8a2, 1px 6px 0 #ffc8a2;
+  content: "🫲";
 }
 
 .guide-icon.hand::after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 4px;
-  width: 7px;
-  height: 4px;
-  border-bottom: 1px solid rgba(233, 139, 103, 0.72);
-  border-radius: 50%;
-  transform: rotate(12deg);
+  content: none;
 }
 
 .guide-icon.catnip {
@@ -1842,7 +1828,8 @@ canvas {
 
   .guide-icon.hand {
     width: 18px;
-    height: 12px;
+    height: 18px;
+    font-size: 0.95rem;
   }
 
   .guide-icon.clipper {

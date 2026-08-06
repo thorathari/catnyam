@@ -2724,67 +2724,13 @@ function drawBoxItem(drop) {
 }
 
 function drawHandItem(drop) {
-  const width = drop.width;
-  const height = drop.height;
-  const skinColor = "#ffc19d";
-  const outlineColor = "#e98b67";
+  const emojiSize = Math.floor(Math.min(drop.width, drop.height) * 0.96);
 
   ctx.save();
-  ctx.rotate(-0.05);
-  ctx.fillStyle = skinColor;
-  ctx.strokeStyle = outlineColor;
-  ctx.lineWidth = Math.max(2.2, height * 0.065);
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-
-  ctx.beginPath();
-  ctx.moveTo(-width * 0.5, height * 0.03);
-  ctx.bezierCurveTo(-width * 0.52, -height * 0.08, -width * 0.43, -height * 0.23, -width * 0.31, -height * 0.34);
-  ctx.bezierCurveTo(-width * 0.16, -height * 0.48, width * 0.01, -height * 0.5, width * 0.16, -height * 0.36);
-  ctx.bezierCurveTo(width * 0.27, -height * 0.26, width * 0.32, -height * 0.2, width * 0.41, -height * 0.2);
-  ctx.bezierCurveTo(width * 0.5, -height * 0.21, width * 0.52, -height * 0.08, width * 0.52, height * 0.06);
-  ctx.bezierCurveTo(width * 0.52, height * 0.23, width * 0.46, height * 0.3, width * 0.37, height * 0.3);
-  ctx.bezierCurveTo(width * 0.29, height * 0.3, width * 0.23, height * 0.41, width * 0.1, height * 0.45);
-  ctx.bezierCurveTo(-width * 0.02, height * 0.49, -width * 0.11, height * 0.42, -width * 0.2, height * 0.39);
-  ctx.bezierCurveTo(-width * 0.27, height * 0.44, -width * 0.36, height * 0.4, -width * 0.36, height * 0.32);
-  ctx.bezierCurveTo(-width * 0.43, height * 0.35, -width * 0.49, height * 0.3, -width * 0.46, height * 0.23);
-  ctx.bezierCurveTo(-width * 0.53, height * 0.22, -width * 0.55, height * 0.13, -width * 0.5, height * 0.08);
-  ctx.bezierCurveTo(-width * 0.55, height * 0.08, -width * 0.56, height * 0.01, -width * 0.5, height * 0.03);
-  ctx.closePath();
-
-  ctx.moveTo(width * 0.18, height * 0.14);
-  ctx.bezierCurveTo(width * 0.12, height * 0.05, width * 0.04, -height * 0.01, -width * 0.05, -height * 0.03);
-  ctx.bezierCurveTo(-width * 0.11, -height * 0.03, -width * 0.16, height * 0.02, -width * 0.17, height * 0.08);
-  ctx.bezierCurveTo(-width * 0.18, height * 0.14, -width * 0.13, height * 0.17, -width * 0.08, height * 0.15);
-  ctx.bezierCurveTo(-width * 0.02, height * 0.12, width * 0.01, height * 0.08, width * 0.05, height * 0.07);
-  ctx.bezierCurveTo(width * 0.1, height * 0.09, width * 0.14, height * 0.15, width * 0.18, height * 0.14);
-  ctx.closePath();
-  ctx.fill("evenodd");
-  ctx.stroke();
-
-  ctx.lineWidth = Math.max(1.5, height * 0.045);
-  ctx.beginPath();
-  ctx.moveTo(-width * 0.42, -height * 0.04);
-  ctx.quadraticCurveTo(-width * 0.23, -height * 0.34, width * 0.02, -height * 0.35);
-  ctx.stroke();
-  [
-    [-0.45, 0.1, -0.3, -0.03],
-    [-0.42, 0.23, -0.25, 0.08],
-    [-0.34, 0.34, -0.18, 0.17],
-  ].forEach(([startX, startY, endX, endY]) => {
-    ctx.beginPath();
-    ctx.moveTo(width * startX, height * startY);
-    ctx.quadraticCurveTo(width * (startX + 0.07), height * (startY - 0.1), width * endX, height * endY);
-    ctx.stroke();
-  });
-
-  ctx.strokeStyle = "rgba(255, 238, 222, 0.55)";
-  ctx.lineWidth = Math.max(1.2, height * 0.035);
-  ctx.beginPath();
-  ctx.moveTo(-width * 0.3, -height * 0.27);
-  ctx.quadraticCurveTo(-width * 0.13, -height * 0.42, width * 0.04, -height * 0.38);
-  ctx.stroke();
-
+  ctx.font = `${emojiSize}px "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("🫲", 0, emojiSize * 0.04);
   ctx.restore();
 }
 
