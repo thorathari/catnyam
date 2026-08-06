@@ -2471,30 +2471,30 @@ function drawChuruPouch(drop) {
 }
 
 function drawHeartItem(drop) {
-  const size = drop.width;
+  const size = Math.min(drop.width, drop.height);
 
   ctx.save();
   ctx.scale(size / 42, size / 42);
   ctx.fillStyle = "rgba(239, 111, 143, 0.18)";
   ctx.beginPath();
-  ctx.ellipse(0, 6, 26, 22, 0, 0, Math.PI * 2);
+  ctx.arc(0, 0, 26, 0, Math.PI * 2);
   ctx.fill();
 
-  ctx.rotate(-Math.PI / 4);
   ctx.fillStyle = "#ef6f8f";
   ctx.beginPath();
-  roundRect(-9, -9, 18, 18, 5);
+  ctx.moveTo(0, 17);
+  ctx.bezierCurveTo(-4, 12, -18, 3, -18, -7);
+  ctx.bezierCurveTo(-18, -16, -7, -20, 0, -11);
+  ctx.bezierCurveTo(7, -20, 18, -16, 18, -7);
+  ctx.bezierCurveTo(18, 3, 4, 12, 0, 17);
+  ctx.closePath();
   ctx.fill();
-  ctx.beginPath();
-  ctx.arc(0, -9, 9, 0, Math.PI * 2);
-  ctx.arc(9, 0, 9, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
 
   ctx.fillStyle = "rgba(255, 255, 255, 0.54)";
   ctx.beginPath();
-  ctx.ellipse(-7, -8, 5, 3, -0.7, 0, Math.PI * 2);
+  ctx.ellipse(-7, -9, 5, 2.8, -0.55, 0, Math.PI * 2);
   ctx.fill();
+  ctx.restore();
 }
 
 function drawBomb(drop) {
@@ -2536,7 +2536,7 @@ function drawCatnipItem(drop) {
 
   ctx.fillStyle = "rgba(77, 123, 53, 0.2)";
   ctx.beginPath();
-  ctx.arc(0, 3, radius + 6, 0, Math.PI * 2);
+  ctx.arc(0, 0, radius + 6, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = gradient;
@@ -2725,28 +2725,59 @@ function drawBoxItem(drop) {
 function drawHandItem(drop) {
   const width = drop.width;
   const height = drop.height;
+  const fingers = [
+    [-width * 0.06, -height * 0.19, -width * 0.43, -height * 0.2],
+    [-width * 0.08, -height * 0.07, -width * 0.49, -height * 0.07],
+    [-width * 0.08, height * 0.05, -width * 0.46, height * 0.07],
+    [-width * 0.03, height * 0.16, -width * 0.37, height * 0.2],
+  ];
 
-  ctx.fillStyle = "#ffc8a2";
-  ctx.beginPath();
-  ctx.ellipse(0, 8, width * 0.32, height * 0.35, 0, 0, Math.PI * 2);
+  ctx.save();
+  ctx.rotate(-0.14);
+
+  const strokeHand = (color, extraWidth = 0) => {
+    ctx.strokeStyle = color;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    ctx.lineWidth = height * 0.34 + extraWidth;
+    ctx.beginPath();
+    ctx.moveTo(width * 0.49, height * 0.02);
+    ctx.lineTo(width * 0.04, height * 0.02);
+    ctx.stroke();
+
+    ctx.lineWidth = height * 0.17 + extraWidth;
+    fingers.forEach(([startX, startY, endX, endY]) => {
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+    });
+
+    ctx.beginPath();
+    ctx.moveTo(width * 0.02, height * 0.1);
+    ctx.quadraticCurveTo(-width * 0.08, height * 0.31, -width * 0.27, height * 0.34);
+    ctx.stroke();
+  };
+
+  strokeHand("rgba(142, 92, 66, 0.42)", 4);
+  strokeHand("#ffc8a2");
+
+  ctx.fillStyle = "#efaa85";
+  roundRect(width * 0.35, -height * 0.17, width * 0.18, height * 0.36, 5);
   ctx.fill();
 
-  [-0.3, -0.1, 0.1, 0.3].forEach((offset, index) => {
+  ctx.strokeStyle = "rgba(239, 111, 143, 0.7)";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  [-0.27, -0.08].forEach((offset) => {
     ctx.beginPath();
-    ctx.ellipse(width * offset, -height * 0.2, 6, 16 - index, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.moveTo(-width * 0.48, height * offset);
+    ctx.quadraticCurveTo(-width * 0.58, height * (offset + 0.06), -width * 0.61, height * (offset + 0.17));
+    ctx.stroke();
   });
 
-  ctx.beginPath();
-  ctx.ellipse(width * 0.38, 0, 7, 15, 0.7, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.strokeStyle = "rgba(142, 92, 66, 0.36)";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(-8, 5);
-  ctx.quadraticCurveTo(0, 14, 10, 5);
-  ctx.stroke();
+  ctx.restore();
 }
 
 function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
@@ -2911,39 +2942,56 @@ function drawBoxCat(width, height, isOpen = false) {
     ctx.fill();
     ctx.stroke();
 
-    const pawX = -width * 0.34;
-    const pawY = -height * 0.52;
-    ctx.strokeStyle = "rgba(119, 72, 42, 0.52)";
-    ctx.lineWidth = width * 0.17;
+    const pawX = -width * 0.36;
+    const pawY = -height * 0.49;
+    const pawOutline = "rgba(119, 72, 42, 0.5)";
+    const pawFur = "#ffcf8a";
+    ctx.strokeStyle = pawOutline;
+    ctx.lineWidth = width * 0.2;
     ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.beginPath();
     ctx.moveTo(-width * 0.07, -height * 0.16);
-    ctx.quadraticCurveTo(-width * 0.18, -height * 0.32, pawX, pawY);
+    ctx.quadraticCurveTo(-width * 0.17, -height * 0.35, pawX, pawY);
     ctx.stroke();
 
-    ctx.strokeStyle = "#ffcf8a";
-    ctx.lineWidth = width * 0.12;
+    ctx.strokeStyle = pawFur;
+    ctx.lineWidth = width * 0.145;
     ctx.beginPath();
     ctx.moveTo(-width * 0.07, -height * 0.16);
-    ctx.quadraticCurveTo(-width * 0.18, -height * 0.32, pawX, pawY);
+    ctx.quadraticCurveTo(-width * 0.17, -height * 0.35, pawX, pawY);
     ctx.stroke();
 
-    ctx.fillStyle = "rgba(119, 72, 42, 0.52)";
-    ctx.beginPath();
-    ctx.ellipse(pawX, pawY, width * 0.12, height * 0.105, -0.24, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#ffcf8a";
-    ctx.beginPath();
-    ctx.ellipse(pawX, pawY, width * 0.102, height * 0.087, -0.24, 0, Math.PI * 2);
-    ctx.fill();
+    const drawPawShape = (color, scale) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.ellipse(pawX, pawY + height * 0.015, width * 0.135 * scale, height * 0.13 * scale, -0.28, 0, Math.PI * 2);
+      ctx.fill();
+      [
+        [-0.085, -0.045],
+        [-0.047, -0.1],
+        [0.005, -0.105],
+      ].forEach(([xOffset, yOffset]) => {
+        ctx.beginPath();
+        ctx.arc(pawX + width * xOffset * scale, pawY + height * yOffset * scale, width * 0.048 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    };
+
+    drawPawShape(pawOutline, 1.12);
+    drawPawShape(pawFur, 0.9);
 
     ctx.fillStyle = "#ef91ad";
     ctx.beginPath();
-    ctx.ellipse(pawX + 1, pawY + 2, width * 0.035, height * 0.03, -0.24, 0, Math.PI * 2);
+    ctx.ellipse(pawX + width * 0.012, pawY + height * 0.025, width * 0.043, height * 0.038, -0.28, 0, Math.PI * 2);
     ctx.fill();
-    [-1, 0, 1].forEach((toe) => {
+    [
+      [-0.07, -0.047],
+      [-0.036, -0.087],
+      [0.008, -0.09],
+    ].forEach(([xOffset, yOffset]) => {
       ctx.beginPath();
-      ctx.arc(pawX + toe * 4.2 - 1, pawY - 3.4, 1.6, 0, Math.PI * 2);
+      ctx.arc(pawX + width * xOffset, pawY + height * yOffset, width * 0.018, 0, Math.PI * 2);
       ctx.fill();
     });
 
