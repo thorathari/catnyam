@@ -10,6 +10,7 @@ const {
   supabaseRequest,
 } = require("../server/db");
 const { getUserLoadout } = require("../server/shop-catalog");
+const { processShopAction } = require("../server/shop-service");
 
 const CHURU_MIN_PLAY_MS = (CatnyamEngine.GAME_SECONDS - 5) * 1000;
 const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
@@ -328,6 +329,21 @@ module.exports = async function handler(req, res) {
 
     const body = await readJson(req);
     const { action, score, sessionId, sessionToken, inputLog, gameMode, steps } = body;
+
+    if (action === "shop") {
+      try {
+        const result = await processShopAction(user, body);
+        sendJson(res, 200, result);
+      } catch (error) {
+        const isMissingColumn = /coins|owned_|equipped_/i.test(error.message || "");
+        sendJson(res, error.statusCode || 500, {
+          message: isMissingColumn
+            ? "Supabase SQL Editor에서 최신 supabase/schema.sql을 실행해주세요."
+            : error.message,
+        });
+      }
+      return;
+    }
 
     if (action === "start-game") {
       const normalizedMode = normalizeGameMode(gameMode);

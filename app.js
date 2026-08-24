@@ -643,13 +643,6 @@ async function openShopModal() {
   shopModal.hidden = false;
   setShopMessage("");
   renderShop();
-
-  try {
-    const data = await requestApi("/api/shop");
-    syncCurrentUser(data.user);
-  } catch (error) {
-    setShopMessage(error.message);
-  }
 }
 
 function closeShopModal() {
@@ -667,10 +660,11 @@ async function handleShopAction(event) {
   setShopMessage("");
 
   try {
-    const data = await requestApi("/api/shop", {
+    const data = await requestApi("/api/scores", {
       method: "POST",
       body: {
-        action: button.dataset.shopAction,
+        action: "shop",
+        shopAction: button.dataset.shopAction,
         type: button.dataset.shopType,
         itemId: button.dataset.shopItem,
         slot: button.dataset.shopSlot || undefined,
