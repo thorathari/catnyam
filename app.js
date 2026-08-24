@@ -5,6 +5,7 @@ const gamePanel = document.querySelector("#gamePanel");
 const profileBox = document.querySelector("#profileBox");
 const profileButton = document.querySelector("#profileButton");
 const currentUserName = document.querySelector("#currentUserName");
+const adminBadge = document.querySelector("#adminBadge");
 const coinText = document.querySelector("#coinText");
 const shopButton = document.querySelector("#shopButton");
 const authTitle = document.querySelector("#authTitle");
@@ -103,23 +104,23 @@ const ctx = canvas.getContext("2d");
 
 const SHOP_CATALOG = {
   character: {
-    gray_scottish: { name: "회색 스코티시 폴드", price: 20, kind: "cat", fur: "#aeb4bd", accent: "#858d99", col: 0, row: 0 },
-    white_munchkin: { name: "흰색 먼치킨", price: 20, kind: "cat", fur: "#fffdf7", accent: "#e8e2d8", col: 1, row: 0 },
-    siamese: { name: "샴 고양이", price: 20, kind: "cat", fur: "#ead6b0", accent: "#705449", col: 2, row: 0 },
-    norwegian_forest: { name: "노르웨이숲", price: 20, kind: "cat", fur: "#9a806c", accent: "#f1e2cf", col: 3, row: 0 },
-    cheese: { name: "치즈냥이", price: 20, kind: "cat", fur: "#f6b85f", accent: "#d98535", col: 0, row: 1 },
-    calico: { name: "얼룩냥이", price: 0, kind: "cat", fur: "#ffcf8a", accent: "#69544a", col: 1, row: 1 },
-    tuxedo: { name: "턱시도냥이", price: 20, kind: "cat", fur: "#30343b", accent: "#fffaf2", col: 2, row: 1 },
-    black: { name: "깜냥이", price: 20, kind: "cat", fur: "#29282d", accent: "#55525d", col: 3, row: 1 },
-    maltese: { name: "말티즈", price: 20, kind: "dog", fur: "#fffdf5", accent: "#ddd8cc", col: 0, row: 2 },
-    poodle: { name: "푸들", price: 20, kind: "dog", fur: "#a86e47", accent: "#7d4d32", col: 1, row: 2 },
-    shih_tzu: { name: "시츄", price: 20, kind: "dog", fur: "#f0dfc6", accent: "#76584b", col: 2, row: 2 },
-    pomeranian: { name: "포메라니안", price: 20, kind: "dog", fur: "#e7a858", accent: "#fff0d2", col: 3, row: 2 },
-    bichon: { name: "비숑", price: 20, kind: "dog", fur: "#fffdf8", accent: "#e5e1d9", col: 0, row: 3 },
-    beagle: { name: "비글", price: 20, kind: "dog", fur: "#e6a25e", accent: "#5b443a", col: 1, row: 3 },
+    gray_scottish: { name: "회색 스코티시 폴드", price: 20, kind: "cat", fur: "#aeb4bd", accent: "#858d99", col: 0, row: 0, face: { x: 0.17, y: -0.28, scale: 0.96 } },
+    white_munchkin: { name: "흰색 먼치킨", price: 20, kind: "cat", fur: "#fffdf7", accent: "#e8e2d8", col: 1, row: 0, face: { x: 0.18, y: -0.27, scale: 0.92 } },
+    siamese: { name: "샴 고양이", price: 20, kind: "cat", fur: "#ead6b0", accent: "#705449", col: 2, row: 0, face: { x: 0.17, y: -0.26, scale: 0.94 } },
+    norwegian_forest: { name: "노르웨이숲", price: 20, kind: "cat", fur: "#9a806c", accent: "#f1e2cf", col: 3, row: 0, face: { x: 0.16, y: -0.25, scale: 1 } },
+    cheese: { name: "치즈냥이", price: 20, kind: "cat", fur: "#f6b85f", accent: "#d98535", col: 0, row: 1, face: { x: 0.17, y: -0.27, scale: 0.94 } },
+    calico: { name: "얼룩냥이", price: 0, kind: "cat", fur: "#ffcf8a", accent: "#69544a", col: 1, row: 1, face: { x: 0.18, y: -0.27, scale: 0.94 } },
+    tuxedo: { name: "턱시도냥이", price: 20, kind: "cat", fur: "#30343b", accent: "#fffaf2", col: 2, row: 1, face: { x: 0.18, y: -0.27, scale: 0.94 } },
+    black: { name: "깜냥이", price: 20, kind: "cat", fur: "#29282d", accent: "#55525d", col: 3, row: 1, face: { x: 0.17, y: -0.25, scale: 0.94 } },
+    maltese: { name: "말티즈", price: 20, kind: "dog", fur: "#fffdf5", accent: "#ddd8cc", col: 0, row: 2, face: { x: 0.13, y: -0.23, scale: 0.9 } },
+    poodle: { name: "푸들", price: 20, kind: "dog", fur: "#a86e47", accent: "#7d4d32", col: 1, row: 2, face: { x: 0.15, y: -0.22, scale: 0.86 } },
+    shih_tzu: { name: "시츄", price: 20, kind: "dog", fur: "#f0dfc6", accent: "#76584b", col: 2, row: 2, face: { x: 0.15, y: -0.21, scale: 0.88 } },
+    pomeranian: { name: "포메라니안", price: 20, kind: "dog", fur: "#e7a858", accent: "#fff0d2", col: 3, row: 2, face: { x: 0.16, y: -0.23, scale: 0.88 } },
+    bichon: { name: "비숑", price: 20, kind: "dog", fur: "#fffdf8", accent: "#e5e1d9", col: 0, row: 3, face: { x: 0.13, y: -0.23, scale: 0.88 } },
+    beagle: { name: "비글", price: 20, kind: "dog", fur: "#e6a25e", accent: "#5b443a", col: 1, row: 3, face: { x: 0.17, y: -0.21, scale: 0.9 } },
   },
   companion: {
-    hamster: { name: "햄스터", price: 50, buff: "코인을 먹으면 1코인 추가", col: 0, row: 0 },
+    hamster: { name: "햄스터", price: 50, buff: "좋은 아이템 획득 범위 +30%", col: 0, row: 0 },
     chick: { name: "병아리", price: 50, buff: "시간 아이템 효과 +1초", col: 1, row: 0 },
     sparrow: { name: "참새", price: 50, buff: "이동속도 +8%", col: 2, row: 0 },
     rabbit: { name: "토끼", price: 50, buff: "득점 아이템 +1점", col: 0, row: 1 },
@@ -138,6 +139,7 @@ const ART_ASSETS = {
   character: Object.assign(new Image(), { src: "./assets/character-atlas.png" }),
   companion: Object.assign(new Image(), { src: "./assets/companion-atlas.png" }),
   background: Object.assign(new Image(), { src: "./assets/background-atlas.png" }),
+  boxPaw: Object.assign(new Image(), { src: "./assets/box-paw-atlas.png" }),
 };
 
 Object.values(ART_ASSETS).forEach((image) => {
@@ -155,6 +157,8 @@ const keys = new Set();
 let authMode = "login";
 let currentUser = null;
 let animationId = null;
+let idleAnimationId = null;
+let idleVisualTime = 0;
 let lastFrame = 0;
 let touchDirection = 0;
 let currentGameMode = CatnyamEngine.GAME_MODES.CHURU;
@@ -233,9 +237,11 @@ function createGameState(seed = "catnyam-local", mode = currentGameMode, loadout
     stepAccumulator: 0,
     inputLog: [],
     lastInputDirection: 0,
+    visualFacing: 1,
     scorePopups: [],
     reaction: {
       type: "neutral",
+      startedAt: 0,
       until: 0,
     },
     bubble: {
@@ -496,7 +502,8 @@ function setShopMessage(message, isGood = false) {
 
 function updateProfileName() {
   const displayName = getUserDisplayName(currentUser);
-  currentUserName.textContent = isAdmin(currentUser) ? `${displayName} 관리자` : displayName;
+  currentUserName.textContent = displayName;
+  adminBadge.hidden = !isAdmin(currentUser);
   coinText.textContent = currentUser?.coins || 0;
   shopCoinText.textContent = currentUser?.coins || 0;
 }
@@ -780,10 +787,12 @@ function showGameFor(user) {
   updateModeBadges();
   showGameOverlay("게임 시작");
   drawIntro();
+  startIdleAnimation();
 }
 
 function showAuth() {
   currentUser = null;
+  cancelIdleAnimation();
   stopRankingRefresh();
   stopGame();
   authPanel.hidden = false;
@@ -1904,6 +1913,7 @@ async function startGame() {
     return;
   }
 
+  cancelIdleAnimation();
   stopGame();
   lastFinishedScore = null;
   lastFinishedGameMode = null;
@@ -1936,6 +1946,36 @@ function cancelAnimation() {
   }
 }
 
+function cancelIdleAnimation() {
+  if (idleAnimationId) {
+    cancelAnimationFrame(idleAnimationId);
+    idleAnimationId = null;
+  }
+}
+
+function idleAnimationLoop(now) {
+  if (!currentUser || game.running || game.paused || gamePanel.hidden) {
+    idleAnimationId = null;
+    return;
+  }
+
+  idleVisualTime = now / 1000;
+  if (lastFinishedScore === null) {
+    drawIntro();
+  } else {
+    drawFinish();
+  }
+  idleAnimationId = requestAnimationFrame(idleAnimationLoop);
+}
+
+function startIdleAnimation() {
+  if (idleAnimationId || !currentUser || game.running || game.paused || gamePanel.hidden) {
+    return;
+  }
+
+  idleAnimationId = requestAnimationFrame(idleAnimationLoop);
+}
+
 function stopGame() {
   cancelAnimation();
   game.running = false;
@@ -1956,6 +1996,7 @@ function finishGame() {
   clearModes();
   drawFinish();
   showGameOverlay("다시하기", `${finalScore}점!`, "result");
+  startIdleAnimation();
   submitScore(finalScore);
 }
 
@@ -1965,6 +2006,7 @@ async function submitScore(score) {
   }
 
   if (!game.gameSession?.id || !game.gameSession?.token) {
+    updateProfileName();
     showGameOverlay("다시하기", `${score}점 · 저장 실패`, "result");
     return;
   }
@@ -1996,6 +2038,7 @@ async function submitScore(score) {
     renderRanking();
   } catch (error) {
     console.warn("Score save failed:", error);
+    updateProfileName();
     showGameOverlay("다시하기", `${score}점 · 저장 실패: ${error.message}`, "result");
   } finally {
     if (lastFinishedSessionId === submittedSessionId) {
@@ -2037,12 +2080,14 @@ function returnToGameHome() {
   lastFinishedSessionId = null;
   resetShareStatus();
   game = createGameState();
+  updateProfileName();
   scoreText.textContent = "0";
   runCoinText.textContent = "0";
   updateTimeDisplay();
   updateModeBadges();
   showGameOverlay("게임 시작");
   drawIntro();
+  startIdleAnimation();
 }
 
 function showPauseOverlay() {
@@ -2246,6 +2291,9 @@ function handleEngineEvents(events) {
 
     if (event.type === "coin") {
       runCoinText.textContent = event.coins;
+      const displayedCoins = Math.max(0, Number(currentUser?.coins) || 0) + event.coins;
+      coinText.textContent = displayedCoins;
+      shopCoinText.textContent = displayedCoins;
       setCollectedItemReaction("good");
       setCatBubble(`코인 +${event.coinDelta}`, 1.1);
       return;
@@ -2319,6 +2367,7 @@ function getScoreMultiplier() {
 function setCatReaction(type, duration = 0.45) {
   game.reaction = {
     type,
+    startedAt: game.elapsed,
     until: game.elapsed + duration,
   };
 }
@@ -2718,11 +2767,14 @@ function drawBackgroundArtwork(background) {
     return false;
   }
 
+  ctx.save();
+  ctx.filter = "saturate(0.7) brightness(1.08)";
   drawAtlasCell(ART_ASSETS.background, background, 2, 3, 0, 0, canvas.width, canvas.height);
+  ctx.restore();
   const wash = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  wash.addColorStop(0, "rgba(255, 255, 255, 0.08)");
-  wash.addColorStop(0.72, "rgba(255, 250, 242, 0.13)");
-  wash.addColorStop(1, "rgba(255, 250, 242, 0.22)");
+  wash.addColorStop(0, "rgba(255, 255, 255, 0.2)");
+  wash.addColorStop(0.72, "rgba(255, 250, 242, 0.3)");
+  wash.addColorStop(1, "rgba(255, 250, 242, 0.4)");
   ctx.fillStyle = wash;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -3347,6 +3399,10 @@ function drawCompanion(id, x, y, width, height) {
   const artwork = SHOP_CATALOG.companion[id];
 
   if (artwork && isArtworkReady(ART_ASSETS.companion)) {
+    const phase = ({ hamster: 0, chick: 0.8, sparrow: 1.6, rabbit: 2.4, mole: 3.2 })[id] || 0;
+    const bob = game.running && !game.paused
+      ? Math.abs(Math.sin(game.elapsed * 6.4 + phase)) * 3.5
+      : 0;
     const drawWidth = width * 1.65;
     const drawHeight = height * 1.75;
     ctx.save();
@@ -3360,7 +3416,7 @@ function drawCompanion(id, x, y, width, height) {
       3,
       2,
       x - drawWidth / 2,
-      y + height * 0.55 - drawHeight,
+      y + height * 0.55 - drawHeight - bob,
       drawWidth,
       drawHeight,
     );
@@ -3444,6 +3500,87 @@ function drawCompanion(id, x, y, width, height) {
   ctx.restore();
 }
 
+function getCharacterMotion(reaction) {
+  const isPreviewAnimating = Boolean(currentUser && !game.running && !game.paused && !gamePanel.hidden);
+  const time = isPreviewAnimating ? idleVisualTime : Number(game.elapsed) || 0;
+  const isAnimating = (game.running && !game.paused) || isPreviewAnimating;
+  const inputDirection = game.running && !game.paused ? getMovementDirection() : 0;
+  const direction = isSkullModeActive() ? -inputDirection : inputDirection;
+  const moving = Math.abs(direction) > 0;
+  const speedCadence = isSpeedModeActive() ? 16 : 10.5;
+  const stepWave = Math.sin(time * speedCadence);
+  const breathWave = Math.sin(time * 3.2);
+  const motion = {
+    x: 0,
+    y: 0,
+    rotation: 0,
+    scaleX: 1,
+    scaleY: 1,
+    facing: game.visualFacing || 1,
+  };
+
+  if (moving) {
+    game.visualFacing = Math.sign(direction);
+    motion.facing = game.visualFacing;
+  }
+
+  if (isAnimating && moving && !isCatnipModeActive()) {
+    const stepLift = Math.abs(stepWave);
+    motion.y -= stepLift * (isSpeedModeActive() ? 6 : 4);
+    motion.rotation += stepWave * direction * (isSpeedModeActive() ? 0.055 : 0.035);
+    motion.scaleX *= 1 + stepLift * 0.035;
+    motion.scaleY *= 1 - stepLift * 0.025;
+  } else if (isAnimating && !isCatnipModeActive()) {
+    motion.y += breathWave * 1.2;
+    motion.scaleX *= 1 - breathWave * 0.009;
+    motion.scaleY *= 1 + breathWave * 0.014;
+  }
+
+  if (isPurrModeActive()) {
+    motion.x += Math.sin(time * 28) * 0.9;
+    motion.scaleX *= 1 + Math.sin(time * 6) * 0.012;
+  }
+
+  if (isTunaModeActive() && !isCatnipModeActive()) {
+    motion.rotation += Math.sin(time * 5.5) * 0.045;
+  }
+
+  if (isCatnipModeActive()) {
+    const catnipPulse = (Math.sin(time * 9) + 1) / 2;
+    motion.y -= 3 + catnipPulse * 4;
+    motion.scaleX *= 1 + catnipPulse * 0.055;
+    motion.scaleY *= 1 + catnipPulse * 0.055;
+  }
+
+  const reactionStartedAt = Number(game.reaction?.startedAt);
+  const reactionClock = isPreviewAnimating ? Number(game.elapsed) || 0 : time;
+  const reactionAge = Number.isFinite(reactionStartedAt) ? Math.max(0, reactionClock - reactionStartedAt) : 1;
+
+  if (reaction === "good" || reaction === "box-open") {
+    const progress = Math.min(1, reactionAge / 0.45);
+    const pop = Math.sin(progress * Math.PI);
+    motion.y -= pop * 14;
+    motion.scaleX *= 1 + pop * 0.08;
+    motion.scaleY *= 1 + pop * 0.12;
+  } else if (reaction === "bad") {
+    const impact = Math.max(0, 1 - reactionAge / 0.58);
+    motion.x += Math.sin(reactionAge * 68) * 8 * impact;
+    motion.rotation += Math.sin(reactionAge * 52) * 0.09 * impact;
+
+    if (isSkullModeActive()) {
+      motion.rotation += Math.sin(time * 8.5) * 0.025;
+    }
+  }
+
+  return motion;
+}
+
+function applyCharacterMotion(motion, mirrorFacing = false) {
+  ctx.translate(motion.x, motion.y);
+  ctx.rotate(motion.rotation);
+  ctx.scale(motion.scaleX * (mirrorFacing ? motion.facing : 1), motion.scaleY);
+}
+
 function drawCharacterArtwork(width, height, rotation, reaction) {
   const characterId = game.loadout?.character || currentUser?.loadout?.character || "calico";
   const character = SHOP_CATALOG.character[characterId] || SHOP_CATALOG.character.calico;
@@ -3462,7 +3599,9 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
   ctx.ellipse(0, height / 2 + 9, width * 0.54, Math.max(8, height * 0.14), 0, 0, Math.PI * 2);
   ctx.fill();
 
+  const motion = getCharacterMotion(reaction);
   ctx.save();
+  applyCharacterMotion(motion, true);
   ctx.rotate(rotation);
   drawAtlasCell(
     ART_ASSETS.character,
@@ -3476,17 +3615,18 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
   );
 
   if (reaction === "good" || reaction === "bad") {
-    drawArtworkReaction(width, height, reaction);
+    drawArtworkReaction(width, height, reaction, character.face);
   }
   ctx.restore();
   return true;
 }
 
-function drawArtworkReaction(width, height, reaction) {
-  const faceX = width * 0.17;
-  const faceY = -height * 0.28;
-  const eyeGap = width * 0.075;
-  const markSize = Math.max(5, width * 0.055);
+function drawArtworkReaction(width, height, reaction, face = {}) {
+  const faceScale = Number(face.scale) || 1;
+  const faceX = width * (Number(face.x) || 0.17);
+  const faceY = height * (Number(face.y) || -0.28);
+  const eyeGap = width * 0.075 * faceScale;
+  const markSize = Math.max(4.5, width * 0.055 * faceScale);
   const outlineWidth = Math.max(5, width * 0.055);
   const lineWidth = Math.max(2.6, width * 0.027);
 
@@ -3534,7 +3674,13 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
   ctx.translate(x, y);
 
   if (reaction === "box" || reaction === "box-open") {
-    drawBoxCat(width, height, reaction === "box-open");
+    const motion = getCharacterMotion(reaction);
+    ctx.save();
+    applyCharacterMotion(motion);
+    if (reaction !== "box-open" || !drawBoxPawArtwork(width, height)) {
+      drawBoxCat(width, height, reaction === "box-open");
+    }
+    ctx.restore();
     const emphasisText = getCatEmphasisBubbleText();
     const bubbleText = getCatBubbleText();
 
@@ -3686,6 +3832,32 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
   }
 
   ctx.restore();
+}
+
+function drawBoxPawArtwork(width, height) {
+  const characterId = game.loadout?.character || currentUser?.loadout?.character || "calico";
+  const character = SHOP_CATALOG.character[characterId] || SHOP_CATALOG.character.calico;
+
+  if (!isArtworkReady(ART_ASSETS.boxPaw)) {
+    return false;
+  }
+
+  const drawSize = Math.max(width * 1.34, height * 1.78);
+  const drawBottom = height * 0.52;
+  ctx.fillStyle = "rgba(37, 33, 29, 0.16)";
+  ctx.beginPath();
+  ctx.ellipse(0, height / 2 + 7, width * 0.5, Math.max(7, height * 0.12), 0, 0, Math.PI * 2);
+  ctx.fill();
+  return drawAtlasCell(
+    ART_ASSETS.boxPaw,
+    character,
+    4,
+    4,
+    -drawSize / 2,
+    drawBottom - drawSize,
+    drawSize,
+    drawSize,
+  );
 }
 
 function drawBoxCat(width, height, isOpen = false) {

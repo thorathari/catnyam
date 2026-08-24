@@ -19,11 +19,22 @@
       </div>
       <div class="profile" id="profileBox" hidden>
         <button class="profile-button" id="profileButton" type="button">
-          <span id="currentUserName"></span>
+          <span class="profile-avatar" aria-hidden="true"><i></i></span>
+          <span class="profile-copy">
+            <strong id="currentUserName"></strong>
+            <small>내 정보</small>
+          </span>
         </button>
-        <span class="coin-pill" aria-label="보유 코인"><i aria-hidden="true"></i><strong id="coinText">0</strong></span>
-        <button class="secondary-button shop-open-button" id="shopButton" type="button">상점</button>
-        <button class="ghost-button" id="logoutButton" type="button">로그아웃</button>
+        <span class="profile-role" id="adminBadge" hidden>관리자</span>
+        <span class="coin-pill" aria-label="보유 코인">
+          <span class="coin-label">보유 코인</span>
+          <i aria-hidden="true"></i>
+          <strong id="coinText">0</strong>
+        </span>
+        <span class="profile-actions">
+          <button class="secondary-button shop-open-button" id="shopButton" type="button">상점</button>
+          <button class="ghost-button" id="logoutButton" type="button">로그아웃</button>
+        </span>
       </div>
     </section>
 

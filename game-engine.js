@@ -49,10 +49,10 @@
   const BOMB_FIRST_SKULL_MAX_SECONDS = 30;
   const BOMB_SKULL_MIN_INTERVAL = 24;
   const BOMB_SKULL_MAX_INTERVAL = 52;
-  const BOMB_FIRST_COIN_MIN_SECONDS = 6;
-  const BOMB_FIRST_COIN_MAX_SECONDS = 18;
-  const BOMB_COIN_MIN_INTERVAL = 12;
-  const BOMB_COIN_MAX_INTERVAL = 28;
+  const BOMB_FIRST_COIN_MIN_SECONDS = 12;
+  const BOMB_FIRST_COIN_MAX_SECONDS = 28;
+  const BOMB_COIN_MIN_INTERVAL = 24;
+  const BOMB_COIN_MAX_INTERVAL = 48;
   const BOMB_GOLD_WINDOW_SECONDS = 1;
   const SURVIVAL_SCORE_INTERVAL = 0.1;
 
@@ -289,10 +289,10 @@
       ["tuna", canSpawnLimitedDrop(state, "tuna") ? 0.045 : 0],
       ["clipper", canSpawnLimitedDrop(state, "clipper") ? 0.045 : 0],
       ["skull", 0.045],
-      ["coin", 0.055],
+      ["coin", 0.025],
       ["bomb", 0.135],
       ["gold", 0.16],
-      ["normal", 0.41],
+      ["normal", 0.44],
     ]);
   }
 
@@ -578,7 +578,7 @@
   }
 
   function applyCoin(state, events) {
-    const coinDelta = 1 + (hasCompanion(state, "hamster") ? 1 : 0);
+    const coinDelta = 1;
     state.coins += coinDelta;
     events.push({
       type: "coin",
@@ -767,24 +767,26 @@
     const hitboxes = [];
 
     if (state.loadout.companionLeft) {
+      const isHamster = state.loadout.companionLeft === "hamster";
       hitboxes.push({
         id: state.loadout.companionLeft,
         side: "left",
         x: state.cat.x - offset,
         y,
-        width: 48,
-        height: 42,
+        width: isHamster ? 64 : 48,
+        height: isHamster ? 56 : 42,
       });
     }
 
     if (state.loadout.companionRight) {
+      const isHamster = state.loadout.companionRight === "hamster";
       hitboxes.push({
         id: state.loadout.companionRight,
         side: "right",
         x: state.cat.x + offset,
         y,
-        width: 48,
-        height: 42,
+        width: isHamster ? 64 : 48,
+        height: isHamster ? 56 : 42,
       });
     }
 

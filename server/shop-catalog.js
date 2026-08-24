@@ -19,7 +19,7 @@ const CATALOG = {
     beagle: { name: "비글", price: 20 },
   },
   companion: {
-    hamster: { name: "햄스터", price: 50, buff: "코인 획득 +1" },
+    hamster: { name: "햄스터", price: 50, buff: "좋은 아이템 획득 범위 +30%" },
     chick: { name: "병아리", price: 50, buff: "시간 아이템 +1초" },
     sparrow: { name: "참새", price: 50, buff: "이동속도 +8%" },
     rabbit: { name: "토끼", price: 50, buff: "득점 아이템 +1점" },
