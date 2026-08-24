@@ -103,36 +103,50 @@ const ctx = canvas.getContext("2d");
 
 const SHOP_CATALOG = {
   character: {
-    gray_scottish: { name: "회색 스코티시 폴드", price: 20, kind: "cat", fur: "#aeb4bd", accent: "#858d99" },
-    white_munchkin: { name: "흰색 먼치킨", price: 20, kind: "cat", fur: "#fffdf7", accent: "#e8e2d8" },
-    siamese: { name: "샴 고양이", price: 20, kind: "cat", fur: "#ead6b0", accent: "#705449" },
-    norwegian_forest: { name: "노르웨이숲", price: 20, kind: "cat", fur: "#9a806c", accent: "#f1e2cf" },
-    cheese: { name: "치즈냥이", price: 20, kind: "cat", fur: "#f6b85f", accent: "#d98535" },
-    calico: { name: "얼룩냥이", price: 0, kind: "cat", fur: "#ffcf8a", accent: "#69544a" },
-    tuxedo: { name: "턱시도냥이", price: 20, kind: "cat", fur: "#30343b", accent: "#fffaf2" },
-    black: { name: "깜냥이", price: 20, kind: "cat", fur: "#29282d", accent: "#55525d" },
-    maltese: { name: "말티즈", price: 20, kind: "dog", fur: "#fffdf5", accent: "#ddd8cc" },
-    poodle: { name: "푸들", price: 20, kind: "dog", fur: "#a86e47", accent: "#7d4d32" },
-    shih_tzu: { name: "시츄", price: 20, kind: "dog", fur: "#f0dfc6", accent: "#76584b" },
-    pomeranian: { name: "포메라니안", price: 20, kind: "dog", fur: "#e7a858", accent: "#fff0d2" },
-    bichon: { name: "비숑", price: 20, kind: "dog", fur: "#fffdf8", accent: "#e5e1d9" },
-    beagle: { name: "비글", price: 20, kind: "dog", fur: "#e6a25e", accent: "#5b443a" },
+    gray_scottish: { name: "회색 스코티시 폴드", price: 20, kind: "cat", fur: "#aeb4bd", accent: "#858d99", col: 0, row: 0 },
+    white_munchkin: { name: "흰색 먼치킨", price: 20, kind: "cat", fur: "#fffdf7", accent: "#e8e2d8", col: 1, row: 0 },
+    siamese: { name: "샴 고양이", price: 20, kind: "cat", fur: "#ead6b0", accent: "#705449", col: 2, row: 0 },
+    norwegian_forest: { name: "노르웨이숲", price: 20, kind: "cat", fur: "#9a806c", accent: "#f1e2cf", col: 3, row: 0 },
+    cheese: { name: "치즈냥이", price: 20, kind: "cat", fur: "#f6b85f", accent: "#d98535", col: 0, row: 1 },
+    calico: { name: "얼룩냥이", price: 0, kind: "cat", fur: "#ffcf8a", accent: "#69544a", col: 1, row: 1 },
+    tuxedo: { name: "턱시도냥이", price: 20, kind: "cat", fur: "#30343b", accent: "#fffaf2", col: 2, row: 1 },
+    black: { name: "깜냥이", price: 20, kind: "cat", fur: "#29282d", accent: "#55525d", col: 3, row: 1 },
+    maltese: { name: "말티즈", price: 20, kind: "dog", fur: "#fffdf5", accent: "#ddd8cc", col: 0, row: 2 },
+    poodle: { name: "푸들", price: 20, kind: "dog", fur: "#a86e47", accent: "#7d4d32", col: 1, row: 2 },
+    shih_tzu: { name: "시츄", price: 20, kind: "dog", fur: "#f0dfc6", accent: "#76584b", col: 2, row: 2 },
+    pomeranian: { name: "포메라니안", price: 20, kind: "dog", fur: "#e7a858", accent: "#fff0d2", col: 3, row: 2 },
+    bichon: { name: "비숑", price: 20, kind: "dog", fur: "#fffdf8", accent: "#e5e1d9", col: 0, row: 3 },
+    beagle: { name: "비글", price: 20, kind: "dog", fur: "#e6a25e", accent: "#5b443a", col: 1, row: 3 },
   },
   companion: {
-    hamster: { name: "햄스터", price: 50, symbol: "햄", buff: "코인을 먹으면 1코인 추가" },
-    chick: { name: "병아리", price: 50, symbol: "삐", buff: "시간 아이템 효과 +1초" },
-    sparrow: { name: "참새", price: 50, symbol: "짹", buff: "이동속도 +8%" },
-    rabbit: { name: "토끼", price: 50, symbol: "토", buff: "득점 아이템 +1점" },
-    mole: { name: "두더지", price: 50, symbol: "두", buff: "폭탄피하기 시작 목숨 +1" },
+    hamster: { name: "햄스터", price: 50, buff: "코인을 먹으면 1코인 추가", col: 0, row: 0 },
+    chick: { name: "병아리", price: 50, buff: "시간 아이템 효과 +1초", col: 1, row: 0 },
+    sparrow: { name: "참새", price: 50, buff: "이동속도 +8%", col: 2, row: 0 },
+    rabbit: { name: "토끼", price: 50, buff: "득점 아이템 +1점", col: 0, row: 1 },
+    mole: { name: "두더지", price: 50, buff: "폭탄피하기 시작 목숨 +1", col: 1, row: 1 },
   },
   background: {
-    village: { name: "시골동네", price: 0, sky: "#dff5ff", ground: "#8addbd" },
-    promenade: { name: "고급산책로", price: 30, sky: "#e9f4ff", ground: "#b9bec5" },
-    beach: { name: "해변가", price: 30, sky: "#bdeaff", ground: "#f2d38b" },
-    mountain: { name: "산동네", price: 30, sky: "#d9eef1", ground: "#77a76d" },
-    alley: { name: "뒷골목", price: 30, sky: "#d7d5df", ground: "#777680" },
+    village: { name: "시골동네", price: 0, col: 0, row: 0 },
+    promenade: { name: "고급산책로", price: 30, col: 1, row: 0 },
+    beach: { name: "해변가", price: 30, col: 0, row: 1 },
+    mountain: { name: "산동네", price: 30, col: 1, row: 1 },
+    alley: { name: "뒷골목", price: 30, col: 0, row: 2 },
   },
 };
+
+const ART_ASSETS = {
+  character: Object.assign(new Image(), { src: "./assets/character-atlas.png" }),
+  companion: Object.assign(new Image(), { src: "./assets/companion-atlas.png" }),
+  background: Object.assign(new Image(), { src: "./assets/background-atlas.png" }),
+};
+
+Object.values(ART_ASSETS).forEach((image) => {
+  image.addEventListener("load", () => {
+    if (currentUser && !game.running) {
+      drawIntro();
+    }
+  });
+});
 
 const REMEMBER_LOGIN_KEY = "catnyam_auto_login";
 const SHARE_PAGE_URL = "https://catnyam.vercel.app/";
@@ -531,11 +545,15 @@ function createShopActionButton(label, className, action, type, itemId, slot = "
 
 function getShopPreviewStyle(type, item) {
   if (type === "character") {
-    return `--preview-fur:${item.fur};--preview-ink:${item.kind === "cat" && item.fur === "#29282d" ? "#f7df75" : "#332923"}`;
+    return `--sprite-x:${(item.col / 3) * 100}%;--sprite-y:${(item.row / 3) * 100}%`;
+  }
+
+  if (type === "companion") {
+    return `--sprite-x:${(item.col / 2) * 100}%;--sprite-y:${item.row * 100}%`;
   }
 
   if (type === "background") {
-    return `--preview-bg:${item.sky};--preview-ground:${item.ground}`;
+    return `--sprite-x:${item.col * 100}%;--sprite-y:${(item.row / 2) * 100}%`;
   }
 
   return "";
@@ -564,24 +582,33 @@ function renderShop() {
     const copy = document.createElement("div");
     const title = document.createElement("strong");
     const meta = document.createElement("span");
+    const description = document.createElement("small");
+    const badge = document.createElement("span");
     const actions = document.createElement("div");
     const equipped = shopTab === "companion"
       ? isShopItemEquipped(shopTab, itemId, "left") || isShopItemEquipped(shopTab, itemId, "right")
       : isShopItemEquipped(shopTab, itemId);
 
-    card.className = `shop-card${equipped ? " is-equipped" : ""}`;
+    card.className = `shop-card shop-card-${shopTab}${equipped ? " is-equipped" : ""}`;
     preview.className = `shop-preview ${shopTab}`;
     preview.style.cssText = getShopPreviewStyle(shopTab, item);
-    if (shopTab === "companion") {
-      preview.textContent = item.symbol;
-    }
+    preview.setAttribute("aria-label", `${item.name} 미리보기`);
+    badge.className = `shop-preview-badge${equipped ? " equipped" : owned ? " owned" : ""}`;
+    badge.textContent = equipped
+      ? "사용 중"
+      : owned
+        ? "보유"
+        : shopTab === "companion" ? "동료" : shopTab === "background" ? "배경" : "스킨";
+    preview.append(badge);
 
     copy.className = "shop-card-copy";
     title.textContent = item.name;
-    meta.textContent = shopTab === "companion"
-      ? item.buff
-      : item.price > 0 ? `${item.price}코인` : "기본 보유";
+    meta.textContent = item.price > 0 ? `● ${item.price}` : "기본";
+    description.textContent = shopTab === "companion" ? item.buff : "";
     copy.append(title, meta);
+    if (shopTab === "companion") {
+      copy.append(description);
+    }
     actions.className = "shop-card-actions";
 
     if (!owned) {
@@ -2596,8 +2623,13 @@ function drawWorld() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const backgroundId = game.loadout?.background || currentUser?.loadout?.background || "village";
   const background = SHOP_CATALOG.background[backgroundId] || SHOP_CATALOG.background.village;
+
+  if (drawBackgroundArtwork(background)) {
+    return;
+  }
+
   const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  sky.addColorStop(0, background.sky);
+  sky.addColorStop(0, "#dff5ff");
   sky.addColorStop(1, backgroundId === "alley" ? "#eee8e0" : "#fff6dc");
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -2648,12 +2680,61 @@ function drawWorld() {
     ctx.fillRect(28, 245, 74, 34);
   }
 
-  ctx.fillStyle = background.ground;
+  ctx.fillStyle = "#8addbd";
   ctx.fillRect(0, canvas.height - 44, canvas.width, 44);
   ctx.fillStyle = "rgba(37, 33, 29, 0.08)";
   for (let x = 20; x < canvas.width; x += 48) {
     ctx.fillRect(x, canvas.height - 37, 18, 6);
   }
+}
+
+function isArtworkReady(image) {
+  return image.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
+}
+
+function drawAtlasCell(image, item, columns, rows, x, y, width, height) {
+  if (!isArtworkReady(image) || !item) {
+    return false;
+  }
+
+  const sourceWidth = image.naturalWidth / columns;
+  const sourceHeight = image.naturalHeight / rows;
+  ctx.drawImage(
+    image,
+    item.col * sourceWidth,
+    item.row * sourceHeight,
+    sourceWidth,
+    sourceHeight,
+    x,
+    y,
+    width,
+    height,
+  );
+  return true;
+}
+
+function drawBackgroundArtwork(background) {
+  if (!isArtworkReady(ART_ASSETS.background)) {
+    return false;
+  }
+
+  drawAtlasCell(ART_ASSETS.background, background, 2, 3, 0, 0, canvas.width, canvas.height);
+  const wash = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  wash.addColorStop(0, "rgba(255, 255, 255, 0.08)");
+  wash.addColorStop(0.72, "rgba(255, 250, 242, 0.13)");
+  wash.addColorStop(1, "rgba(255, 250, 242, 0.22)");
+  ctx.fillStyle = wash;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.strokeStyle = "rgba(37, 33, 29, 0.18)";
+  ctx.lineWidth = 5;
+  ctx.setLineDash([20, 24]);
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height - 32);
+  ctx.lineTo(canvas.width, canvas.height - 32);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  return true;
 }
 
 function drawCloud(x, y, scale) {
@@ -3263,6 +3344,30 @@ function drawCompanions() {
 }
 
 function drawCompanion(id, x, y, width, height) {
+  const artwork = SHOP_CATALOG.companion[id];
+
+  if (artwork && isArtworkReady(ART_ASSETS.companion)) {
+    const drawWidth = width * 1.65;
+    const drawHeight = height * 1.75;
+    ctx.save();
+    ctx.fillStyle = "rgba(37, 33, 29, 0.16)";
+    ctx.beginPath();
+    ctx.ellipse(x, y + height * 0.43, width * 0.48, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    drawAtlasCell(
+      ART_ASSETS.companion,
+      artwork,
+      3,
+      2,
+      x - drawWidth / 2,
+      y + height * 0.55 - drawHeight,
+      drawWidth,
+      drawHeight,
+    );
+    ctx.restore();
+    return;
+  }
+
   const palettes = {
     hamster: { fur: "#d9a36b", accent: "#fff0d8", ear: "#ef9eaa" },
     chick: { fur: "#ffd84f", accent: "#fff1a3", ear: "#e98a3d" },
@@ -3339,12 +3444,113 @@ function drawCompanion(id, x, y, width, height) {
   ctx.restore();
 }
 
+function drawCharacterArtwork(width, height, rotation, reaction) {
+  const characterId = game.loadout?.character || currentUser?.loadout?.character || "calico";
+  const character = SHOP_CATALOG.character[characterId] || SHOP_CATALOG.character.calico;
+
+  if (!isArtworkReady(ART_ASSETS.character)) {
+    return false;
+  }
+
+  const drawWidth = width * 1.42;
+  const drawHeight = height * 1.62;
+  const drawLeft = -drawWidth / 2;
+  const drawTop = height * 0.58 - drawHeight;
+
+  ctx.fillStyle = "rgba(37, 33, 29, 0.18)";
+  ctx.beginPath();
+  ctx.ellipse(0, height / 2 + 9, width * 0.54, Math.max(8, height * 0.14), 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.save();
+  ctx.rotate(rotation);
+  drawAtlasCell(
+    ART_ASSETS.character,
+    character,
+    4,
+    4,
+    drawLeft,
+    drawTop,
+    drawWidth,
+    drawHeight,
+  );
+
+  if (reaction === "good" || reaction === "bad") {
+    drawArtworkReaction(width, height, reaction);
+  }
+  ctx.restore();
+  return true;
+}
+
+function drawArtworkReaction(width, height, reaction) {
+  const faceX = width * 0.17;
+  const faceY = -height * 0.28;
+  const eyeGap = width * 0.075;
+  const markSize = Math.max(5, width * 0.055);
+  const outlineWidth = Math.max(5, width * 0.055);
+  const lineWidth = Math.max(2.6, width * 0.027);
+
+  const strokeMarks = (color, widthValue) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = widthValue;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+
+    [-1, 1].forEach((side) => {
+      const eyeX = faceX + side * eyeGap;
+      if (reaction === "bad") {
+        ctx.moveTo(eyeX - markSize, faceY - markSize);
+        ctx.lineTo(eyeX + markSize, faceY + markSize);
+        ctx.moveTo(eyeX + markSize, faceY - markSize);
+        ctx.lineTo(eyeX - markSize, faceY + markSize);
+      } else {
+        ctx.moveTo(eyeX - markSize, faceY + 1);
+        ctx.quadraticCurveTo(eyeX, faceY - markSize, eyeX + markSize, faceY + 1);
+      }
+    });
+    ctx.stroke();
+  };
+
+  strokeMarks("rgba(255, 250, 242, 0.95)", outlineWidth);
+  strokeMarks("#332923", lineWidth);
+
+  ctx.fillStyle = "#332923";
+  ctx.strokeStyle = "rgba(255, 250, 242, 0.95)";
+  ctx.lineWidth = Math.max(3, width * 0.035);
+  ctx.beginPath();
+  ctx.ellipse(faceX, faceY + height * 0.16, markSize * 0.75, markSize, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = reaction === "bad" ? "#8ed7f5" : "#ef6f8f";
+  ctx.beginPath();
+  ctx.ellipse(faceX, faceY + height * 0.19, markSize * 0.42, markSize * 0.32, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
   ctx.save();
   ctx.translate(x, y);
 
   if (reaction === "box" || reaction === "box-open") {
     drawBoxCat(width, height, reaction === "box-open");
+    const emphasisText = getCatEmphasisBubbleText();
+    const bubbleText = getCatBubbleText();
+
+    if (bubbleText) {
+      drawSpeechBubble(width, height, bubbleText);
+    }
+
+    if (emphasisText) {
+      drawEmphasisBubble(width, height, emphasisText);
+    }
+
+    ctx.restore();
+    return;
+  }
+
+  if (drawCharacterArtwork(width, height, rotation, reaction)) {
     const emphasisText = getCatEmphasisBubbleText();
     const bubbleText = getCatBubbleText();
 
