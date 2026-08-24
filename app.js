@@ -5,6 +5,8 @@ const gamePanel = document.querySelector("#gamePanel");
 const profileBox = document.querySelector("#profileBox");
 const profileButton = document.querySelector("#profileButton");
 const currentUserName = document.querySelector("#currentUserName");
+const coinText = document.querySelector("#coinText");
+const shopButton = document.querySelector("#shopButton");
 const authTitle = document.querySelector("#authTitle");
 const authDescription = document.querySelector("#authDescription");
 const authForm = document.querySelector("#authForm");
@@ -74,10 +76,18 @@ const resetMyScoreButton = document.querySelector("#resetMyScoreButton");
 const resetMyBombScoreButton = document.querySelector("#resetMyBombScoreButton");
 const deleteMyAccountButton = document.querySelector("#deleteMyAccountButton");
 const accountActionMessage = document.querySelector("#accountActionMessage");
+const shopModal = document.querySelector("#shopModal");
+const closeShopModalButton = document.querySelector("#closeShopModalButton");
+const shopCoinText = document.querySelector("#shopCoinText");
+const shopGrid = document.querySelector("#shopGrid");
+const shopHelp = document.querySelector("#shopHelp");
+const shopMessage = document.querySelector("#shopMessage");
+const shopTabButtons = Array.from(document.querySelectorAll("[data-shop-tab]"));
 const scoreText = document.querySelector("#scoreText");
 const timeLabel = document.querySelector("#timeLabel");
 const timeText = document.querySelector("#timeText");
 const bestText = document.querySelector("#bestText");
+const runCoinText = document.querySelector("#runCoinText");
 const speedModeBadge = document.querySelector("#speedModeBadge");
 const hideModeBadge = document.querySelector("#hideModeBadge");
 const purrModeBadge = document.querySelector("#purrModeBadge");
@@ -90,6 +100,39 @@ const heartModeBadge = document.querySelector("#heartModeBadge");
 const canvasWrap = document.querySelector("#canvasWrap");
 const canvas = document.querySelector("#gameCanvas");
 const ctx = canvas.getContext("2d");
+
+const SHOP_CATALOG = {
+  character: {
+    gray_scottish: { name: "회색 스코티시 폴드", price: 20, kind: "cat", fur: "#aeb4bd", accent: "#858d99" },
+    white_munchkin: { name: "흰색 먼치킨", price: 20, kind: "cat", fur: "#fffdf7", accent: "#e8e2d8" },
+    siamese: { name: "샴 고양이", price: 20, kind: "cat", fur: "#ead6b0", accent: "#705449" },
+    norwegian_forest: { name: "노르웨이숲", price: 20, kind: "cat", fur: "#9a806c", accent: "#f1e2cf" },
+    cheese: { name: "치즈냥이", price: 20, kind: "cat", fur: "#f6b85f", accent: "#d98535" },
+    calico: { name: "얼룩냥이", price: 0, kind: "cat", fur: "#ffcf8a", accent: "#69544a" },
+    tuxedo: { name: "턱시도냥이", price: 20, kind: "cat", fur: "#30343b", accent: "#fffaf2" },
+    black: { name: "깜냥이", price: 20, kind: "cat", fur: "#29282d", accent: "#55525d" },
+    maltese: { name: "말티즈", price: 20, kind: "dog", fur: "#fffdf5", accent: "#ddd8cc" },
+    poodle: { name: "푸들", price: 20, kind: "dog", fur: "#a86e47", accent: "#7d4d32" },
+    shih_tzu: { name: "시츄", price: 20, kind: "dog", fur: "#f0dfc6", accent: "#76584b" },
+    pomeranian: { name: "포메라니안", price: 20, kind: "dog", fur: "#e7a858", accent: "#fff0d2" },
+    bichon: { name: "비숑", price: 20, kind: "dog", fur: "#fffdf8", accent: "#e5e1d9" },
+    beagle: { name: "비글", price: 20, kind: "dog", fur: "#e6a25e", accent: "#5b443a" },
+  },
+  companion: {
+    hamster: { name: "햄스터", price: 50, symbol: "햄", buff: "코인을 먹으면 1코인 추가" },
+    chick: { name: "병아리", price: 50, symbol: "삐", buff: "시간 아이템 효과 +1초" },
+    sparrow: { name: "참새", price: 50, symbol: "짹", buff: "이동속도 +8%" },
+    rabbit: { name: "토끼", price: 50, symbol: "토", buff: "득점 아이템 +1점" },
+    mole: { name: "두더지", price: 50, symbol: "두", buff: "폭탄피하기 시작 목숨 +1" },
+  },
+  background: {
+    village: { name: "시골동네", price: 0, sky: "#dff5ff", ground: "#8addbd" },
+    promenade: { name: "고급산책로", price: 30, sky: "#e9f4ff", ground: "#b9bec5" },
+    beach: { name: "해변가", price: 30, sky: "#bdeaff", ground: "#f2d38b" },
+    mountain: { name: "산동네", price: 30, sky: "#d9eef1", ground: "#77a76d" },
+    alley: { name: "뒷골목", price: 30, sky: "#d7d5df", ground: "#777680" },
+  },
+};
 
 const REMEMBER_LOGIN_KEY = "catnyam_auto_login";
 const SHARE_PAGE_URL = "https://catnyam.vercel.app/";
@@ -119,6 +162,7 @@ let lastFinishedScore = null;
 let lastFinishedGameMode = null;
 let lastFinishedRanking = null;
 let lastFinishedSessionId = null;
+let shopTab = "character";
 const expandedAdminAccountIds = new Set();
 let game = createGameState();
 
@@ -157,9 +201,18 @@ async function requestApi(path, options = {}) {
   return data;
 }
 
-function createGameState(seed = "catnyam-local", mode = currentGameMode) {
+function getCurrentLoadout() {
+  return currentUser?.loadout || {
+    character: "calico",
+    companionLeft: null,
+    companionRight: null,
+    background: "village",
+  };
+}
+
+function createGameState(seed = "catnyam-local", mode = currentGameMode, loadout = getCurrentLoadout()) {
   return {
-    ...CatnyamEngine.createGameState({ seed, mode }),
+    ...CatnyamEngine.createGameState({ seed, mode, loadout }),
     running: false,
     paused: false,
     gameSession: null,
@@ -423,9 +476,15 @@ function setAdminMessage(message, isGood = false) {
   setFieldMessage(adminMessage, message, isGood);
 }
 
+function setShopMessage(message, isGood = false) {
+  setFieldMessage(shopMessage, message, isGood);
+}
+
 function updateProfileName() {
   const displayName = getUserDisplayName(currentUser);
   currentUserName.textContent = isAdmin(currentUser) ? `${displayName} 관리자` : displayName;
+  coinText.textContent = currentUser?.coins || 0;
+  shopCoinText.textContent = currentUser?.coins || 0;
 }
 
 function syncCurrentUser(user) {
@@ -436,6 +495,197 @@ function syncCurrentUser(user) {
   currentUser = user;
   updateProfileName();
   bestText.textContent = currentUser.bestScore || 0;
+  renderShop();
+}
+
+function getOwnedShopItems(type) {
+  const key = type === "character" ? "characters" : type === "companion" ? "companions" : "backgrounds";
+  return currentUser?.inventory?.[key] || [];
+}
+
+function isShopItemEquipped(type, itemId, slot = "") {
+  if (type === "character") {
+    return currentUser?.loadout?.character === itemId;
+  }
+
+  if (type === "background") {
+    return currentUser?.loadout?.background === itemId;
+  }
+
+  return slot === "left"
+    ? currentUser?.loadout?.companionLeft === itemId
+    : currentUser?.loadout?.companionRight === itemId;
+}
+
+function createShopActionButton(label, className, action, type, itemId, slot = "") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = label;
+  button.dataset.shopAction = action;
+  button.dataset.shopType = type;
+  button.dataset.shopItem = itemId;
+  if (slot) button.dataset.shopSlot = slot;
+  return button;
+}
+
+function getShopPreviewStyle(type, item) {
+  if (type === "character") {
+    return `--preview-fur:${item.fur};--preview-ink:${item.kind === "cat" && item.fur === "#29282d" ? "#f7df75" : "#332923"}`;
+  }
+
+  if (type === "background") {
+    return `--preview-bg:${item.sky};--preview-ground:${item.ground}`;
+  }
+
+  return "";
+}
+
+function renderShop() {
+  if (!shopGrid || !currentUser) {
+    return;
+  }
+
+  const catalog = SHOP_CATALOG[shopTab];
+  const ownedItems = getOwnedShopItems(shopTab);
+  const fragment = document.createDocumentFragment();
+  shopGrid.innerHTML = "";
+  shopCoinText.textContent = currentUser.coins || 0;
+  shopHelp.textContent = shopTab === "character"
+    ? "게임에서 사용할 주인공을 골라보세요."
+    : shopTab === "companion"
+      ? "좋은 아이템만 먹는 동료를 왼쪽과 오른쪽에 최대 두 마리 배치할 수 있어요."
+      : "게임 화면의 풍경을 바꿔보세요.";
+
+  Object.entries(catalog).forEach(([itemId, item]) => {
+    const owned = ownedItems.includes(itemId);
+    const card = document.createElement("article");
+    const preview = document.createElement("div");
+    const copy = document.createElement("div");
+    const title = document.createElement("strong");
+    const meta = document.createElement("span");
+    const actions = document.createElement("div");
+    const equipped = shopTab === "companion"
+      ? isShopItemEquipped(shopTab, itemId, "left") || isShopItemEquipped(shopTab, itemId, "right")
+      : isShopItemEquipped(shopTab, itemId);
+
+    card.className = `shop-card${equipped ? " is-equipped" : ""}`;
+    preview.className = `shop-preview ${shopTab}`;
+    preview.style.cssText = getShopPreviewStyle(shopTab, item);
+    if (shopTab === "companion") {
+      preview.textContent = item.symbol;
+    }
+
+    copy.className = "shop-card-copy";
+    title.textContent = item.name;
+    meta.textContent = shopTab === "companion"
+      ? item.buff
+      : item.price > 0 ? `${item.price}코인` : "기본 보유";
+    copy.append(title, meta);
+    actions.className = "shop-card-actions";
+
+    if (!owned) {
+      actions.append(createShopActionButton(
+        `${item.price}코인 구매`,
+        "secondary-button wide",
+        "purchase",
+        shopTab,
+        itemId,
+      ));
+    } else if (shopTab === "companion") {
+      const leftEquipped = isShopItemEquipped(shopTab, itemId, "left");
+      const rightEquipped = isShopItemEquipped(shopTab, itemId, "right");
+      const leftButton = createShopActionButton(leftEquipped ? "왼쪽 적용 중" : "왼쪽 적용", "ghost-button", "equip", shopTab, itemId, "left");
+      const rightButton = createShopActionButton(rightEquipped ? "오른쪽 적용 중" : "오른쪽 적용", "ghost-button", "equip", shopTab, itemId, "right");
+      leftButton.disabled = leftEquipped;
+      rightButton.disabled = rightEquipped;
+      actions.append(leftButton, rightButton);
+    } else {
+      const equipButton = createShopActionButton(
+        equipped ? "적용 중" : "적용하기",
+        equipped ? "ghost-button wide" : "secondary-button wide",
+        "equip",
+        shopTab,
+        itemId,
+      );
+      equipButton.disabled = equipped;
+      actions.append(equipButton);
+    }
+
+    card.append(preview, copy, actions);
+    fragment.append(card);
+  });
+
+  shopGrid.append(fragment);
+}
+
+function setShopTab(type) {
+  if (!SHOP_CATALOG[type]) {
+    return;
+  }
+
+  shopTab = type;
+  shopTabButtons.forEach((button) => {
+    const active = button.dataset.shopTab === type;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  setShopMessage("");
+  renderShop();
+}
+
+async function openShopModal() {
+  if (!currentUser || game.running || game.paused) {
+    return;
+  }
+
+  closeAccountModal();
+  shopModal.hidden = false;
+  setShopMessage("");
+  renderShop();
+
+  try {
+    const data = await requestApi("/api/shop");
+    syncCurrentUser(data.user);
+  } catch (error) {
+    setShopMessage(error.message);
+  }
+}
+
+function closeShopModal() {
+  shopModal.hidden = true;
+  setShopMessage("");
+}
+
+async function handleShopAction(event) {
+  const button = event.target.closest("[data-shop-action]");
+  if (!button || !currentUser) {
+    return;
+  }
+
+  button.disabled = true;
+  setShopMessage("");
+
+  try {
+    const data = await requestApi("/api/shop", {
+      method: "POST",
+      body: {
+        action: button.dataset.shopAction,
+        type: button.dataset.shopType,
+        itemId: button.dataset.shopItem,
+        slot: button.dataset.shopSlot || undefined,
+      },
+    });
+    syncCurrentUser(data.user);
+    game.loadout = CatnyamEngine.normalizeLoadout(currentUser.loadout);
+    if (!game.running && !game.paused) {
+      drawIntro();
+    }
+    setShopMessage(data.message || "상점 설정을 저장했습니다.", true);
+  } catch (error) {
+    setShopMessage(error.message);
+    renderShop();
+  }
 }
 
 function startRankingRefresh() {
@@ -484,11 +734,13 @@ function setAuthMode(mode) {
 
 function showGameFor(user) {
   currentUser = user;
+  game = createGameState(`${currentGameMode}-preview`, currentGameMode, currentUser.loadout);
   authPanel.hidden = true;
   gamePanel.hidden = false;
   profileBox.hidden = false;
   updateProfileName();
   scoreText.textContent = "0";
+  runCoinText.textContent = "0";
   bestText.textContent = currentUser.bestScore || 0;
   changeUsernameForm.reset();
   changeNicknameForm.reset();
@@ -517,6 +769,7 @@ function showAuth() {
   gamePanel.hidden = true;
   profileBox.hidden = true;
   closeAccountModal();
+  closeShopModal();
   closePlayerHistoryModal();
   changeUsernameForm.reset();
   changeNicknameForm.reset();
@@ -802,6 +1055,7 @@ function openAccountModal() {
   setPasswordMessage("");
   setAccountActionMessage("");
   setAdminMessage("");
+  closeShopModal();
   accountModal.hidden = false;
   newUsernameInput.focus();
 }
@@ -1637,17 +1891,19 @@ async function startGame() {
   resetShareStatus();
   currentGameMode = CatnyamEngine.normalizeGameMode(gameSession.gameMode || currentGameMode);
   updateGameModeUI();
-  game = createGameState(gameSession.seed, currentGameMode);
+  game = createGameState(gameSession.seed, currentGameMode, gameSession.loadout || currentUser.loadout);
   game.gameSession = gameSession;
   game.running = true;
   game.paused = false;
   hideGameOverlay();
   scoreText.textContent = "0";
+  runCoinText.textContent = "0";
   updateTimeDisplay();
   clearMovementInput();
   updateModeBadges();
   lastFrame = performance.now();
   animationId = requestAnimationFrame(loop);
+  shopButton.disabled = true;
   startButton.disabled = false;
   pauseRestartButton.disabled = false;
 }
@@ -1664,6 +1920,7 @@ function stopGame() {
   game.running = false;
   game.paused = false;
   pauseButton.hidden = true;
+  shopButton.disabled = false;
   canvasWrap.classList.remove("mode-highlight", "danger-highlight", "catnip-highlight", "reverse-highlight");
   clearMovementInput();
 }
@@ -1710,6 +1967,7 @@ async function submitScore(score) {
       },
     });
     currentUser = data.user;
+    updateProfileName();
     if (lastFinishedSessionId === submittedSessionId) {
       lastFinishedRanking = data.shareRankings || data.shareRanking || null;
     }
@@ -1759,6 +2017,7 @@ function returnToGameHome() {
   resetShareStatus();
   game = createGameState();
   scoreText.textContent = "0";
+  runCoinText.textContent = "0";
   updateTimeDisplay();
   updateModeBadges();
   showGameOverlay("게임 시작");
@@ -1961,6 +2220,13 @@ function handleEngineEvents(events) {
       setCollectedItemReaction("good");
       setCatBubble("하트 +1", 1.1);
       updateModeBadges();
+      return;
+    }
+
+    if (event.type === "coin") {
+      runCoinText.textContent = event.coins;
+      setCollectedItemReaction("good");
+      setCatBubble(`코인 +${event.coinDelta}`, 1.1);
       return;
     }
 
@@ -2254,6 +2520,7 @@ function updateCanvasHighlight() {
 function draw() {
   drawWorld();
   game.drops.forEach(drawChuru);
+  drawCompanions();
   const catReaction = getCatReaction();
   const boxReaction = catReaction === "box" || catReaction === "box-open";
   const drawWidth = boxReaction ? game.cat.width : getCatWidth();
@@ -2333,9 +2600,11 @@ function drawLifeHeart(x, y, size) {
 
 function drawWorld() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const backgroundId = game.loadout?.background || currentUser?.loadout?.background || "village";
+  const background = SHOP_CATALOG.background[backgroundId] || SHOP_CATALOG.background.village;
   const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  sky.addColorStop(0, "#dff5ff");
-  sky.addColorStop(1, "#fff6dc");
+  sky.addColorStop(0, background.sky);
+  sky.addColorStop(1, backgroundId === "alley" ? "#eee8e0" : "#fff6dc");
   ctx.fillStyle = sky;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -2344,7 +2613,48 @@ function drawWorld() {
   drawCloud(740, 128, 0.8);
   drawCloud(450, 70, 0.62);
 
-  ctx.fillStyle = "#8addbd";
+  if (backgroundId === "mountain") {
+    ctx.fillStyle = "rgba(79, 122, 91, 0.38)";
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height - 44);
+    ctx.lineTo(180, 240);
+    ctx.lineTo(350, canvas.height - 44);
+    ctx.lineTo(570, 205);
+    ctx.lineTo(820, canvas.height - 44);
+    ctx.closePath();
+    ctx.fill();
+  } else if (backgroundId === "beach") {
+    ctx.fillStyle = "rgba(70, 184, 220, 0.5)";
+    ctx.fillRect(0, canvas.height - 128, canvas.width, 84);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.82)";
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height - 72);
+    ctx.quadraticCurveTo(220, canvas.height - 91, 430, canvas.height - 69);
+    ctx.quadraticCurveTo(650, canvas.height - 48, canvas.width, canvas.height - 76);
+    ctx.stroke();
+  } else if (backgroundId === "promenade") {
+    ctx.strokeStyle = "rgba(82, 95, 103, 0.34)";
+    ctx.lineWidth = 8;
+    for (let x = 60; x < canvas.width; x += 160) {
+      ctx.beginPath();
+      ctx.moveTo(x, canvas.height - 44);
+      ctx.lineTo(x, canvas.height - 150);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(255, 216, 79, 0.8)";
+      ctx.beginPath();
+      ctx.arc(x, canvas.height - 158, 12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (backgroundId === "alley") {
+    ctx.fillStyle = "rgba(97, 91, 105, 0.18)";
+    ctx.fillRect(0, 190, 170, canvas.height - 234);
+    ctx.fillRect(canvas.width - 190, 140, 190, canvas.height - 184);
+    ctx.fillStyle = "rgba(239, 111, 143, 0.38)";
+    ctx.fillRect(28, 245, 74, 34);
+  }
+
+  ctx.fillStyle = background.ground;
   ctx.fillRect(0, canvas.height - 44, canvas.width, 44);
   ctx.fillStyle = "rgba(37, 33, 29, 0.08)";
   for (let x = 20; x < canvas.width; x += 48) {
@@ -2441,9 +2751,44 @@ function drawChuru(drop) {
     return;
   }
 
+  if (drop.kind === "coin") {
+    drawCoinItem(drop);
+    ctx.restore();
+    return;
+  }
+
   drawChuruPouch(drop);
 
   ctx.restore();
+}
+
+function drawCoinItem(drop) {
+  const radius = Math.min(drop.width, drop.height) / 2;
+  const gradient = ctx.createRadialGradient(-radius * 0.3, -radius * 0.38, 2, 0, 0, radius);
+  gradient.addColorStop(0, "#fff2a3");
+  gradient.addColorStop(0.55, "#ffd84f");
+  gradient.addColorStop(1, "#d69b18");
+
+  ctx.fillStyle = "rgba(255, 216, 79, 0.2)";
+  ctx.beginPath();
+  ctx.arc(0, 0, radius + 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = gradient;
+  ctx.strokeStyle = "#a86f08";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(168, 111, 8, 0.72)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.67, 0, Math.PI * 2);
+  ctx.stroke();
+
+  drawPawMark(0, 1, radius * 1.08, "#a86f08");
 }
 
 function drawPawMark(x, y, scale, color) {
@@ -2917,6 +3262,89 @@ function drawHandItem(drop) {
   ctx.restore();
 }
 
+function drawCompanions() {
+  CatnyamEngine.getCompanionHitboxes(game).forEach((companion) => {
+    drawCompanion(companion.id, companion.x, companion.y, companion.width, companion.height);
+  });
+}
+
+function drawCompanion(id, x, y, width, height) {
+  const palettes = {
+    hamster: { fur: "#d9a36b", accent: "#fff0d8", ear: "#ef9eaa" },
+    chick: { fur: "#ffd84f", accent: "#fff1a3", ear: "#e98a3d" },
+    sparrow: { fur: "#9a765e", accent: "#ead7c5", ear: "#6b4f40" },
+    rabbit: { fur: "#f3eee7", accent: "#ffffff", ear: "#ef9eaa" },
+    mole: { fur: "#655c59", accent: "#948681", ear: "#ef9eaa" },
+  };
+  const palette = palettes[id] || palettes.hamster;
+
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = "rgba(37, 33, 29, 0.12)";
+  ctx.beginPath();
+  ctx.ellipse(0, height * 0.42, width * 0.42, 6, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (id === "rabbit") {
+    ctx.fillStyle = palette.fur;
+    [-1, 1].forEach((side) => {
+      ctx.beginPath();
+      ctx.ellipse(side * width * 0.15, -height * 0.43, width * 0.11, height * 0.35, side * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.fillStyle = palette.ear;
+    [-1, 1].forEach((side) => {
+      ctx.beginPath();
+      ctx.ellipse(side * width * 0.15, -height * 0.43, width * 0.045, height * 0.23, side * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } else if (id === "hamster") {
+    ctx.fillStyle = palette.ear;
+    ctx.beginPath();
+    ctx.arc(-width * 0.27, -height * 0.2, width * 0.13, 0, Math.PI * 2);
+    ctx.arc(width * 0.27, -height * 0.2, width * 0.13, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = palette.fur;
+  ctx.beginPath();
+  ctx.ellipse(0, 2, width * 0.4, height * 0.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (id === "chick" || id === "sparrow") {
+    ctx.fillStyle = palette.accent;
+    ctx.beginPath();
+    ctx.ellipse(0, height * 0.12, width * 0.22, height * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = id === "chick" ? "#e98a3d" : "#6b4f40";
+    ctx.beginPath();
+    ctx.moveTo(0, 2);
+    ctx.lineTo(width * 0.17, height * 0.09);
+    ctx.lineTo(0, height * 0.15);
+    ctx.closePath();
+    ctx.fill();
+  } else {
+    ctx.fillStyle = palette.accent;
+    ctx.beginPath();
+    ctx.ellipse(0, height * 0.12, width * 0.23, height * 0.19, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = id === "mole" ? "#fffaf2" : "#332923";
+  ctx.beginPath();
+  ctx.arc(-width * 0.13, -height * 0.05, 2.6, 0, Math.PI * 2);
+  ctx.arc(width * 0.13, -height * 0.05, 2.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (id !== "chick" && id !== "sparrow") {
+    ctx.fillStyle = id === "mole" ? "#ef9eaa" : "#6c4b3d";
+    ctx.beginPath();
+    ctx.arc(0, height * 0.09, 3.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
   ctx.save();
   ctx.translate(x, y);
@@ -2946,52 +3374,80 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
   ctx.save();
   ctx.rotate(rotation);
 
-  ctx.fillStyle = "#ffcf8a";
+  const characterId = game.loadout?.character || currentUser?.loadout?.character || "calico";
+  const character = SHOP_CATALOG.character[characterId] || SHOP_CATALOG.character.calico;
+  const faceColor = characterId === "black" || characterId === "tuxedo" ? "#fff5cb" : "#332923";
+
+  ctx.fillStyle = character.fur;
   ctx.beginPath();
   ctx.ellipse(0, 6, width * 0.45, height * 0.42, 0, 0, Math.PI * 2);
   ctx.fill();
 
+  if (character.kind === "dog") {
+    ctx.fillStyle = character.accent;
+    ctx.beginPath();
+    ctx.ellipse(-width * 0.36, -height * 0.13, width * 0.14, height * 0.3, -0.22, 0, Math.PI * 2);
+    ctx.ellipse(width * 0.36, -height * 0.13, width * 0.14, height * 0.3, 0.22, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.fillStyle = character.fur;
+    ctx.beginPath();
+    ctx.moveTo(-width * 0.33, -height * 0.22);
+    ctx.lineTo(-width * 0.22, -height * 0.62);
+    ctx.lineTo(-width * 0.07, -height * 0.28);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(width * 0.33, -height * 0.22);
+    ctx.lineTo(width * 0.22, -height * 0.62);
+    ctx.lineTo(width * 0.07, -height * 0.28);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = "#ff9fbe";
+    ctx.beginPath();
+    ctx.moveTo(-width * 0.27, -height * 0.25);
+    ctx.lineTo(-width * 0.22, -height * 0.46);
+    ctx.lineTo(-width * 0.13, -height * 0.26);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(width * 0.27, -height * 0.25);
+    ctx.lineTo(width * 0.22, -height * 0.46);
+    ctx.lineTo(width * 0.13, -height * 0.26);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.fillStyle = character.accent;
   ctx.beginPath();
-  ctx.moveTo(-width * 0.33, -height * 0.22);
-  ctx.lineTo(-width * 0.22, -height * 0.62);
-  ctx.lineTo(-width * 0.07, -height * 0.28);
-  ctx.closePath();
+  ctx.ellipse(-width * 0.18, -height * 0.13, width * 0.12, height * 0.12, -0.35, 0, Math.PI * 2);
+  if (characterId === "calico" || characterId === "beagle" || characterId === "shih_tzu") {
+    ctx.ellipse(width * 0.2, height * 0.13, width * 0.11, height * 0.15, 0.4, 0, Math.PI * 2);
+  }
   ctx.fill();
 
-  ctx.beginPath();
-  ctx.moveTo(width * 0.33, -height * 0.22);
-  ctx.lineTo(width * 0.22, -height * 0.62);
-  ctx.lineTo(width * 0.07, -height * 0.28);
-  ctx.closePath();
-  ctx.fill();
+  if (character.kind === "dog") {
+    ctx.fillStyle = "rgba(255, 250, 242, 0.72)";
+    ctx.beginPath();
+    ctx.ellipse(0, height * 0.08, width * 0.2, height * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
-  ctx.fillStyle = "#ff9fbe";
-  ctx.beginPath();
-  ctx.moveTo(-width * 0.27, -height * 0.25);
-  ctx.lineTo(-width * 0.22, -height * 0.46);
-  ctx.lineTo(-width * 0.13, -height * 0.26);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(width * 0.27, -height * 0.25);
-  ctx.lineTo(width * 0.22, -height * 0.46);
-  ctx.lineTo(width * 0.13, -height * 0.26);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.strokeStyle = "#332923";
+  ctx.strokeStyle = faceColor;
   ctx.lineWidth = 3;
   ctx.lineCap = "round";
 
   if (reaction === "good") {
-    drawHappyEyes(width, height);
-    drawOpenMouth(height, "#ef6f8f");
+    drawHappyEyes(width, height, faceColor);
+    drawOpenMouth(height, "#ef6f8f", faceColor);
   } else if (reaction === "bad") {
-    drawXEyes(width, height);
-    drawOpenMouth(height, "#8ed7f5");
+    drawXEyes(width, height, faceColor);
+    drawOpenMouth(height, "#8ed7f5", faceColor);
   } else {
-    ctx.fillStyle = "#332923";
+    ctx.fillStyle = faceColor;
     ctx.beginPath();
     ctx.arc(-width * 0.16, -height * 0.03, 5, 0, Math.PI * 2);
     ctx.arc(width * 0.16, -height * 0.03, 5, 0, Math.PI * 2);
@@ -3005,7 +3461,7 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
     ctx.stroke();
   }
 
-  ctx.strokeStyle = "rgba(51, 41, 35, 0.72)";
+  ctx.strokeStyle = character.kind === "dog" ? "rgba(51, 41, 35, 0.4)" : faceColor;
   ctx.lineWidth = 2;
   [-1, 1].forEach((side) => {
     ctx.beginPath();
@@ -3081,8 +3537,10 @@ function drawBoxCat(width, height, isOpen = false) {
 
     const pawX = -width * 0.36;
     const pawY = -height * 0.49;
+    const characterId = game.loadout?.character || "calico";
+    const character = SHOP_CATALOG.character[characterId] || SHOP_CATALOG.character.calico;
     const pawOutline = "rgba(119, 72, 42, 0.5)";
-    const pawFur = "#ffcf8a";
+    const pawFur = character.fur;
     ctx.strokeStyle = pawOutline;
     ctx.lineWidth = width * 0.2;
     ctx.lineCap = "butt";
@@ -3240,8 +3698,8 @@ function drawEmphasisBubble(width, height, text) {
   ctx.restore();
 }
 
-function drawHappyEyes(width, height) {
-  ctx.strokeStyle = "#332923";
+function drawHappyEyes(width, height, color = "#332923") {
+  ctx.strokeStyle = color;
   ctx.lineWidth = 4;
   ctx.lineCap = "round";
   ctx.beginPath();
@@ -3252,8 +3710,8 @@ function drawHappyEyes(width, height) {
   ctx.stroke();
 }
 
-function drawXEyes(width, height) {
-  ctx.strokeStyle = "#332923";
+function drawXEyes(width, height, color = "#332923") {
+  ctx.strokeStyle = color;
   ctx.lineWidth = 4;
   ctx.lineCap = "round";
   [-1, 1].forEach((side) => {
@@ -3268,11 +3726,14 @@ function drawXEyes(width, height) {
   });
 }
 
-function drawOpenMouth(height, tongueColor) {
+function drawOpenMouth(height, tongueColor, outlineColor = "#332923") {
   ctx.fillStyle = "#332923";
+  ctx.strokeStyle = outlineColor;
+  ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.ellipse(0, height * 0.12, 12, 14, 0, 0, Math.PI * 2);
   ctx.fill();
+  ctx.stroke();
 
   ctx.fillStyle = tongueColor;
   ctx.beginPath();
@@ -3282,12 +3743,14 @@ function drawOpenMouth(height, tongueColor) {
 
 function drawIntro() {
   drawWorld();
+  drawCompanions();
   drawCat(canvas.width / 2, canvas.height - 84, 104, 74);
   drawBombModeHearts();
 }
 
 function drawFinish() {
   drawWorld();
+  drawCompanions();
   drawCat(game.cat.x, game.cat.y, game.cat.width, game.cat.height, getCatReaction());
   drawBombModeHearts();
 }
@@ -3327,6 +3790,7 @@ function canUseGameHotkey(target) {
   return currentUser
     && !gamePanel.hidden
     && accountModal.hidden
+    && shopModal.hidden
     && playerHistoryModal.hidden
     && !isTypingTarget(target)
     && !isButtonTarget(target);
@@ -3472,12 +3936,23 @@ signupButton.addEventListener("click", () => setAuthMode("signup"));
 loginModeButton.addEventListener("click", () => setAuthMode("login"));
 logoutButton.addEventListener("click", logout);
 profileButton.addEventListener("click", openAccountModal);
+shopButton.addEventListener("click", openShopModal);
 closeAccountModalButton.addEventListener("click", closeAccountModal);
+closeShopModalButton.addEventListener("click", closeShopModal);
 closePlayerHistoryButton.addEventListener("click", closePlayerHistoryModal);
 accountModal.addEventListener("click", (event) => {
   if (event.target === accountModal) {
     closeAccountModal();
   }
+});
+shopModal.addEventListener("click", (event) => {
+  if (event.target === shopModal) {
+    closeShopModal();
+  }
+});
+shopGrid.addEventListener("click", handleShopAction);
+shopTabButtons.forEach((button) => {
+  button.addEventListener("click", () => setShopTab(button.dataset.shopTab));
 });
 playerHistoryModal.addEventListener("click", (event) => {
   if (event.target === playerHistoryModal) {
@@ -3537,6 +4012,11 @@ window.addEventListener("keydown", (event) => {
 
   if (!accountModal.hidden) {
     closeAccountModal();
+    return;
+  }
+
+  if (!shopModal.hidden) {
+    closeShopModal();
   }
 });
 

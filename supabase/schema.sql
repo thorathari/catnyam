@@ -29,6 +29,50 @@ alter table public.users
   alter column nickname set default '',
   alter column nickname set not null;
 
+alter table public.users
+  add column if not exists coins integer not null default 0;
+
+alter table public.users
+  add column if not exists owned_characters jsonb not null default '["calico"]'::jsonb;
+
+alter table public.users
+  add column if not exists owned_companions jsonb not null default '[]'::jsonb;
+
+alter table public.users
+  add column if not exists owned_backgrounds jsonb not null default '["village"]'::jsonb;
+
+alter table public.users
+  add column if not exists equipped_character text not null default 'calico';
+
+alter table public.users
+  add column if not exists equipped_companion_left text;
+
+alter table public.users
+  add column if not exists equipped_companion_right text;
+
+alter table public.users
+  add column if not exists equipped_background text not null default 'village';
+
+update public.users
+set
+  coins = greatest(coalesce(coins, 0), 0),
+  owned_characters = case
+    when owned_characters is null or jsonb_typeof(owned_characters) <> 'array' then '["calico"]'::jsonb
+    when not (owned_characters ? 'calico') then owned_characters || '["calico"]'::jsonb
+    else owned_characters
+  end,
+  owned_companions = case
+    when owned_companions is null or jsonb_typeof(owned_companions) <> 'array' then '[]'::jsonb
+    else owned_companions
+  end,
+  owned_backgrounds = case
+    when owned_backgrounds is null or jsonb_typeof(owned_backgrounds) <> 'array' then '["village"]'::jsonb
+    when not (owned_backgrounds ? 'village') then owned_backgrounds || '["village"]'::jsonb
+    else owned_backgrounds
+  end,
+  equipped_character = coalesce(nullif(equipped_character, ''), 'calico'),
+  equipped_background = coalesce(nullif(equipped_background, ''), 'village');
+
 create table if not exists public.scores (
   id bigint generated always as identity primary key,
   user_id uuid not null references public.users(id) on delete cascade,
@@ -86,6 +130,9 @@ alter table public.game_sessions
 
 alter table public.game_sessions
   add column if not exists game_mode text;
+
+alter table public.game_sessions
+  add column if not exists loadout jsonb;
 
 update public.game_sessions
 set game_mode = 'churu'

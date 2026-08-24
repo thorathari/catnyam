@@ -9,6 +9,7 @@ const {
   sendJson,
   supabaseRequest,
 } = require("../server/db");
+const { getUserLoadout } = require("../server/shop-catalog");
 
 const CHURU_MIN_PLAY_MS = (CatnyamEngine.GAME_SECONDS - 5) * 1000;
 const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
@@ -133,6 +134,11 @@ function isMissingPlaySecondsColumn(error) {
   return /play_seconds/i.test(error.message || "");
 }
 
+function isMissingColumn(error, columnName) {
+  return new RegExp(columnName, "i").test(error.message || "")
+    && /column|schema cache/i.test(error.message || "");
+}
+
 async function insertScore(scoreRow) {
   try {
     await supabaseRequest("scores", {
@@ -157,23 +163,35 @@ async function createGameSession(user, gameMode) {
   const token = crypto.randomBytes(32).toString("base64url");
   const seed = crypto.randomBytes(16).toString("hex");
   const normalizedMode = normalizeGameMode(gameMode);
+  const loadout = getUserLoadout(user);
   const now = Date.now();
+
+  const sessionBody = {
+    id: sessionId,
+    user_id: user.id,
+    token_hash: hashGameToken(token),
+    seed,
+    game_mode: normalizedMode,
+    loadout,
+    started_at: new Date(now).toISOString(),
+    expires_at: new Date(now + SESSION_TTL_MS).toISOString(),
+  };
 
   try {
     await supabaseRequest("game_sessions", {
       method: "POST",
-      body: {
-        id: sessionId,
-        user_id: user.id,
-        token_hash: hashGameToken(token),
-        seed,
-        game_mode: normalizedMode,
-        started_at: new Date(now).toISOString(),
-        expires_at: new Date(now + SESSION_TTL_MS).toISOString(),
-      },
+      body: sessionBody,
     });
   } catch (error) {
-    throw new Error(`게임 세션 저장에 실패했습니다. Supabase SQL Editor에서 supabase/schema.sql을 다시 실행해주세요. (${error.message})`);
+    if (!isMissingColumn(error, "loadout")) {
+      throw new Error(`게임 세션 저장에 실패했습니다. Supabase SQL Editor에서 supabase/schema.sql을 다시 실행해주세요. (${error.message})`);
+    }
+
+    const { loadout: unusedLoadout, ...fallbackBody } = sessionBody;
+    await supabaseRequest("game_sessions", {
+      method: "POST",
+      body: fallbackBody,
+    });
   }
 
   return {
@@ -181,6 +199,7 @@ async function createGameSession(user, gameMode) {
     token,
     seed,
     gameMode: normalizedMode,
+    loadout,
     minSubmitAfterMs: normalizedMode === CatnyamEngine.GAME_MODES.BOMB ? 0 : CHURU_MIN_PLAY_MS,
   };
 }
@@ -247,7 +266,11 @@ async function validateGameSession(user, sessionId, sessionToken, score, inputLo
     return { error: `${sessionGameMode === CatnyamEngine.GAME_MODES.BOMB ? "폭탄피하기" : "츄르먹기"} 플레이 시간이 올바르지 않습니다.` };
   }
 
-  const simulationOptions = { mode: sessionGameMode, steps: submittedSteps };
+  const simulationOptions = {
+    mode: sessionGameMode,
+    steps: submittedSteps,
+    loadout: session.loadout || getUserLoadout(user),
+  };
 
   const simulation = CatnyamEngine.simulateGame(session.seed, inputLog, simulationOptions);
 
@@ -273,6 +296,7 @@ async function validateGameSession(user, sessionId, sessionToken, score, inputLo
 
   return {
     score: simulation.score,
+    coins: Math.max(0, Number(simulation.coins) || 0),
     gameMode: sessionGameMode,
     playSeconds: sessionGameMode === CatnyamEngine.GAME_MODES.BOMB ? Math.max(0, Math.floor(simulation.elapsed || 0)) : null,
   };
@@ -349,14 +373,30 @@ module.exports = async function handler(req, res) {
     });
 
     const bestScore = Math.max(user.best_score || 0, verifiedScore);
-    const updated = await supabaseRequest(`users?id=eq.${encodeURIComponent(user.id)}`, {
-      method: "PATCH",
-      body: {
-        best_score: bestScore,
-        games_played: (user.games_played || 0) + 1,
-        updated_at: new Date().toISOString(),
-      },
-    });
+    const userPatch = {
+      best_score: bestScore,
+      games_played: (user.games_played || 0) + 1,
+      coins: Math.max(0, Number(user.coins) || 0) + validation.coins,
+      updated_at: new Date().toISOString(),
+    };
+    let updated;
+
+    try {
+      updated = await supabaseRequest(`users?id=eq.${encodeURIComponent(user.id)}`, {
+        method: "PATCH",
+        body: userPatch,
+      });
+    } catch (error) {
+      if (!isMissingColumn(error, "coins")) {
+        throw error;
+      }
+
+      const { coins: unusedCoins, ...fallbackPatch } = userPatch;
+      updated = await supabaseRequest(`users?id=eq.${encodeURIComponent(user.id)}`, {
+        method: "PATCH",
+        body: fallbackPatch,
+      });
+    }
 
     let shareRanking = null;
     let shareRankings = {
@@ -385,6 +425,7 @@ module.exports = async function handler(req, res) {
       user: sanitizeUser(updated[0]),
       shareRanking,
       shareRankings,
+      coinsEarned: validation.coins,
     });
   } catch (error) {
     sendJson(res, 500, { message: error.message });

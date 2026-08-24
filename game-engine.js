@@ -49,11 +49,31 @@
   const BOMB_FIRST_SKULL_MAX_SECONDS = 30;
   const BOMB_SKULL_MIN_INTERVAL = 24;
   const BOMB_SKULL_MAX_INTERVAL = 52;
+  const BOMB_FIRST_COIN_MIN_SECONDS = 6;
+  const BOMB_FIRST_COIN_MAX_SECONDS = 18;
+  const BOMB_COIN_MIN_INTERVAL = 12;
+  const BOMB_COIN_MAX_INTERVAL = 28;
   const BOMB_GOLD_WINDOW_SECONDS = 1;
   const SURVIVAL_SCORE_INTERVAL = 0.1;
 
   function normalizeGameMode(mode) {
     return mode === GAME_MODES.BOMB ? GAME_MODES.BOMB : GAME_MODES.CHURU;
+  }
+
+  function normalizeLoadout(loadout = {}) {
+    const companionLeft = loadout.companionLeft || null;
+    const companionRight = loadout.companionRight === companionLeft ? null : loadout.companionRight || null;
+
+    return {
+      character: String(loadout.character || "calico"),
+      companionLeft: companionLeft ? String(companionLeft) : null,
+      companionRight: companionRight ? String(companionRight) : null,
+      background: String(loadout.background || "village"),
+    };
+  }
+
+  function hasCompanion(state, companionId) {
+    return state.loadout.companionLeft === companionId || state.loadout.companionRight === companionId;
   }
 
   function createWindowDropSchedule(rng, windowSeconds, chance) {
@@ -120,6 +140,7 @@
   function createGameState(options = {}) {
     const seed = String(options.seed || "catnyam-local");
     const gameMode = normalizeGameMode(options.mode);
+    const loadout = normalizeLoadout(options.loadout);
     const rng = createRng(seed);
     const churuModeState = gameMode === GAME_MODES.CHURU
       ? {
@@ -130,7 +151,7 @@
       : {};
     const bombModeState = gameMode === GAME_MODES.BOMB
       ? {
-        hearts: BOMB_START_HEARTS,
+        hearts: BOMB_START_HEARTS + (loadout.companionLeft === "mole" || loadout.companionRight === "mole" ? 1 : 0),
         nextDropAt: 0.4,
         nextBombRainAt: BOMB_RAIN_INTERVAL,
         nextSurvivalScoreAt: SURVIVAL_SCORE_INTERVAL,
@@ -142,6 +163,8 @@
           + rng() * (BOMB_FIRST_BOX_MAX_SECONDS - BOMB_FIRST_BOX_MIN_SECONDS),
         nextSkullAt: BOMB_FIRST_SKULL_MIN_SECONDS
           + rng() * (BOMB_FIRST_SKULL_MAX_SECONDS - BOMB_FIRST_SKULL_MIN_SECONDS),
+        nextCoinAt: BOMB_FIRST_COIN_MIN_SECONDS
+          + rng() * (BOMB_FIRST_COIN_MAX_SECONDS - BOMB_FIRST_COIN_MIN_SECONDS),
         bombSpecialSchedules: {
           gold: createWindowDropSchedule(rng, BOMB_GOLD_WINDOW_SECONDS, 1),
         },
@@ -152,9 +175,11 @@
     return {
       seed,
       gameMode,
+      loadout,
       rng,
       step: 0,
       score: 0,
+      coins: 0,
       timeLeft: gameMode === GAME_MODES.BOMB ? Number.POSITIVE_INFINITY : GAME_SECONDS,
       durationSeconds: gameMode === GAME_MODES.BOMB ? Number.POSITIVE_INFINITY : GAME_SECONDS,
       elapsed: 0,
@@ -264,9 +289,10 @@
       ["tuna", canSpawnLimitedDrop(state, "tuna") ? 0.045 : 0],
       ["clipper", canSpawnLimitedDrop(state, "clipper") ? 0.045 : 0],
       ["skull", 0.045],
+      ["coin", 0.055],
       ["bomb", 0.135],
       ["gold", 0.16],
-      ["normal", 0.465],
+      ["normal", 0.41],
     ]);
   }
 
@@ -282,14 +308,15 @@
     const isHeart = kind === "heart";
     const isTimer = kind === "timer";
     const isSkull = kind === "skull";
+    const isCoin = kind === "coin";
 
     noteDropSpawned(state, kind);
     state.drops.push({
       id: state.nextDropId,
       x: options.x ?? 34 + state.rng() * (CANVAS_WIDTH - 68),
       y: options.y ?? -40,
-      width: options.width ?? (isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 44 : isClipper ? 48 : isHeart ? 42 : isTimer ? 42 : isSkull ? 44 : isGold ? 34 : 28),
-      height: options.height ?? (isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 42 : isClipper ? 34 : isHeart ? 38 : isTimer ? 42 : isSkull ? 44 : isGold ? 70 : 60),
+      width: options.width ?? (isBomb ? 42 : isBox ? 46 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 44 : isClipper ? 48 : isHeart ? 42 : isTimer ? 42 : isSkull ? 44 : isCoin ? 40 : isGold ? 34 : 28),
+      height: options.height ?? (isBomb ? 42 : isBox ? 38 : isToy ? 42 : isHand ? 48 : isCatnip ? 46 : isTuna ? 42 : isClipper ? 34 : isHeart ? 38 : isTimer ? 42 : isSkull ? 44 : isCoin ? 40 : isGold ? 70 : 60),
       speed: options.speed ?? 170 + state.rng() * 145 + state.elapsed * 2.3,
       rotation: options.rotation ?? state.rng() * Math.PI,
       spin: (state.rng() - 0.5) * 3,
@@ -422,6 +449,15 @@
       + state.rng() * (BOMB_SKULL_MAX_INTERVAL - BOMB_SKULL_MIN_INTERVAL);
   }
 
+  function spawnBombModeCoinDrop(state) {
+    addDrop(state, "coin", {
+      speed: 150 + state.rng() * 80 + state.elapsed * 0.5,
+      rotation: 0,
+    });
+    state.nextCoinAt = state.elapsed + BOMB_COIN_MIN_INTERVAL
+      + state.rng() * (BOMB_COIN_MAX_INTERVAL - BOMB_COIN_MIN_INTERVAL);
+  }
+
   function spawnBombModeGoldDrop(state) {
     addDrop(state, "gold", {
       speed: 155 + state.rng() * 85 + state.elapsed * 0.75,
@@ -475,6 +511,10 @@
       spawnBombModeSkullDrop(state);
     }
 
+    if (state.elapsed >= state.nextCoinAt) {
+      spawnBombModeCoinDrop(state);
+    }
+
     maybeSpawnBombModeWindowDrop(state, state.bombSpecialSchedules?.gold, spawnBombModeGoldDrop);
 
     while (state.elapsed >= state.nextBombRainAt) {
@@ -516,7 +556,7 @@
       return -3;
     }
 
-    const baseScore = drop.kind === "gold" ? 5 : 2;
+    const baseScore = (drop.kind === "gold" ? 5 : 2) + (hasCompanion(state, "rabbit") ? 1 : 0);
     return baseScore * getScoreMultiplier(state);
   }
 
@@ -533,7 +573,18 @@
   }
 
   function getBombModeItemScore(state, baseScore) {
-    return baseScore * (isCatnipModeActive(state) ? 2 : 1);
+    const companionBonus = hasCompanion(state, "rabbit") ? 1 : 0;
+    return (baseScore + companionBonus) * (isCatnipModeActive(state) ? 2 : 1);
+  }
+
+  function applyCoin(state, events) {
+    const coinDelta = 1 + (hasCompanion(state, "hamster") ? 1 : 0);
+    state.coins += coinDelta;
+    events.push({
+      type: "coin",
+      coinDelta,
+      coins: state.coins,
+    });
   }
 
   function applyModeItem(state, drop, events) {
@@ -563,7 +614,7 @@
 
     if (drop.kind === "tuna") {
       state.modes.tunaUntil = state.elapsed + 5;
-      applyScoreDelta(state, 1, events);
+      applyScoreDelta(state, 1 + (hasCompanion(state, "rabbit") ? 1 : 0), events);
       events.push({ type: "mode", kind: "tuna" });
       return true;
     }
@@ -576,13 +627,19 @@
     }
 
     if (drop.kind === "timer" && state.gameMode === GAME_MODES.CHURU) {
-      state.durationSeconds += CHURU_TIMER_SECONDS;
+      const seconds = CHURU_TIMER_SECONDS + (hasCompanion(state, "chick") ? 1 : 0);
+      state.durationSeconds += seconds;
       state.timeLeft = Math.max(0, state.durationSeconds - state.elapsed);
       events.push({
         type: "time",
-        seconds: CHURU_TIMER_SECONDS,
+        seconds,
         timeLeft: state.timeLeft,
       });
+      return true;
+    }
+
+    if (drop.kind === "coin") {
+      applyCoin(state, events);
       return true;
     }
 
@@ -597,6 +654,10 @@
 
   function isDebuffDrop(drop) {
     return drop.kind === "bomb" || drop.kind === "clipper" || drop.kind === "skull";
+  }
+
+  function isGoodDrop(drop) {
+    return !isDebuffDrop(drop);
   }
 
   function applySurvivalScore(state, events) {
@@ -628,6 +689,11 @@
         type: "heart",
         hearts: state.hearts,
       });
+      return false;
+    }
+
+    if (drop.kind === "coin") {
+      applyCoin(state, events);
       return false;
     }
 
@@ -694,6 +760,56 @@
     return dropRight > catLeft && dropLeft < catRight && dropBottom > catTop && dropTop < catBottom;
   }
 
+  function getCompanionHitboxes(state) {
+    const catWidth = getCatWidth(state);
+    const y = state.cat.y + Math.min(16, getCatHeight(state) * 0.16);
+    const offset = catWidth / 2 + 30;
+    const hitboxes = [];
+
+    if (state.loadout.companionLeft) {
+      hitboxes.push({
+        id: state.loadout.companionLeft,
+        side: "left",
+        x: state.cat.x - offset,
+        y,
+        width: 48,
+        height: 42,
+      });
+    }
+
+    if (state.loadout.companionRight) {
+      hitboxes.push({
+        id: state.loadout.companionRight,
+        side: "right",
+        x: state.cat.x + offset,
+        y,
+        width: 48,
+        height: 42,
+      });
+    }
+
+    return hitboxes;
+  }
+
+  function collidesCompanion(state, drop) {
+    if (!isGoodDrop(drop)) {
+      return false;
+    }
+
+    const dropLeft = drop.x - drop.width / 2;
+    const dropRight = drop.x + drop.width / 2;
+    const dropTop = drop.y - drop.height / 2;
+    const dropBottom = drop.y + drop.height / 2;
+
+    return getCompanionHitboxes(state).some((companion) => {
+      const left = companion.x - companion.width / 2;
+      const right = companion.x + companion.width / 2;
+      const top = companion.y - companion.height / 2;
+      const bottom = companion.y + companion.height / 2;
+      return dropRight > left && dropLeft < right && dropBottom > top && dropTop < bottom;
+    });
+  }
+
   function stepGame(state, direction = 0, delta = STEP_SECONDS) {
     const events = [];
 
@@ -717,7 +833,7 @@
       }
     }
 
-    const speedMultiplier = isSpeedModeActive(state) ? 1.75 : 1;
+    const speedMultiplier = (isSpeedModeActive(state) ? 1.75 : 1) * (hasCompanion(state, "sparrow") ? 1.08 : 1);
     const movementDirection = isSkullModeActive(state) ? -safeDirection : safeDirection;
     state.cat.x += movementDirection * state.cat.speed * speedMultiplier * stepDelta;
     state.cat.x = clamp(state.cat.x, getCatWidth(state) / 2 + 12, CANVAS_WIDTH - getCatWidth(state) / 2 - 12);
@@ -752,17 +868,20 @@
         return isDropVisible(drop);
       }
 
-      if (collides(state, drop)) {
+      const mainCollision = collides(state, drop);
+      const companionCollision = !mainCollision && collidesCompanion(state, drop);
+
+      if (mainCollision || companionCollision) {
         if (state.gameMode === GAME_MODES.BOMB) {
           return handleBombAvoidCollision(state, drop, events);
         }
 
-        if (isCatnipModeActive(state) && isDebuffDrop(drop)) {
+        if (mainCollision && isCatnipModeActive(state) && isDebuffDrop(drop)) {
           knockAwayDrop(state, drop, events);
           return true;
         }
 
-        if (isHideModeActive(state) && isDebuffDrop(drop)) {
+        if (mainCollision && isHideModeActive(state) && isDebuffDrop(drop)) {
           knockAwayDrop(state, drop, events);
           return true;
         }
@@ -828,7 +947,7 @@
       };
     }
 
-    const state = createGameState({ seed, mode: gameMode });
+    const state = createGameState({ seed, mode: gameMode, loadout: options.loadout });
     let direction = 0;
     let logIndex = 0;
 
@@ -874,6 +993,7 @@
       steps: state.step,
       elapsed: state.elapsed,
       hearts: state.hearts,
+      coins: state.coins,
       gameMode: state.gameMode,
     };
   }
@@ -890,6 +1010,7 @@
     CANVAS_HEIGHT,
     createGameState,
     createRng,
+    getCompanionHitboxes,
     getCatHeight,
     getCatWidth,
     getCatScale,
@@ -902,6 +1023,7 @@
     isSpeedModeActive,
     isTunaModeActive,
     normalizeGameMode,
+    normalizeLoadout,
     normalizeInputLog,
     simulateGame,
     stepGame,

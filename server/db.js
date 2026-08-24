@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { getUserInventory, getUserLoadout } = require("./shop-catalog");
 
 const COOKIE_NAME = "catnyam_session";
 const PASSWORD_ITERATIONS = 120000;
@@ -123,6 +124,8 @@ function sanitizeUser(user) {
   }
 
   const nickname = normalizeNickname(user.nickname) || user.username;
+  const inventory = getUserInventory(user);
+  const loadout = getUserLoadout(user);
 
   return {
     id: user.id,
@@ -131,6 +134,9 @@ function sanitizeUser(user) {
     role: user.role,
     bestScore: user.best_score || 0,
     gamesPlayed: user.games_played || 0,
+    coins: Math.max(0, Number(user.coins) || 0),
+    inventory,
+    loadout,
   };
 }
 
