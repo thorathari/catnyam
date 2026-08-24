@@ -3601,14 +3601,6 @@ function getCharacterMotion(reaction) {
     motion.y -= pop * 14;
     motion.scaleX *= 1 + pop * 0.08;
     motion.scaleY *= 1 + pop * 0.12;
-  } else if (reaction === "bad") {
-    const impact = Math.max(0, 1 - reactionAge / 0.58);
-    motion.x += Math.sin(reactionAge * 68) * 8 * impact;
-    motion.rotation += Math.sin(reactionAge * 52) * 0.09 * impact;
-
-    if (isSkullModeActive()) {
-      motion.rotation += Math.sin(time * 8.5) * 0.025;
-    }
   }
 
   return motion;
