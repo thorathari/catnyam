@@ -2036,6 +2036,7 @@ async function submitScore(score) {
         sessionToken: finishedGame.gameSession.token,
         steps: finishedGame.step,
         inputLog: finishedGame.inputLog,
+        coinsEarned: finishedGame.coins,
       },
     });
     currentUser = data.user;

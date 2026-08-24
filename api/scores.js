@@ -16,6 +16,7 @@ const CHURU_MIN_PLAY_MS = (CatnyamEngine.GAME_SECONDS - 5) * 1000;
 const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
 const SUBMIT_CLOCK_SKEW_MS = 3000;
 const MAX_ACCEPTED_SCORE = 500000;
+const MAX_ACCEPTED_COINS = 10000;
 const MAX_SHARE_RANKING_ROWS = 10000;
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
@@ -135,11 +136,6 @@ function isMissingPlaySecondsColumn(error) {
   return /play_seconds/i.test(error.message || "");
 }
 
-function isMissingColumn(error, columnName) {
-  return new RegExp(columnName, "i").test(error.message || "")
-    && /column|schema cache/i.test(error.message || "");
-}
-
 async function insertScore(scoreRow) {
   try {
     await supabaseRequest("scores", {
@@ -205,13 +201,19 @@ async function createGameSession(user, gameMode) {
   };
 }
 
-async function validateGameSession(user, sessionId, sessionToken, score, inputLog, gameMode, steps) {
+async function validateGameSession(user, sessionId, sessionToken, score, coinsEarned, inputLog, gameMode, steps) {
   if (!sessionId || !sessionToken) {
     return { error: "게임 시작 토큰이 필요합니다." };
   }
 
   if (score > MAX_ACCEPTED_SCORE) {
     return { error: "점수 값이 비정상적으로 높습니다." };
+  }
+
+  const submittedCoins = Number(coinsEarned);
+
+  if (!Number.isInteger(submittedCoins) || submittedCoins < 0 || submittedCoins > MAX_ACCEPTED_COINS) {
+    return { error: "획득 코인 값이 올바르지 않습니다." };
   }
 
   const sessions = await supabaseRequest(`game_sessions?id=eq.${encodeURIComponent(sessionId)}&user_id=eq.${encodeURIComponent(user.id)}&select=*&limit=1`, {
@@ -283,6 +285,10 @@ async function validateGameSession(user, sessionId, sessionToken, score, inputLo
     return { error: "점수 검증에 실패했습니다." };
   }
 
+  if (simulation.coins !== submittedCoins) {
+    return { error: "획득 코인 검증에 실패했습니다." };
+  }
+
   const usedSession = await supabaseRequest(`game_sessions?id=eq.${encodeURIComponent(session.id)}&user_id=eq.${encodeURIComponent(user.id)}&submitted_at=is.null`, {
     method: "PATCH",
     body: {
@@ -328,7 +334,14 @@ module.exports = async function handler(req, res) {
     }
 
     const body = await readJson(req);
-    const { action, score, sessionId, sessionToken, inputLog, gameMode, steps } = body;
+    const { action, score, coinsEarned, sessionId, sessionToken, inputLog, gameMode, steps } = body;
+
+    if (!Object.prototype.hasOwnProperty.call(user, "coins")) {
+      sendJson(res, 503, {
+        message: "코인 저장 컬럼이 없습니다. Supabase SQL Editor에서 최신 supabase/schema.sql을 실행해주세요.",
+      });
+      return;
+    }
 
     if (action === "shop") {
       try {
@@ -370,7 +383,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const validation = await validateGameSession(user, sessionId, sessionToken, numericScore, inputLog, gameMode, steps);
+    const validation = await validateGameSession(user, sessionId, sessionToken, numericScore, coinsEarned, inputLog, gameMode, steps);
 
     if (validation.error) {
       sendJson(res, 400, { message: validation.error });
@@ -395,23 +408,13 @@ module.exports = async function handler(req, res) {
       coins: Math.max(0, Number(user.coins) || 0) + validation.coins,
       updated_at: new Date().toISOString(),
     };
-    let updated;
+    const updated = await supabaseRequest(`users?id=eq.${encodeURIComponent(user.id)}`, {
+      method: "PATCH",
+      body: userPatch,
+    });
 
-    try {
-      updated = await supabaseRequest(`users?id=eq.${encodeURIComponent(user.id)}`, {
-        method: "PATCH",
-        body: userPatch,
-      });
-    } catch (error) {
-      if (!isMissingColumn(error, "coins")) {
-        throw error;
-      }
-
-      const { coins: unusedCoins, ...fallbackPatch } = userPatch;
-      updated = await supabaseRequest(`users?id=eq.${encodeURIComponent(user.id)}`, {
-        method: "PATCH",
-        body: fallbackPatch,
-      });
+    if (!updated?.[0] || Number(updated[0].coins) !== userPatch.coins) {
+      throw new Error("획득 코인을 사용자 잔액에 저장하지 못했습니다.");
     }
 
     let shareRanking = null;

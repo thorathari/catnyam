@@ -28,7 +28,7 @@ Vercel에 배포하면 서버 API와 함께 실행됩니다. 로컬 파일로 �
 2. Supabase SQL Editor에서 `supabase/schema.sql` 내용을 실행합니다.
 3. Vercel Project Settings > Environment Variables에 아래 값을 추가합니다.
 
-이미 운영 중인 Supabase 프로젝트에도 닉네임 컬럼을 추가하려면 `supabase/schema.sql` 내용을 다시 실행하면 됩니다.
+이미 운영 중인 Supabase 프로젝트에 닉네임, 코인, 상점 컬럼을 추가하려면 최신 `supabase/schema.sql` 내용을 다시 실행하면 됩니다. SQL은 `if not exists`를 사용하므로 기존 계정과 점수는 유지됩니다.
 
 ```text
 SUPABASE_URL
