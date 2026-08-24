@@ -89,103 +89,51 @@ h2 {
 .profile {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px;
-  border: 2px solid var(--outline);
-  border-radius: 12px;
-  background: #fffdf8;
-  box-shadow: 4px 4px 0 var(--outline);
+  justify-content: flex-end;
+  gap: 7px;
+  min-width: 0;
 }
 
-.profile-button {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  gap: 9px;
+.profile-button,
+.profile-action-button {
+  display: inline-flex;
   align-items: center;
-  max-width: 220px;
-  min-height: 42px;
-  border: 1px solid rgba(56, 51, 44, 0.3);
-  border-radius: 8px;
-  padding: 3px 10px 3px 4px;
+  justify-content: center;
+  min-height: 38px;
+  border: 2px solid var(--outline);
+  border-radius: 999px;
   color: var(--ink);
-  background: #edf8f4;
+  background: #fffdf8;
+  box-shadow: 2px 3px 0 var(--outline);
   font-weight: 900;
 }
 
-.profile-avatar {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 2px solid var(--outline);
-  border-radius: 46% 46% 48% 48%;
-  background: #ffcf8a;
-}
-
-.profile-avatar::before,
-.profile-avatar::after {
-  content: "";
-  position: absolute;
-  top: -4px;
-  width: 12px;
-  height: 12px;
-  border: 2px solid var(--outline);
-  background: #ffcf8a;
-  transform: rotate(45deg);
-}
-
-.profile-avatar::before {
-  left: 2px;
-}
-
-.profile-avatar::after {
-  right: 2px;
-}
-
-.profile-avatar i {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--outline);
-  box-shadow: 9px 0 0 var(--outline);
-  transform: translateX(-4.5px);
-}
-
-.profile-copy {
-  display: grid;
+.profile-button {
+  gap: 7px;
+  max-width: 245px;
   min-width: 0;
-  text-align: left;
+  padding: 0 10px 0 13px;
 }
 
-.profile-copy strong {
-  max-width: 150px;
+#currentUserName {
+  min-width: 0;
   overflow: hidden;
-  font-size: 0.92rem;
-  line-height: 1.15;
+  font-size: 0.84rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.profile-copy small {
-  color: var(--muted);
-  font-size: 0.66rem;
-  font-weight: 800;
-}
-
 .profile-role {
-  min-height: 26px;
-  border: 1px solid #b63d55;
-  border-radius: 6px;
-  padding: 4px 7px;
+  border-radius: 999px;
+  padding: 2px 5px;
   color: #9e2944;
   background: #fff0f3;
-  font-size: 0.68rem;
+  font-size: 0.58rem;
   font-weight: 900;
+  line-height: 1.35;
   white-space: nowrap;
 }
 
-.coin-pill,
 .shop-balance {
   display: inline-flex;
   align-items: center;
@@ -200,44 +148,41 @@ h2 {
   white-space: nowrap;
 }
 
-.coin-pill {
-  min-height: 42px;
-  border: 1px solid rgba(126, 88, 11, 0.4);
-  border-radius: 8px;
-  background: #fff5d7;
+.profile-coin {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-left: 1px solid rgba(56, 51, 44, 0.24);
+  padding-left: 7px;
+  color: #72520d;
+  font-size: 0.74rem;
+  white-space: nowrap;
 }
 
-.coin-label {
-  color: #8a691f;
-  font-size: 0.68rem;
-  font-weight: 900;
+.profile-action-button {
+  padding: 0 13px;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
-.profile-actions {
-  display: flex;
-  gap: 6px;
+.profile-button:hover,
+.profile-action-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 3px 4px 0 var(--outline);
 }
 
-.profile-actions button {
-  min-height: 42px;
-  border-radius: 8px;
-  padding: 0 11px;
-  box-shadow: none;
-  font-size: 0.82rem;
-}
-
-.coin-pill i,
+.profile-coin i,
 .shop-balance i {
   position: relative;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border: 2px solid #b87e0f;
   border-radius: 50%;
   background: #ffd84f;
   box-shadow: inset 0 0 0 2px rgba(255, 250, 242, 0.62);
 }
 
-.coin-pill i::after,
+.profile-coin i::after,
 .shop-balance i::after {
   content: "";
   position: absolute;
@@ -247,8 +192,7 @@ h2 {
 }
 
 .shop-open-button {
-  min-height: 38px;
-  padding: 0 14px;
+  background: #fffaf0;
 }
 
 .auth-panel {
@@ -1393,7 +1337,6 @@ canvas {
   display: grid;
   gap: 4px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-auto-flow: column;
   margin: 0 18px 10px;
   padding: 3px;
   border: 2px solid #4a433a;
@@ -1402,6 +1345,7 @@ canvas {
 }
 
 .shop-tab-list .tab-button {
+  width: 100%;
   min-width: 0;
   min-height: 38px;
   border: 0;
@@ -1475,11 +1419,22 @@ canvas {
 
 .shop-preview.character {
   aspect-ratio: 6 / 5;
-  background-image:
-    url("./assets/character-atlas.png"),
-    linear-gradient(180deg, #a8e7f4 0 62%, #b6df7d 62% 100%);
-  background-position: var(--sprite-x) var(--sprite-y), center;
-  background-size: 400% 400%, cover;
+  background-image: linear-gradient(180deg, #c9f0f6 0 62%, #cfe5a4 62% 100%);
+  background-position: center;
+  background-size: cover;
+}
+
+.shop-preview.character::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-image: url("./assets/character-atlas.png");
+  background-position: var(--sprite-x) var(--sprite-y);
+  background-repeat: no-repeat;
+  background-size: 400% 400%;
+  transform: scale(0.8);
+  transform-origin: center;
 }
 
 .shop-preview.companion {
@@ -1501,6 +1456,7 @@ canvas {
 
 .shop-preview-badge {
   position: absolute;
+  z-index: 1;
   top: 7px;
   left: 7px;
   min-height: 24px;
@@ -2180,47 +2136,31 @@ canvas {
 
   .profile {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 7px;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 6px;
     width: 100%;
     align-items: center;
-    padding: 7px;
   }
 
   .profile-button {
-    grid-column: 1;
-    grid-row: 1;
     width: 100%;
+    max-width: none;
     margin: 0;
+    padding-inline: 9px;
   }
 
   .profile-role {
-    grid-column: 2;
-    grid-row: 1;
-    justify-self: end;
+    font-size: 0.54rem;
   }
 
-  .coin-pill {
-    grid-column: 1;
-    grid-row: 2;
-    justify-self: start;
-  }
-
-  .profile-actions {
-    grid-column: 2;
-    grid-row: 2;
-    justify-self: end;
-  }
-
-  .profile-actions button {
-    min-height: 38px;
-    padding-inline: 9px;
-    font-size: 0.76rem;
+  .profile-action-button {
+    min-height: 36px;
+    padding-inline: 10px;
+    font-size: 0.72rem;
   }
 
   .shop-tab-list {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-auto-flow: column;
     margin-inline: 12px;
   }
 

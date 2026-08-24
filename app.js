@@ -104,20 +104,20 @@ const ctx = canvas.getContext("2d");
 
 const SHOP_CATALOG = {
   character: {
-    gray_scottish: { name: "회색 스코티시 폴드", price: 20, kind: "cat", fur: "#aeb4bd", accent: "#858d99", col: 0, row: 0, face: { x: 0.17, y: -0.28, scale: 0.96 } },
-    white_munchkin: { name: "흰색 먼치킨", price: 20, kind: "cat", fur: "#fffdf7", accent: "#e8e2d8", col: 1, row: 0, face: { x: 0.18, y: -0.27, scale: 0.92 } },
-    siamese: { name: "샴 고양이", price: 20, kind: "cat", fur: "#ead6b0", accent: "#705449", col: 2, row: 0, face: { x: 0.17, y: -0.26, scale: 0.94 } },
-    norwegian_forest: { name: "노르웨이숲", price: 20, kind: "cat", fur: "#9a806c", accent: "#f1e2cf", col: 3, row: 0, face: { x: 0.16, y: -0.25, scale: 1 } },
-    cheese: { name: "치즈냥이", price: 20, kind: "cat", fur: "#f6b85f", accent: "#d98535", col: 0, row: 1, face: { x: 0.17, y: -0.27, scale: 0.94 } },
-    calico: { name: "얼룩냥이", price: 0, kind: "cat", fur: "#ffcf8a", accent: "#69544a", col: 1, row: 1, face: { x: 0.18, y: -0.27, scale: 0.94 } },
-    tuxedo: { name: "턱시도냥이", price: 20, kind: "cat", fur: "#30343b", accent: "#fffaf2", col: 2, row: 1, face: { x: 0.18, y: -0.27, scale: 0.94 } },
-    black: { name: "깜냥이", price: 20, kind: "cat", fur: "#29282d", accent: "#55525d", col: 3, row: 1, face: { x: 0.17, y: -0.25, scale: 0.94 } },
-    maltese: { name: "말티즈", price: 20, kind: "dog", fur: "#fffdf5", accent: "#ddd8cc", col: 0, row: 2, face: { x: 0.13, y: -0.23, scale: 0.9 } },
-    poodle: { name: "푸들", price: 20, kind: "dog", fur: "#a86e47", accent: "#7d4d32", col: 1, row: 2, face: { x: 0.15, y: -0.22, scale: 0.86 } },
-    shih_tzu: { name: "시츄", price: 20, kind: "dog", fur: "#f0dfc6", accent: "#76584b", col: 2, row: 2, face: { x: 0.15, y: -0.21, scale: 0.88 } },
-    pomeranian: { name: "포메라니안", price: 20, kind: "dog", fur: "#e7a858", accent: "#fff0d2", col: 3, row: 2, face: { x: 0.16, y: -0.23, scale: 0.88 } },
-    bichon: { name: "비숑", price: 20, kind: "dog", fur: "#fffdf8", accent: "#e5e1d9", col: 0, row: 3, face: { x: 0.13, y: -0.23, scale: 0.88 } },
-    beagle: { name: "비글", price: 20, kind: "dog", fur: "#e6a25e", accent: "#5b443a", col: 1, row: 3, face: { x: 0.17, y: -0.21, scale: 0.9 } },
+    gray_scottish: { name: "회색 스코티시 폴드", price: 20, kind: "cat", fur: "#aeb4bd", accent: "#858d99", col: 0, row: 0 },
+    white_munchkin: { name: "흰색 먼치킨", price: 20, kind: "cat", fur: "#fffdf7", accent: "#e8e2d8", col: 1, row: 0 },
+    siamese: { name: "샴 고양이", price: 20, kind: "cat", fur: "#ead6b0", accent: "#705449", col: 2, row: 0 },
+    norwegian_forest: { name: "노르웨이숲", price: 20, kind: "cat", fur: "#9a806c", accent: "#f1e2cf", col: 3, row: 0 },
+    cheese: { name: "치즈냥이", price: 20, kind: "cat", fur: "#f6b85f", accent: "#d98535", col: 0, row: 1 },
+    calico: { name: "얼룩냥이", price: 0, kind: "cat", fur: "#ffcf8a", accent: "#69544a", col: 1, row: 1 },
+    tuxedo: { name: "턱시도냥이", price: 20, kind: "cat", fur: "#30343b", accent: "#fffaf2", col: 2, row: 1 },
+    black: { name: "깜냥이", price: 20, kind: "cat", fur: "#29282d", accent: "#55525d", col: 3, row: 1 },
+    maltese: { name: "말티즈", price: 20, kind: "dog", fur: "#fffdf5", accent: "#ddd8cc", col: 0, row: 2 },
+    poodle: { name: "푸들", price: 20, kind: "dog", fur: "#a86e47", accent: "#7d4d32", col: 1, row: 2 },
+    shih_tzu: { name: "시츄", price: 20, kind: "dog", fur: "#f0dfc6", accent: "#76584b", col: 2, row: 2 },
+    pomeranian: { name: "포메라니안", price: 20, kind: "dog", fur: "#e7a858", accent: "#fff0d2", col: 3, row: 2 },
+    bichon: { name: "비숑", price: 20, kind: "dog", fur: "#fffdf8", accent: "#e5e1d9", col: 0, row: 3 },
+    beagle: { name: "비글", price: 20, kind: "dog", fur: "#e6a25e", accent: "#5b443a", col: 1, row: 3 },
   },
   companion: {
     hamster: { name: "햄스터", price: 50, buff: "좋은 아이템 획득 범위 +30%", col: 0, row: 0 },
@@ -137,13 +137,22 @@ const SHOP_CATALOG = {
 
 const ART_ASSETS = {
   character: Object.assign(new Image(), { src: "./assets/character-atlas.png" }),
+  characterHappy: Object.assign(new Image(), { src: "./assets/character-happy-atlas.png" }),
+  characterHurt: Object.assign(new Image(), { src: "./assets/character-hurt-atlas.png" }),
   companion: Object.assign(new Image(), { src: "./assets/companion-atlas.png" }),
   background: Object.assign(new Image(), { src: "./assets/background-atlas.png" }),
   boxPaw: Object.assign(new Image(), { src: "./assets/box-paw-atlas.png" }),
+  boxClosed: Object.assign(new Image(), { src: "./assets/box-closed-atlas.png" }),
+};
+
+const EXPRESSION_ARTWORK = {
+  good: null,
+  bad: null,
 };
 
 Object.values(ART_ASSETS).forEach((image) => {
   image.addEventListener("load", () => {
+    prepareExpressionArtwork();
     if (currentUser && !game.running) {
       drawIntro();
     }
@@ -2738,7 +2747,35 @@ function drawWorld() {
 }
 
 function isArtworkReady(image) {
-  return image.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
+  const width = image?.naturalWidth || image?.width || 0;
+  const height = image?.naturalHeight || image?.height || 0;
+  return width > 0 && height > 0;
+}
+
+function createMaskedArtwork(source, mask) {
+  const canvasElement = document.createElement("canvas");
+  canvasElement.width = source.naturalWidth;
+  canvasElement.height = source.naturalHeight;
+  const canvasContext = canvasElement.getContext("2d");
+  canvasContext.drawImage(source, 0, 0);
+  canvasContext.globalCompositeOperation = "destination-in";
+  canvasContext.drawImage(mask, 0, 0, canvasElement.width, canvasElement.height);
+  canvasContext.globalCompositeOperation = "source-over";
+  return canvasElement;
+}
+
+function prepareExpressionArtwork() {
+  if (!isArtworkReady(ART_ASSETS.character)) {
+    return;
+  }
+
+  if (!EXPRESSION_ARTWORK.good && isArtworkReady(ART_ASSETS.characterHappy)) {
+    EXPRESSION_ARTWORK.good = createMaskedArtwork(ART_ASSETS.characterHappy, ART_ASSETS.character);
+  }
+
+  if (!EXPRESSION_ARTWORK.bad && isArtworkReady(ART_ASSETS.characterHurt)) {
+    EXPRESSION_ARTWORK.bad = createMaskedArtwork(ART_ASSETS.characterHurt, ART_ASSETS.character);
+  }
 }
 
 function drawAtlasCell(image, item, columns, rows, x, y, width, height) {
@@ -2746,8 +2783,10 @@ function drawAtlasCell(image, item, columns, rows, x, y, width, height) {
     return false;
   }
 
-  const sourceWidth = image.naturalWidth / columns;
-  const sourceHeight = image.naturalHeight / rows;
+  const artworkWidth = image.naturalWidth || image.width;
+  const artworkHeight = image.naturalHeight || image.height;
+  const sourceWidth = artworkWidth / columns;
+  const sourceHeight = artworkHeight / rows;
   ctx.drawImage(
     image,
     item.col * sourceWidth,
@@ -3584,13 +3623,18 @@ function applyCharacterMotion(motion, mirrorFacing = false) {
 function drawCharacterArtwork(width, height, rotation, reaction) {
   const characterId = game.loadout?.character || currentUser?.loadout?.character || "calico";
   const character = SHOP_CATALOG.character[characterId] || SHOP_CATALOG.character.calico;
+  const characterArtwork = reaction === "good"
+    ? EXPRESSION_ARTWORK.good || ART_ASSETS.character
+    : reaction === "bad"
+      ? EXPRESSION_ARTWORK.bad || ART_ASSETS.character
+      : ART_ASSETS.character;
 
-  if (!isArtworkReady(ART_ASSETS.character)) {
+  if (!isArtworkReady(characterArtwork)) {
     return false;
   }
 
-  const drawWidth = width * 1.42;
-  const drawHeight = height * 1.62;
+  const drawWidth = width * 1.28;
+  const drawHeight = height * 1.46;
   const drawLeft = -drawWidth / 2;
   const drawTop = height * 0.58 - drawHeight;
 
@@ -3604,7 +3648,7 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
   applyCharacterMotion(motion, true);
   ctx.rotate(rotation);
   drawAtlasCell(
-    ART_ASSETS.character,
+    characterArtwork,
     character,
     4,
     4,
@@ -3613,60 +3657,8 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
     drawWidth,
     drawHeight,
   );
-
-  if (reaction === "good" || reaction === "bad") {
-    drawArtworkReaction(width, height, reaction, character.face);
-  }
   ctx.restore();
   return true;
-}
-
-function drawArtworkReaction(width, height, reaction, face = {}) {
-  const faceScale = Number(face.scale) || 1;
-  const faceX = width * (Number(face.x) || 0.17);
-  const faceY = height * (Number(face.y) || -0.28);
-  const eyeGap = width * 0.075 * faceScale;
-  const markSize = Math.max(4.5, width * 0.055 * faceScale);
-  const outlineWidth = Math.max(5, width * 0.055);
-  const lineWidth = Math.max(2.6, width * 0.027);
-
-  const strokeMarks = (color, widthValue) => {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = widthValue;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.beginPath();
-
-    [-1, 1].forEach((side) => {
-      const eyeX = faceX + side * eyeGap;
-      if (reaction === "bad") {
-        ctx.moveTo(eyeX - markSize, faceY - markSize);
-        ctx.lineTo(eyeX + markSize, faceY + markSize);
-        ctx.moveTo(eyeX + markSize, faceY - markSize);
-        ctx.lineTo(eyeX - markSize, faceY + markSize);
-      } else {
-        ctx.moveTo(eyeX - markSize, faceY + 1);
-        ctx.quadraticCurveTo(eyeX, faceY - markSize, eyeX + markSize, faceY + 1);
-      }
-    });
-    ctx.stroke();
-  };
-
-  strokeMarks("rgba(255, 250, 242, 0.95)", outlineWidth);
-  strokeMarks("#332923", lineWidth);
-
-  ctx.fillStyle = "#332923";
-  ctx.strokeStyle = "rgba(255, 250, 242, 0.95)";
-  ctx.lineWidth = Math.max(3, width * 0.035);
-  ctx.beginPath();
-  ctx.ellipse(faceX, faceY + height * 0.16, markSize * 0.75, markSize, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.stroke();
-
-  ctx.fillStyle = reaction === "bad" ? "#8ed7f5" : "#ef6f8f";
-  ctx.beginPath();
-  ctx.ellipse(faceX, faceY + height * 0.19, markSize * 0.42, markSize * 0.32, 0, 0, Math.PI * 2);
-  ctx.fill();
 }
 
 function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
@@ -3677,7 +3669,10 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
     const motion = getCharacterMotion(reaction);
     ctx.save();
     applyCharacterMotion(motion);
-    if (reaction !== "box-open" || !drawBoxPawArtwork(width, height)) {
+    const renderedBox = reaction === "box-open"
+      ? drawBoxPawArtwork(width, height)
+      : drawClosedBoxArtwork(width, height);
+    if (!renderedBox) {
       drawBoxCat(width, height, reaction === "box-open");
     }
     ctx.restore();
@@ -3832,6 +3827,32 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
   }
 
   ctx.restore();
+}
+
+function drawClosedBoxArtwork(width, height) {
+  const characterId = game.loadout?.character || currentUser?.loadout?.character || "calico";
+  const character = SHOP_CATALOG.character[characterId] || SHOP_CATALOG.character.calico;
+
+  if (!isArtworkReady(ART_ASSETS.boxClosed)) {
+    return false;
+  }
+
+  const drawSize = Math.max(width * 1.28, height * 1.7);
+  const drawBottom = height * 0.54;
+  ctx.fillStyle = "rgba(37, 33, 29, 0.14)";
+  ctx.beginPath();
+  ctx.ellipse(0, height / 2 + 7, width * 0.5, Math.max(7, height * 0.12), 0, 0, Math.PI * 2);
+  ctx.fill();
+  return drawAtlasCell(
+    ART_ASSETS.boxClosed,
+    { col: character.kind === "dog" ? 1 : 0, row: 0 },
+    2,
+    1,
+    -drawSize / 2,
+    drawBottom - drawSize,
+    drawSize,
+    drawSize,
+  );
 }
 
 function drawBoxPawArtwork(width, height) {
