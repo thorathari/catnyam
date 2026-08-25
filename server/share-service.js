@@ -281,16 +281,105 @@ async function getAtlasCell(filePath, item, columns, rows) {
   return image.extract(getAtlasRect(metadata, item, columns, rows));
 }
 
+async function removeConnectedDarkBackground(imageBuffer) {
+  const { data, info } = await sharp(imageBuffer)
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const visited = new Uint8Array(info.width * info.height);
+  const stack = [];
+
+  const isBackground = (pixel) => {
+    const offset = pixel * info.channels;
+    const red = data[offset];
+    const green = data[offset + 1];
+    const blue = data[offset + 2];
+    return Math.max(red, green, blue) <= 24 && Math.max(red, green, blue) - Math.min(red, green, blue) <= 8;
+  };
+  const enqueue = (pixel) => {
+    if (pixel < 0 || pixel >= visited.length || visited[pixel] || !isBackground(pixel)) {
+      return;
+    }
+    visited[pixel] = 1;
+    stack.push(pixel);
+  };
+
+  for (let x = 0; x < info.width; x += 1) {
+    enqueue(x);
+    enqueue((info.height - 1) * info.width + x);
+  }
+  for (let y = 0; y < info.height; y += 1) {
+    enqueue(y * info.width);
+    enqueue(y * info.width + info.width - 1);
+  }
+
+  while (stack.length > 0) {
+    const pixel = stack.pop();
+    const x = pixel % info.width;
+    const offset = pixel * info.channels;
+    data[offset + 3] = 0;
+    if (x > 0) enqueue(pixel - 1);
+    if (x < info.width - 1) enqueue(pixel + 1);
+    enqueue(pixel - info.width);
+    enqueue(pixel + info.width);
+  }
+
+  const labels = new Uint32Array(info.width * info.height);
+  let nextLabel = 0;
+  let largestLabel = 0;
+  let largestSize = 0;
+
+  for (let start = 0; start < labels.length; start += 1) {
+    if (labels[start] || data[start * info.channels + 3] === 0) {
+      continue;
+    }
+
+    nextLabel += 1;
+    labels[start] = nextLabel;
+    stack.push(start);
+    let size = 0;
+
+    while (stack.length > 0) {
+      const pixel = stack.pop();
+      const x = pixel % info.width;
+      size += 1;
+      const neighbors = [pixel - 1, pixel + 1, pixel - info.width, pixel + info.width];
+
+      neighbors.forEach((neighbor, index) => {
+        const crossesRow = (index === 0 && x === 0) || (index === 1 && x === info.width - 1);
+        if (crossesRow || neighbor < 0 || neighbor >= labels.length || labels[neighbor]) {
+          return;
+        }
+        if (data[neighbor * info.channels + 3] > 0) {
+          labels[neighbor] = nextLabel;
+          stack.push(neighbor);
+        }
+      });
+    }
+
+    if (size > largestSize) {
+      largestLabel = nextLabel;
+      largestSize = size;
+    }
+  }
+
+  for (let pixel = 0; pixel < labels.length; pixel += 1) {
+    if (labels[pixel] !== largestLabel) {
+      data[pixel * info.channels + 3] = 0;
+    }
+  }
+
+  return sharp(data, { raw: info }).png().toBuffer();
+}
+
 function getShareCharacterAtlas(item) {
   return item?.atlas === "extra"
     ? {
-      neutralFile: "character-extra-atlas.png",
       happyFile: "character-extra-happy-atlas.png",
       columns: 3,
       rows: 3,
     }
     : {
-      neutralFile: "character-atlas.png",
       happyFile: "character-happy-atlas.png",
       columns: 4,
       rows: 4,
@@ -426,7 +515,6 @@ async function createShareImage(payload) {
   const backgroundAtlas = getShareBackgroundAtlas(backgroundItem);
   const characterAtlas = getShareCharacterAtlas(characterItem);
   const backgroundPath = path.join(__dirname, "..", "assets", backgroundAtlas.file);
-  const characterMaskPath = path.join(__dirname, "..", "assets", characterAtlas.neutralFile);
   const characterHappyPath = path.join(__dirname, "..", "assets", characterAtlas.happyFile);
   const companionPath = path.join(__dirname, "..", "assets", "companion-atlas.png");
   const backgroundCell = await getAtlasCell(
@@ -441,27 +529,13 @@ async function createShareImage(payload) {
     characterAtlas.columns,
     characterAtlas.rows,
   );
-  const characterMaskCell = await getAtlasCell(
-    characterMaskPath,
-    characterItem,
-    characterAtlas.columns,
-    characterAtlas.rows,
-  );
   const backgroundBuffer = await backgroundCell
     .resize(1200, 630, { fit: "cover" })
     .modulate({ brightness: 0.88, saturation: 0.82 })
     .png()
     .toBuffer();
   const characterHappyBuffer = await characterHappyCell.png().toBuffer();
-  const characterHappyMetadata = await sharp(characterHappyBuffer).metadata();
-  const characterMaskBuffer = await characterMaskCell
-    .resize(characterHappyMetadata.width, characterHappyMetadata.height, { fit: "fill" })
-    .png()
-    .toBuffer();
-  const maskedCharacterBuffer = await sharp(characterHappyBuffer)
-    .composite([{ input: characterMaskBuffer, blend: "dest-in" }])
-    .png()
-    .toBuffer();
+  const maskedCharacterBuffer = await removeConnectedDarkBackground(characterHappyBuffer);
   const characterBuffer = await sharp(maskedCharacterBuffer)
     .trim()
     .resize(410, 350, { fit: "inside", withoutEnlargement: false })
