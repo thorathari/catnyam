@@ -3045,6 +3045,53 @@ function refineOpaqueEdge(imageData) {
   }
 }
 
+function addCharacterOutline(imageData, radius = 2) {
+  const { data, width, height } = imageData;
+  const alpha = new Uint8Array(width * height);
+
+  for (let pixel = 0; pixel < alpha.length; pixel += 1) {
+    alpha[pixel] = data[pixel * 4 + 3];
+  }
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const pixel = y * width + x;
+      if (alpha[pixel] > 0) {
+        continue;
+      }
+
+      let nearestDistance = Infinity;
+      for (let offsetY = -radius; offsetY <= radius; offsetY += 1) {
+        for (let offsetX = -radius; offsetX <= radius; offsetX += 1) {
+          const distance = offsetX * offsetX + offsetY * offsetY;
+          if (distance === 0 || distance > radius * radius) {
+            continue;
+          }
+
+          const neighborX = x + offsetX;
+          const neighborY = y + offsetY;
+          if (neighborX < 0 || neighborX >= width || neighborY < 0 || neighborY >= height) {
+            continue;
+          }
+          if (alpha[neighborY * width + neighborX] >= 96) {
+            nearestDistance = Math.min(nearestDistance, distance);
+          }
+        }
+      }
+
+      if (nearestDistance === Infinity) {
+        continue;
+      }
+
+      const offset = pixel * 4;
+      data[offset] = 52;
+      data[offset + 1] = 42;
+      data[offset + 2] = 35;
+      data[offset + 3] = nearestDistance <= 1 ? 255 : 205;
+    }
+  }
+}
+
 function createCharacterFrameArtwork(source, item, columns, rows, removeDarkBackground, darkThreshold) {
   if (!isArtworkReady(source)) {
     return null;
@@ -3071,6 +3118,7 @@ function createCharacterFrameArtwork(source, item, columns, rows, removeDarkBack
   if (removeDarkBackground) {
     refineOpaqueEdge(imageData);
     getOpaqueArtworkBounds(imageData);
+    addCharacterOutline(imageData);
   }
   frameContext.clearRect(0, 0, frame.width, frame.height);
   frameContext.putImageData(imageData, 0, 0);
