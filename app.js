@@ -597,7 +597,7 @@ function isShopItemEquipped(type, itemId, slot = "") {
 function createShopActionButton(label, className, action, type, itemId, slot = "") {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = className;
+  button.className = `${className} shop-${action}-button`;
   button.textContent = label;
   button.dataset.shopAction = action;
   button.dataset.shopType = type;
@@ -4462,6 +4462,7 @@ function bindTouchControl(button, direction) {
   button.addEventListener("lostpointercapture", stop);
   button.addEventListener("selectstart", (event) => event.preventDefault());
   button.addEventListener("contextmenu", (event) => event.preventDefault());
+  button.addEventListener("dragstart", (event) => event.preventDefault());
 }
 
 function getSelectionElement(node) {
