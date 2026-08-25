@@ -3045,7 +3045,7 @@ function refineOpaqueEdge(imageData) {
   }
 }
 
-function addCharacterOutline(imageData, radius = 2) {
+function addCharacterOutline(imageData, radius = 3) {
   const { data, width, height } = imageData;
   const alpha = new Uint8Array(width * height);
 
@@ -3087,7 +3087,7 @@ function addCharacterOutline(imageData, radius = 2) {
       data[offset] = 52;
       data[offset + 1] = 42;
       data[offset + 2] = 35;
-      data[offset + 3] = nearestDistance <= 1 ? 255 : 205;
+      data[offset + 3] = nearestDistance <= 4 ? 255 : 205;
     }
   }
 }
@@ -3925,7 +3925,7 @@ function drawCompanion(id, x, y, width, height) {
   ctx.restore();
 }
 
-function getCharacterMotion(reaction) {
+function getCharacterMotion() {
   const isPreviewAnimating = Boolean(currentUser && !game.running && !game.paused && !gamePanel.hidden);
   const time = isPreviewAnimating ? idleVisualTime : Number(game.elapsed) || 0;
   const isAnimating = (game.running && !game.paused) || isPreviewAnimating;
@@ -3969,18 +3969,6 @@ function getCharacterMotion(reaction) {
     motion.y -= 3 + catnipPulse * 4;
     motion.scaleX *= 1 + catnipPulse * 0.055;
     motion.scaleY *= 1 + catnipPulse * 0.055;
-  }
-
-  const reactionStartedAt = Number(game.reaction?.startedAt);
-  const reactionClock = isPreviewAnimating ? Number(game.elapsed) || 0 : time;
-  const reactionAge = Number.isFinite(reactionStartedAt) ? Math.max(0, reactionClock - reactionStartedAt) : 1;
-
-  if (reaction === "good" || reaction === "box-open") {
-    const progress = Math.min(1, reactionAge / 0.45);
-    const pop = Math.sin(progress * Math.PI);
-    motion.y -= pop * 8;
-    motion.scaleX *= 1 + pop * 0.08;
-    motion.scaleY *= 1 + pop * 0.12;
   }
 
   return motion;
@@ -4028,7 +4016,7 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
   ctx.ellipse(0, height / 2 + 9, width * 0.54, Math.max(8, height * 0.14), 0, 0, Math.PI * 2);
   ctx.fill();
 
-  const motion = getCharacterMotion(reaction);
+  const motion = getCharacterMotion();
   ctx.save();
   applyCharacterMotion(motion, true);
   ctx.rotate(rotation);
@@ -4055,7 +4043,7 @@ function drawCat(x, y, width, height, reaction = "neutral", rotation = 0) {
   ctx.translate(x, y);
 
   if (reaction === "box" || reaction === "box-open") {
-    const motion = getCharacterMotion(reaction);
+    const motion = getCharacterMotion();
     ctx.save();
     applyCharacterMotion(motion);
     const renderedBox = reaction === "box-open"
