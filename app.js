@@ -2899,6 +2899,10 @@ function drawWorld() {
 }
 
 function isArtworkReady(image) {
+  if (image && "complete" in image && !image.complete) {
+    return false;
+  }
+
   const width = image?.naturalWidth || image?.width || 0;
   const height = image?.naturalHeight || image?.height || 0;
   return width > 0 && height > 0;
