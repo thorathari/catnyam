@@ -3616,13 +3616,13 @@ function applyCharacterMotion(motion, mirrorFacing = false) {
 function drawCharacterArtwork(width, height, rotation, reaction) {
   const characterId = game.loadout?.character || currentUser?.loadout?.character || "calico";
   const character = SHOP_CATALOG.character[characterId] || SHOP_CATALOG.character.calico;
-  const characterArtwork = reaction === "good"
-    ? EXPRESSION_ARTWORK.good || ART_ASSETS.character
+  const reactionArtwork = reaction === "good"
+    ? EXPRESSION_ARTWORK.good
     : reaction === "bad"
-      ? EXPRESSION_ARTWORK.bad || ART_ASSETS.character
-      : ART_ASSETS.character;
+      ? EXPRESSION_ARTWORK.bad
+      : null;
 
-  if (!isArtworkReady(characterArtwork)) {
+  if (!isArtworkReady(ART_ASSETS.character)) {
     return false;
   }
 
@@ -3641,7 +3641,7 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
   applyCharacterMotion(motion, true);
   ctx.rotate(rotation);
   drawAtlasCell(
-    characterArtwork,
+    ART_ASSETS.character,
     character,
     4,
     4,
@@ -3650,6 +3650,18 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
     drawWidth,
     drawHeight,
   );
+  if (isArtworkReady(reactionArtwork)) {
+    drawAtlasCell(
+      reactionArtwork,
+      character,
+      4,
+      4,
+      drawLeft,
+      drawTop,
+      drawWidth,
+      drawHeight,
+    );
+  }
   ctx.restore();
   return true;
 }
