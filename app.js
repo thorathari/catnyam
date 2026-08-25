@@ -715,19 +715,19 @@ function drawShopSpritePreview(canvas, type, item) {
       return;
     }
 
-    const padding = 2;
+    const padding = 8;
     const cropX = Math.max(0, bounds.minX - padding);
     const cropY = Math.max(0, bounds.minY - padding);
     const cropWidth = Math.min(sourceWidth, bounds.maxX + padding + 1) - cropX;
     const cropHeight = Math.min(sourceHeight, bounds.maxY + padding + 1) - cropY;
     const context = canvas.getContext("2d");
-    const maxWidth = canvas.width * 0.74;
-    const maxHeight = canvas.height * 0.84;
+    const maxWidth = canvas.width * 0.7;
+    const maxHeight = canvas.height * 0.8;
     const scale = Math.min(maxWidth / cropWidth, maxHeight / cropHeight);
     const drawWidth = cropWidth * scale;
     const drawHeight = cropHeight * scale;
     const drawX = (canvas.width - drawWidth) / 2;
-    const drawY = canvas.height - drawHeight - canvas.height * 0.035;
+    const drawY = canvas.height - drawHeight - canvas.height * 0.05;
     const flip = type === "companion" && (item.col === 1 || item.col === 2) && item.row === 0;
 
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -2927,11 +2927,15 @@ function prepareExpressionArtwork() {
     }
 
     if (!EXPRESSION_ARTWORK.good[atlasId] && isArtworkReady(atlas.happy)) {
-      EXPRESSION_ARTWORK.good[atlasId] = createMaskedArtwork(atlas.happy, atlas.neutral);
+      EXPRESSION_ARTWORK.good[atlasId] = atlasId === "extra"
+        ? atlas.happy
+        : createMaskedArtwork(atlas.happy, atlas.neutral);
     }
 
     if (!EXPRESSION_ARTWORK.bad[atlasId] && isArtworkReady(atlas.hurt)) {
-      EXPRESSION_ARTWORK.bad[atlasId] = createMaskedArtwork(atlas.hurt, atlas.neutral);
+      EXPRESSION_ARTWORK.bad[atlasId] = atlasId === "extra"
+        ? atlas.hurt
+        : createMaskedArtwork(atlas.hurt, atlas.neutral);
     }
   });
 }
@@ -3801,8 +3805,14 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
     return false;
   }
 
-  const drawWidth = width * 1.28;
-  const drawHeight = height * 1.46;
+  const defaultDrawWidth = width * 1.28;
+  const defaultDrawHeight = height * 1.46;
+  const sourceWidth = (atlas.neutral.naturalWidth || atlas.neutral.width) / atlas.columns;
+  const sourceHeight = (atlas.neutral.naturalHeight || atlas.neutral.height) / atlas.rows;
+  const sourceAspect = sourceWidth / sourceHeight;
+  const defaultArea = defaultDrawWidth * defaultDrawHeight;
+  const drawWidth = atlasId === "extra" ? Math.sqrt(defaultArea * sourceAspect) : defaultDrawWidth;
+  const drawHeight = atlasId === "extra" ? drawWidth / sourceAspect : defaultDrawHeight;
   const drawLeft = -drawWidth / 2;
   const drawTop = height * 0.58 - drawHeight;
 
@@ -3815,16 +3825,18 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
   ctx.save();
   applyCharacterMotion(motion, true);
   ctx.rotate(rotation);
-  drawAtlasCell(
-    atlas.neutral,
-    character,
-    atlas.columns,
-    atlas.rows,
-    drawLeft,
-    drawTop,
-    drawWidth,
-    drawHeight,
-  );
+  if (!reactionArtwork || atlasId === "main") {
+    drawAtlasCell(
+      atlas.neutral,
+      character,
+      atlas.columns,
+      atlas.rows,
+      drawLeft,
+      drawTop,
+      drawWidth,
+      drawHeight,
+    );
+  }
   if (isArtworkReady(reactionArtwork)) {
     drawAtlasCell(
       reactionArtwork,

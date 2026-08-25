@@ -500,8 +500,8 @@ async function createShareImage(payload) {
   return sharp(backgroundBuffer)
     .composite([
       { input: createUnderlaySvg(payload), left: 0, top: 0 },
-      ...companionComposites,
       { input: characterBuffer, left: characterLeft, top: characterTop },
+      ...companionComposites,
       { input: createUiSvg(payload), left: 0, top: 0 },
     ])
     .jpeg({ quality: 86, chromaSubsampling: "4:2:0", progressive: false })
