@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/s/:token",
+      "destination": "/api/scores?share=:token"
+    },
+    {
+      "source": "/i/:token",
+      "destination": "/api/scores?shareImage=:token"
+    }
+  ]
+}

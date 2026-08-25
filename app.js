@@ -186,8 +186,6 @@ let rankingRequestInFlight = false;
 let rankingRefreshQueued = false;
 let activePlayerHistoryAccount = null;
 let lastFinishedScore = null;
-let lastFinishedGameMode = null;
-let lastFinishedRanking = null;
 let lastFinishedShareUrls = null;
 let lastFinishedSessionId = null;
 let shopTab = "character";
@@ -447,8 +445,6 @@ function setGameMode(mode) {
 
   currentGameMode = nextMode;
   lastFinishedScore = null;
-  lastFinishedGameMode = null;
-  lastFinishedRanking = null;
   lastFinishedShareUrls = null;
   lastFinishedSessionId = null;
   resetShareStatus();
@@ -1929,8 +1925,6 @@ async function startGame() {
   cancelIdleAnimation();
   stopGame();
   lastFinishedScore = null;
-  lastFinishedGameMode = null;
-  lastFinishedRanking = null;
   lastFinishedShareUrls = null;
   lastFinishedSessionId = null;
   resetShareStatus();
@@ -2003,8 +1997,6 @@ function stopGame() {
 function finishGame() {
   const finalScore = game.score;
   lastFinishedScore = finalScore;
-  lastFinishedGameMode = game.gameMode;
-  lastFinishedRanking = null;
   lastFinishedShareUrls = null;
   lastFinishedSessionId = game.gameSession?.id || null;
   stopGame();
@@ -2048,7 +2040,6 @@ async function submitScore(score) {
     currentUser = data.user;
     updateProfileName();
     if (lastFinishedSessionId === submittedSessionId) {
-      lastFinishedRanking = data.shareRankings || data.shareRanking || null;
       lastFinishedShareUrls = data.shareUrls || null;
     }
     bestText.textContent = currentUser.bestScore || 0;
@@ -2092,8 +2083,6 @@ function resumeGame() {
 function returnToGameHome() {
   stopGame();
   lastFinishedScore = null;
-  lastFinishedGameMode = null;
-  lastFinishedRanking = null;
   lastFinishedShareUrls = null;
   lastFinishedSessionId = null;
   resetShareStatus();
@@ -2152,70 +2141,27 @@ function getSharePageUrl() {
     || SHARE_PAGE_URL;
 }
 
-function getShareModeLabel() {
-  const mode = CatnyamEngine.normalizeGameMode(lastFinishedGameMode || game.gameMode || currentGameMode);
-
-  return mode === CatnyamEngine.GAME_MODES.BOMB ? "폭탄피하기" : "츄르먹기";
-}
-
-function getSelectedShareRanking() {
-  if (!lastFinishedRanking) {
-    return null;
-  }
-
-  if ("daily" in lastFinishedRanking || "allTime" in lastFinishedRanking) {
-    return lastFinishedRanking[rankingMode] || lastFinishedRanking.allTime || lastFinishedRanking.daily || null;
-  }
-
-  return lastFinishedRanking;
-}
-
-function getResultShareText(score) {
-  const nickname = getUserDisplayName(currentUser) || "플레이어";
-  const modeLabel = getShareModeLabel();
-  const ranking = getSelectedShareRanking();
-  const rank = Number(ranking?.rank);
-  const isRankingScore = Number(ranking?.rankingScore) === Number(score);
-  const shouldUseRankingMessage = ranking?.isPersonalBest === true || isRankingScore;
-
-  if (Number.isInteger(rank) && rank > 0 && shouldUseRankingMessage) {
-    const scopeLabel = ranking?.scope === "daily" ? "일일 랭킹" : "전체 랭킹";
-    const rankMessage = ranking.overtakenNickname
-      ? `${ranking.overtakenNickname}님을 제끼고 ${rank}위의 자리를 차지했다냥!`
-      : `${scopeLabel} ${rank}위의 자리를 차지했다냥!`;
-
-    return `Cat Nyam ${modeLabel} 모드로 ${nickname}님이 ${score}점을 달성하여\n${rankMessage}\n지금 당장 츄르 잡으러 가봐라냥!`;
-  }
-
-  return `Cat Nyam ${modeLabel} 모드로 ${nickname}님이 ${score}점을 달성했다냥!\n지금 당장 츄르 잡으러 가봐라냥!`;
-}
-
-function getFullResultShareText(score) {
-  return `${getResultShareText(score)}\n${getSharePageUrl()}`;
-}
-
 function resetShareStatus() {
   shareStatus.textContent = "";
   shareStatus.hidden = true;
 }
 
-async function copyResultShareText(score) {
+async function copyResultShareLink() {
   if (!navigator.clipboard?.writeText) {
     throw new Error("이 브라우저에서는 공유와 복사를 지원하지 않습니다.");
   }
 
-  await navigator.clipboard.writeText(getFullResultShareText(score));
+  await navigator.clipboard.writeText(getSharePageUrl());
 }
 
 async function shareResult() {
-  const score = lastFinishedScore ?? game.score ?? 0;
   shareResultButton.disabled = true;
   shareStatus.hidden = false;
-  shareStatus.textContent = "복사하는 중입니다.";
+  shareStatus.textContent = "링크를 복사하는 중입니다.";
 
   try {
-    await copyResultShareText(score);
-    shareStatus.textContent = "공유 문구가 복사되었습니다.";
+    await copyResultShareLink();
+    shareStatus.textContent = "공유 링크가 복사되었습니다.";
   } catch (error) {
     shareStatus.textContent = error.message || "복사를 완료하지 못했어요.";
   } finally {

@@ -112,6 +112,53 @@ async function getPersonalBestScore(userId, gameMode) {
   return Number(scores?.[0]?.score) || 0;
 }
 
+async function resolveShareReference({ sessionId, scope }) {
+  const sessions = await supabaseRequest(
+    `game_sessions?id=eq.${encodeURIComponent(sessionId)}&submitted_at=not.is.null&select=id,user_id,game_mode,loadout,submitted_score&limit=1`,
+    { prefer: "" },
+  );
+  const session = sessions?.[0];
+
+  if (!session || !Number.isInteger(Number(session.submitted_score))) {
+    return null;
+  }
+
+  const users = await supabaseRequest(`users?id=eq.${encodeURIComponent(session.user_id)}&select=*&limit=1`, {
+    prefer: "",
+  });
+  const user = users?.[0];
+
+  if (!user) {
+    return null;
+  }
+
+  const score = Number(session.submitted_score);
+  const gameMode = normalizeGameMode(session.game_mode);
+  let ranking = null;
+
+  try {
+    ranking = await getShareRanking(user.id, gameMode, scope);
+  } catch (error) {
+    console.warn("Shared result ranking lookup failed:", error);
+  }
+
+  const useRanking = Number(ranking?.rankingScore) === score;
+  const loadout = session.loadout && typeof session.loadout === "object"
+    ? session.loadout
+    : getUserLoadout(user);
+
+  return {
+    nickname: getDisplayName(user),
+    score,
+    gameMode,
+    rank: useRanking ? ranking.rank : null,
+    overtakenNickname: useRanking ? ranking.overtakenNickname : null,
+    scope,
+    character: loadout.character,
+    background: loadout.background,
+  };
+}
+
 function getSessionSecret() {
   const secret = process.env.SESSION_SECRET;
 
@@ -312,7 +359,7 @@ async function validateGameSession(user, sessionId, sessionToken, score, coinsEa
 
 module.exports = async function handler(req, res) {
   try {
-    if (req.method === "GET" && await handleShareRequest(req, res)) {
+    if (req.method === "GET" && await handleShareRequest(req, res, resolveShareReference)) {
       return;
     }
 
@@ -445,16 +492,9 @@ module.exports = async function handler(req, res) {
       console.warn("Share ranking lookup failed:", error);
     }
 
-    const shareLoadout = getUserLoadout(updated[0]);
-    const shareUrlOptions = {
-      user: updated[0],
-      score: verifiedScore,
-      gameMode: validation.gameMode,
-      loadout: shareLoadout,
-    };
     const shareUrls = {
-      daily: createShareUrl({ ...shareUrlOptions, ranking: shareRankings.daily }),
-      allTime: createShareUrl({ ...shareUrlOptions, ranking: shareRankings.allTime }),
+      daily: createShareUrl({ sessionId, scope: "daily" }),
+      allTime: createShareUrl({ sessionId, scope: "allTime" }),
     };
 
     sendJson(res, 200, {

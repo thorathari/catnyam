@@ -10,7 +10,8 @@ const {
 } = require("./shop-catalog");
 
 const SHARE_ORIGIN = "https://catnyam.vercel.app";
-const SHARE_TOKEN_VERSION = 1;
+const LEGACY_SHARE_TOKEN_VERSION = 1;
+const SHORT_SHARE_TOKEN_VERSION = 2;
 const MAX_SHARE_TOKEN_LENGTH = 4096;
 const MAX_SCORE = 500000;
 
@@ -61,12 +62,12 @@ function normalizeSharePayload(value) {
   const character = CATALOG.character[value?.c] ? value.c : DEFAULT_CHARACTER;
   const background = CATALOG.background[value?.b] ? value.b : DEFAULT_BACKGROUND;
 
-  if (value?.v !== SHARE_TOKEN_VERSION || !Number.isInteger(score) || score < 0 || score > MAX_SCORE) {
+  if (value?.v !== LEGACY_SHARE_TOKEN_VERSION || !Number.isInteger(score) || score < 0 || score > MAX_SCORE) {
     return null;
   }
 
   return {
-    version: SHARE_TOKEN_VERSION,
+    version: LEGACY_SHARE_TOKEN_VERSION,
     nickname: cleanText(value.n) || "플레이어",
     score,
     gameMode: mode,
@@ -78,33 +79,90 @@ function normalizeSharePayload(value) {
   };
 }
 
-function createShareToken({ user, score, gameMode, ranking, loadout }) {
-  const numericScore = Number(score);
-  const rank = Number(ranking?.rank);
-  const isRankingScore = Number(ranking?.rankingScore) === numericScore;
-  const useRanking = Number.isInteger(rank)
-    && rank > 0
-    && (ranking?.isPersonalBest === true || isRankingScore);
-  const payload = {
-    v: SHARE_TOKEN_VERSION,
-    n: cleanText(user?.nickname || user?.username) || "플레이어",
-    s: numericScore,
-    m: CatnyamEngine.normalizeGameMode(gameMode),
-    r: useRanking ? rank : null,
-    o: useRanking ? cleanText(ranking?.overtakenNickname) : "",
-    q: ranking?.scope === "daily" ? "daily" : "allTime",
-    c: CATALOG.character[loadout?.character] ? loadout.character : DEFAULT_CHARACTER,
-    b: CATALOG.background[loadout?.background] ? loadout.background : DEFAULT_BACKGROUND,
-  };
-  const encodedPayload = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
-  return `${encodedPayload}.${signPayload(encodedPayload)}`;
+function normalizeResolvedPayload(value) {
+  return normalizeSharePayload({
+    v: LEGACY_SHARE_TOKEN_VERSION,
+    n: value?.nickname,
+    s: value?.score,
+    m: value?.gameMode,
+    r: value?.rank,
+    o: value?.overtakenNickname,
+    q: value?.scope,
+    c: value?.character,
+    b: value?.background,
+  });
 }
 
-function readShareToken(token) {
-  if (!token || token.length > MAX_SHARE_TOKEN_LENGTH) {
+function uuidToBuffer(value) {
+  const hex = String(value || "").replace(/-/g, "").toLowerCase();
+
+  if (!/^[0-9a-f]{32}$/.test(hex)) {
     return null;
   }
 
+  return Buffer.from(hex, "hex");
+}
+
+function bufferToUuid(value) {
+  const hex = value.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+function signReference(encodedReference) {
+  return crypto
+    .createHmac("sha256", getSecret())
+    .update(`catnyam-share-reference:${encodedReference}`)
+    .digest()
+    .subarray(0, 12)
+    .toString("base64url");
+}
+
+function createShareToken({ sessionId, scope = "allTime" }) {
+  const sessionBytes = uuidToBuffer(sessionId);
+
+  if (!sessionBytes) {
+    throw new Error("공유할 게임 세션 ID가 올바르지 않습니다.");
+  }
+
+  const reference = Buffer.concat([
+    Buffer.from([SHORT_SHARE_TOKEN_VERSION, scope === "daily" ? 1 : 0]),
+    sessionBytes,
+  ]).toString("base64url");
+  return `${reference}.${signReference(reference)}`;
+}
+
+function readShortShareToken(token) {
+  const separatorIndex = token.lastIndexOf(".");
+
+  if (separatorIndex <= 0) {
+    return null;
+  }
+
+  const encodedReference = token.slice(0, separatorIndex);
+  const signature = token.slice(separatorIndex + 1);
+
+  if (!safeEqual(signature, signReference(encodedReference))) {
+    return null;
+  }
+
+  try {
+    const reference = Buffer.from(encodedReference, "base64url");
+
+    if (reference.length !== 18 || reference[0] !== SHORT_SHARE_TOKEN_VERSION) {
+      return null;
+    }
+
+    return {
+      type: "reference",
+      sessionId: bufferToUuid(reference.subarray(2)),
+      scope: reference[1] === 1 ? "daily" : "allTime",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function readLegacyShareToken(token) {
   const separatorIndex = token.lastIndexOf(".");
 
   if (separatorIndex <= 0) {
@@ -119,15 +177,23 @@ function readShareToken(token) {
   }
 
   try {
-    return normalizeSharePayload(JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8")));
+    const payload = normalizeSharePayload(JSON.parse(Buffer.from(encodedPayload, "base64url").toString("utf8")));
+    return payload ? { type: "payload", payload } : null;
   } catch {
     return null;
   }
 }
 
+function readShareToken(token) {
+  if (!token || token.length > MAX_SHARE_TOKEN_LENGTH) {
+    return null;
+  }
+
+  return readShortShareToken(token) || readLegacyShareToken(token);
+}
+
 function createShareUrl(options) {
-  const token = createShareToken(options);
-  return `${SHARE_ORIGIN}/api/scores?share=${encodeURIComponent(token)}`;
+  return `${SHARE_ORIGIN}/s/${createShareToken(options)}`;
 }
 
 function getModeLabel(gameMode) {
@@ -207,24 +273,86 @@ function createUnderlaySvg() {
   `);
 }
 
+const PIXEL_GLYPHS = {
+  " ": ["000", "000", "000", "000", "000", "000", "000"],
+  "#": ["01010", "11111", "01010", "01010", "11111", "01010", "01010"],
+  ",": ["000", "000", "000", "000", "000", "010", "100"],
+  "0": ["01110", "10001", "10011", "10101", "11001", "10001", "01110"],
+  "1": ["00100", "01100", "00100", "00100", "00100", "00100", "01110"],
+  "2": ["01110", "10001", "00001", "00010", "00100", "01000", "11111"],
+  "3": ["11110", "00001", "00001", "01110", "00001", "00001", "11110"],
+  "4": ["00010", "00110", "01010", "10010", "11111", "00010", "00010"],
+  "5": ["11111", "10000", "10000", "11110", "00001", "00001", "11110"],
+  "6": ["01110", "10000", "10000", "11110", "10001", "10001", "01110"],
+  "7": ["11111", "00001", "00010", "00100", "01000", "01000", "01000"],
+  "8": ["01110", "10001", "10001", "01110", "10001", "10001", "01110"],
+  "9": ["01110", "10001", "10001", "01111", "00001", "00001", "01110"],
+  A: ["01110", "10001", "10001", "11111", "10001", "10001", "10001"],
+  B: ["11110", "10001", "10001", "11110", "10001", "10001", "11110"],
+  C: ["01111", "10000", "10000", "10000", "10000", "10000", "01111"],
+  D: ["11110", "10001", "10001", "10001", "10001", "10001", "11110"],
+  E: ["11111", "10000", "10000", "11110", "10000", "10000", "11111"],
+  G: ["01111", "10000", "10000", "10111", "10001", "10001", "01110"],
+  H: ["10001", "10001", "10001", "11111", "10001", "10001", "10001"],
+  I: ["11111", "00100", "00100", "00100", "00100", "00100", "11111"],
+  K: ["10001", "10010", "10100", "11000", "10100", "10010", "10001"],
+  M: ["10001", "11011", "10101", "10101", "10001", "10001", "10001"],
+  N: ["10001", "11001", "10101", "10011", "10001", "10001", "10001"],
+  O: ["01110", "10001", "10001", "10001", "10001", "10001", "01110"],
+  P: ["11110", "10001", "10001", "11110", "10000", "10000", "10000"],
+  R: ["11110", "10001", "10001", "11110", "10100", "10010", "10001"],
+  S: ["01111", "10000", "10000", "01110", "00001", "00001", "11110"],
+  T: ["11111", "00100", "00100", "00100", "00100", "00100", "00100"],
+  U: ["10001", "10001", "10001", "10001", "10001", "10001", "01110"],
+  Y: ["10001", "10001", "01010", "00100", "00100", "00100", "00100"],
+};
+
+function getPixelTextWidth(text, scale) {
+  const glyphWidths = Array.from(text, (character) => (PIXEL_GLYPHS[character] || PIXEL_GLYPHS[" "])[0].length * scale);
+  return glyphWidths.reduce((total, width) => total + width, 0) + Math.max(0, glyphWidths.length - 1) * scale;
+}
+
+function renderPixelText(text, x, y, scale, color, align = "left") {
+  const normalizedText = String(text || "").toUpperCase();
+  const totalWidth = getPixelTextWidth(normalizedText, scale);
+  let cursorX = align === "center" ? x - totalWidth / 2 : align === "right" ? x - totalWidth : x;
+  const pixelRadius = Math.max(0.4, scale * 0.1);
+  const markup = [];
+
+  Array.from(normalizedText).forEach((character) => {
+    const pattern = PIXEL_GLYPHS[character] || PIXEL_GLYPHS[" "];
+
+    pattern.forEach((row, rowIndex) => {
+      Array.from(row).forEach((pixel, columnIndex) => {
+        if (pixel === "1") {
+          markup.push(`<rect x="${cursorX + columnIndex * scale}" y="${y + rowIndex * scale}" width="${scale}" height="${scale}" rx="${pixelRadius}" fill="${color}"/>`);
+        }
+      });
+    });
+    cursorX += (pattern[0].length + 1) * scale;
+  });
+
+  return markup.join("");
+}
+
 function createUiSvg(payload) {
   const modeText = payload.gameMode === CatnyamEngine.GAME_MODES.BOMB ? "BOMB DODGE" : "CHURU CATCH";
   const rankMarkup = payload.rank
-    ? `<rect x="920" y="42" width="232" height="82" rx="18" fill="#fffaf0" stroke="#3b372f" stroke-width="4"/>
-       <text x="1036" y="94" text-anchor="middle" font-family="Arial, sans-serif" font-size="32" font-weight="900" fill="#2c2925">RANK #${payload.rank}</text>`
+    ? `<rect x="876" y="42" width="276" height="82" rx="18" fill="#fffaf0" stroke="#3b372f" stroke-width="4"/>
+       ${renderPixelText(`RANK #${payload.rank}`, 1014, 69, 4, "#2c2925", "center")}`
     : "";
   const formattedScore = payload.score.toLocaleString("en-US");
 
   return Buffer.from(`
     <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
-      <rect x="46" y="42" width="326" height="118" rx="22" fill="#fffaf0" stroke="#3b372f" stroke-width="4"/>
-      <text x="72" y="96" font-family="Arial, sans-serif" font-size="42" font-weight="900" fill="#2c2925">CAT NYAM</text>
-      <text x="73" y="135" font-family="Arial, sans-serif" font-size="21" font-weight="800" fill="#e95e83">${modeText}</text>
+      <rect x="46" y="42" width="390" height="118" rx="22" fill="#fffaf0" stroke="#3b372f" stroke-width="4"/>
+      ${renderPixelText("CAT NYAM", 72, 66, 6, "#2c2925")}
+      ${renderPixelText(modeText, 73, 126, 3, "#e95e83")}
       ${rankMarkup}
       <rect x="805" y="438" width="347" height="146" rx="25" fill="#fffaf0" stroke="#3b372f" stroke-width="5"/>
-      <text x="838" y="482" font-family="Arial, sans-serif" font-size="22" font-weight="800" fill="#70685e">SCORE</text>
-      <text x="978" y="548" text-anchor="middle" font-family="Arial, sans-serif" font-size="61" font-weight="900" fill="#ef5f85">${formattedScore}</text>
-      <text x="1122" y="558" text-anchor="end" font-family="Arial, sans-serif" font-size="18" font-weight="800" fill="#70685e">POINTS</text>
+      ${renderPixelText("SCORE", 838, 467, 3, "#70685e")}
+      ${renderPixelText("POINTS", 1122, 467, 2, "#70685e", "right")}
+      ${renderPixelText(formattedScore, 978, 506, 8, "#ef5f85", "center")}
     </svg>
   `);
 }
@@ -281,8 +409,8 @@ function sendInvalidShare(res) {
 
 function sendSharePage(res, token, payload) {
   const copy = getShareCopy(payload);
-  const shareUrl = `${SHARE_ORIGIN}/api/scores?share=${encodeURIComponent(token)}`;
-  const imageUrl = `${SHARE_ORIGIN}/api/scores?shareImage=${encodeURIComponent(token)}`;
+  const shareUrl = `${SHARE_ORIGIN}/s/${token}`;
+  const imageUrl = `${SHARE_ORIGIN}/i/${token}`;
   const title = escapeHtml(copy.headline);
   const description = escapeHtml(copy.description);
   const message = escapeHtml(copy.message).replace(/\n/g, "<br>");
@@ -336,7 +464,7 @@ function sendSharePage(res, token, payload) {
   res.end(html);
 }
 
-async function handleShareRequest(req, res) {
+async function handleShareRequest(req, res, resolveShareReference) {
   if (req.method !== "GET") {
     return false;
   }
@@ -349,7 +477,16 @@ async function handleShareRequest(req, res) {
     return false;
   }
 
-  const payload = readShareToken(token);
+  const shareData = readShareToken(token);
+
+  if (!shareData) {
+    sendInvalidShare(res);
+    return true;
+  }
+
+  const payload = shareData.type === "payload"
+    ? shareData.payload
+    : normalizeResolvedPayload(await resolveShareReference?.(shareData));
 
   if (!payload) {
     sendInvalidShare(res);
