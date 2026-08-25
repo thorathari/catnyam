@@ -434,19 +434,23 @@ async function createShareImage(payload) {
   const companionComposites = [];
 
   for (const companion of getShareCompanionLayout(payload)) {
-    const companionItem = CATALOG.companion[companion.id];
-    const companionCell = await getAtlasCell(companionPath, companionItem, 3, 2);
-    const companionBuffer = await companionCell
-      .trim()
-      .resize(150, 145, { fit: "inside", withoutEnlargement: false })
-      .png()
-      .toBuffer();
-    const companionMetadata = await sharp(companionBuffer).metadata();
-    companionComposites.push({
-      input: companionBuffer,
-      left: Math.round(companion.centerX - companionMetadata.width / 2),
-      top: Math.round(companion.baselineY - companionMetadata.height),
-    });
+    try {
+      const companionItem = CATALOG.companion[companion.id];
+      const companionCell = await getAtlasCell(companionPath, companionItem, 3, 2);
+      const companionBuffer = await companionCell
+        .trim()
+        .resize(150, 145, { fit: "inside", withoutEnlargement: false })
+        .png()
+        .toBuffer();
+      const companionMetadata = await sharp(companionBuffer).metadata();
+      companionComposites.push({
+        input: companionBuffer,
+        left: Math.round(companion.centerX - companionMetadata.width / 2),
+        top: Math.round(companion.baselineY - companionMetadata.height),
+      });
+    } catch (error) {
+      console.warn(`Shared companion artwork skipped (${companion.id}):`, error.message);
+    }
   }
 
   return sharp(backgroundBuffer)
@@ -456,6 +460,27 @@ async function createShareImage(payload) {
       { input: characterBuffer, left: characterLeft, top: characterTop },
       { input: createUiSvg(payload), left: 0, top: 0 },
     ])
+    .jpeg({ quality: 86, chromaSubsampling: "4:2:0", progressive: false })
+    .toBuffer();
+}
+
+function createFallbackShareImage(payload) {
+  const scene = Buffer.from(`
+    <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="630" fill="#dff5ff"/>
+      <rect y="390" width="1200" height="240" fill="#cfe5a4"/>
+      <ellipse cx="170" cy="145" rx="92" ry="32" fill="#ffffff" opacity="0.82"/>
+      <ellipse cx="980" cy="210" rx="116" ry="38" fill="#ffffff" opacity="0.76"/>
+      <circle cx="600" cy="415" r="110" fill="#fff8e9" stroke="#3b372f" stroke-width="7"/>
+      <path d="M535 385 L565 330 L595 386 M605 386 L640 330 L670 390" fill="#efb16c" stroke="#3b372f" stroke-width="7" stroke-linejoin="round"/>
+      <circle cx="565" cy="416" r="10" fill="#3b372f"/>
+      <circle cx="635" cy="416" r="10" fill="#3b372f"/>
+      <path d="M580 454 Q600 470 620 454" fill="none" stroke="#3b372f" stroke-width="7" stroke-linecap="round"/>
+    </svg>
+  `);
+
+  return sharp(scene)
+    .composite([{ input: createUiSvg(payload), left: 0, top: 0 }])
     .jpeg({ quality: 86, chromaSubsampling: "4:2:0", progressive: false })
     .toBuffer();
 }
@@ -470,7 +495,8 @@ function sendInvalidShare(res) {
 function sendSharePage(res, token, payload) {
   const copy = getShareCopy(payload);
   const shareUrl = `${SHARE_ORIGIN}/s/${token}`;
-  const imageUrl = `${SHARE_ORIGIN}/i/${createShareImageToken(payload)}/result.jpg`;
+  const imageToken = createShareImageToken(payload);
+  const imageUrl = `${SHARE_ORIGIN}/api/scores?shareImage=${encodeURIComponent(imageToken)}`;
   const title = escapeHtml(copy.headline);
   const description = escapeHtml(copy.description);
   const message = escapeHtml(copy.message).replace(/\n/g, "<br>");
@@ -498,6 +524,7 @@ function sendSharePage(res, token, payload) {
   <meta name="twitter:description" content="${description}">
   <meta name="twitter:image" content="${escapeHtml(imageUrl)}">
   <link rel="canonical" href="${escapeHtml(shareUrl)}">
+  <script>window.location.replace("${SHARE_ORIGIN}/");</script>
   <style>
     * { box-sizing: border-box; }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; color: #2c2925; background: #fff7e8; font-family: Arial, sans-serif; }
@@ -505,7 +532,6 @@ function sendSharePage(res, token, payload) {
     img { display: block; width: 100%; border: 3px solid #3b372f; border-radius: 8px; }
     h1 { margin: 22px 0 10px; font-size: 24px; }
     p { margin: 0 0 22px; line-height: 1.7; }
-    a { display: inline-block; padding: 13px 22px; border: 2px solid #3b372f; border-radius: 7px; color: white; background: #ef5f85; font-weight: 800; text-decoration: none; }
   </style>
 </head>
 <body>
@@ -513,7 +539,6 @@ function sendSharePage(res, token, payload) {
     <img src="${escapeHtml(imageUrl)}" alt="Cat Nyam 게임 결과">
     <h1>Cat Nyam 게임 결과</h1>
     <p>${message}</p>
-    <a href="${SHARE_ORIGIN}/">게임하러 가기</a>
   </main>
 </body>
 </html>`;
@@ -554,7 +579,15 @@ async function handleShareRequest(req, res, resolveShareReference) {
   }
 
   if (imageToken) {
-    const image = await createShareImage(payload);
+    let image;
+
+    try {
+      image = await createShareImage(payload);
+    } catch (error) {
+      console.warn("Shared result artwork failed; using fallback:", error.message);
+      image = await createFallbackShareImage(payload);
+    }
+
     res.statusCode = 200;
     res.setHeader("Content-Type", "image/jpeg");
     res.setHeader("Content-Length", image.length);

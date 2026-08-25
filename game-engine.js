@@ -31,13 +31,12 @@
   const CHURU_FIRST_TIMER_MAX_SECONDS = 30;
   const CHURU_TIMER_MIN_INTERVAL = 25;
   const CHURU_TIMER_MAX_INTERVAL = 55;
-  const CHURU_COIN_WINDOWS = [
-    [8, 15],
-    [28, 35],
-    [48, 53],
-  ];
-  const CHURU_COIN_MIN_INTERVAL = 25;
-  const CHURU_COIN_MAX_INTERVAL = 55;
+  const CHURU_COIN_MIN_COUNT = 2;
+  const CHURU_COIN_MAX_COUNT = 5;
+  const CHURU_COIN_WINDOW_START = 6;
+  const CHURU_COIN_WINDOW_END = 52;
+  const CHURU_COIN_EXTRA_MIN_INTERVAL = 8;
+  const CHURU_COIN_EXTRA_MAX_INTERVAL = 30;
   const BOMB_START_HEARTS = 3;
   const BOMB_RAIN_INTERVAL = 15;
   const BOMB_FIRST_HEART_MIN_SECONDS = 8;
@@ -90,6 +89,18 @@
       chance,
       dropAt: rng() < chance ? rng() * windowSeconds : null,
     };
+  }
+
+  function createChuruCoinSchedule(rng) {
+    const count = CHURU_COIN_MIN_COUNT
+      + Math.floor(rng() * (CHURU_COIN_MAX_COUNT - CHURU_COIN_MIN_COUNT + 1));
+    const slotSeconds = (CHURU_COIN_WINDOW_END - CHURU_COIN_WINDOW_START) / count;
+
+    return Array.from({ length: count }, (_, index) => {
+      const slotStart = CHURU_COIN_WINDOW_START + slotSeconds * index;
+      const slotEnd = CHURU_COIN_WINDOW_START + slotSeconds * (index + 1) - 3;
+      return slotStart + rng() * Math.max(1, slotEnd - slotStart);
+    });
   }
 
   function advanceWindowDropSchedule(state, schedule) {
@@ -149,14 +160,15 @@
     const gameMode = normalizeGameMode(options.mode);
     const loadout = normalizeLoadout(options.loadout);
     const rng = createRng(seed);
+    const churuCoinSchedule = gameMode === GAME_MODES.CHURU ? createChuruCoinSchedule(rng) : [];
     const churuModeState = gameMode === GAME_MODES.CHURU
       ? {
         durationSeconds: GAME_SECONDS,
         nextTimerAt: CHURU_FIRST_TIMER_MIN_SECONDS
           + rng() * (CHURU_FIRST_TIMER_MAX_SECONDS - CHURU_FIRST_TIMER_MIN_SECONDS),
         churuCoinWindowIndex: 0,
-        nextCoinAt: CHURU_COIN_WINDOWS[0][0]
-          + rng() * (CHURU_COIN_WINDOWS[0][1] - CHURU_COIN_WINDOWS[0][0]),
+        churuCoinSchedule,
+        nextCoinAt: churuCoinSchedule[0],
       }
       : {};
     const bombModeState = gameMode === GAME_MODES.BOMB
@@ -428,11 +440,10 @@
       rotation: 0,
     });
     state.churuCoinWindowIndex += 1;
-    const nextWindow = CHURU_COIN_WINDOWS[state.churuCoinWindowIndex];
-    state.nextCoinAt = nextWindow
-      ? nextWindow[0] + state.rng() * (nextWindow[1] - nextWindow[0])
-      : state.elapsed + CHURU_COIN_MIN_INTERVAL
-        + state.rng() * (CHURU_COIN_MAX_INTERVAL - CHURU_COIN_MIN_INTERVAL);
+    const nextScheduledDrop = state.churuCoinSchedule[state.churuCoinWindowIndex];
+    state.nextCoinAt = nextScheduledDrop ?? Math.max(GAME_SECONDS, state.elapsed)
+      + CHURU_COIN_EXTRA_MIN_INTERVAL
+      + state.rng() * (CHURU_COIN_EXTRA_MAX_INTERVAL - CHURU_COIN_EXTRA_MIN_INTERVAL);
   }
 
   function spawnHeartDrop(state) {
