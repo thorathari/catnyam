@@ -1449,11 +1449,25 @@ canvas {
 
 .shop-preview.companion {
   aspect-ratio: 1 / 1;
-  background-image:
-    url("./assets/companion-atlas.png"),
-    linear-gradient(180deg, #d8f3ff 0 64%, #dbe9a6 64% 100%);
-  background-position: var(--sprite-x) var(--sprite-y), center;
-  background-size: 300% 200%, cover;
+  background-image: linear-gradient(180deg, #d8f3ff 0 64%, #dbe9a6 64% 100%);
+  background-position: center;
+  background-size: cover;
+}
+
+.shop-preview.companion::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("./assets/companion-atlas.png");
+  background-position: var(--sprite-x) var(--sprite-y);
+  background-repeat: no-repeat;
+  background-size: 300% 200%;
+  transform-origin: center;
+}
+
+.shop-preview.companion[data-shop-item="chick"]::before,
+.shop-preview.companion[data-shop-item="sparrow"]::before {
+  transform: scaleX(-1);
 }
 
 .shop-preview.background {
