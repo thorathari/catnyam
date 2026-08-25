@@ -244,7 +244,7 @@
   }
 
   function getCatScale(state) {
-    return isCatnipModeActive(state) ? 1.65 : 1;
+    return isCatnipModeActive(state) ? 1.4 : 1;
   }
 
   function getCatWidth(state) {

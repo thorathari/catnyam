@@ -3448,9 +3448,10 @@ function drawCompanions() {
   const facing = syncVisualFacing();
 
   CatnyamEngine.getCompanionHitboxes(game).forEach((companion) => {
+    const companionFacing = companion.id === "chick" || companion.id === "sparrow" ? -facing : facing;
     ctx.save();
     ctx.translate(companion.x, companion.y);
-    ctx.scale(facing, 1);
+    ctx.scale(companionFacing, 1);
     drawCompanion(companion.id, 0, 0, companion.width * visualScale, companion.height * visualScale);
     ctx.restore();
   });
