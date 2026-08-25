@@ -210,6 +210,7 @@ Object.values(ART_ASSETS).forEach((image) => {
 });
 
 const REMEMBER_LOGIN_KEY = "catnyam_auto_login";
+const ADSENSE_CLIENT_ID = "ca-pub-1434022792706022";
 const SHARE_PAGE_URL = "https://catnyam.vercel.app/";
 const RANKING_REFRESH_MS = 15000;
 const keys = new Set();
@@ -275,6 +276,19 @@ async function requestApi(path, options = {}) {
   }
 
   return data;
+}
+
+function loadAdsense() {
+  if (document.querySelector("#adsenseScript")) {
+    return;
+  }
+
+  const script = document.createElement("script");
+  script.id = "adsenseScript";
+  script.async = true;
+  script.crossOrigin = "anonymous";
+  script.src = `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT_ID}`;
+  document.head.append(script);
 }
 
 function getCurrentLoadout() {
@@ -992,6 +1006,7 @@ function showGameFor(user) {
   showGameOverlay("게임 시작");
   drawIntro();
   startIdleAnimation();
+  loadAdsense();
 }
 
 function showAuth() {
@@ -1093,6 +1108,10 @@ async function logout() {
   }
 
   clearRememberedLogin();
+  if (document.querySelector("#adsenseScript")) {
+    window.location.reload();
+    return;
+  }
   showAuth();
 }
 
