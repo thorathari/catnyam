@@ -2897,10 +2897,6 @@ function drawWorld() {
 
   ctx.fillStyle = "#8addbd";
   ctx.fillRect(0, canvas.height - 44, canvas.width, 44);
-  ctx.fillStyle = "rgba(37, 33, 29, 0.08)";
-  for (let x = 20; x < canvas.width; x += 48) {
-    ctx.fillRect(x, canvas.height - 37, 18, 6);
-  }
 }
 
 function isArtworkReady(image) {
@@ -2985,15 +2981,6 @@ function drawBackgroundArtwork(background) {
   wash.addColorStop(1, "rgba(255, 250, 242, 0.4)");
   ctx.fillStyle = wash;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.strokeStyle = "rgba(37, 33, 29, 0.18)";
-  ctx.lineWidth = 5;
-  ctx.setLineDash([20, 24]);
-  ctx.beginPath();
-  ctx.moveTo(0, canvas.height - 32);
-  ctx.lineTo(canvas.width, canvas.height - 32);
-  ctx.stroke();
-  ctx.setLineDash([]);
   return true;
 }
 
