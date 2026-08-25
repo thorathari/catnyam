@@ -280,15 +280,8 @@ async function requireAdmin(req, res) {
   return user;
 }
 
-function generateTemporaryPassword() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  const bytes = crypto.randomBytes(10);
-  return Array.from(bytes, (byte) => chars[byte % chars.length]).join("");
-}
-
 module.exports = {
   clearSessionCookie,
-  generateTemporaryPassword,
   getUserById,
   getUserByUsername,
   hashPassword,

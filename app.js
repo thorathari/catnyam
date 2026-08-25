@@ -1745,7 +1745,7 @@ async function resetAccountPassword(userId, username) {
       method: "POST",
       body: { userId },
     });
-    setAdminMessage(`${username} 임시 비밀번호: ${data.temporaryPassword}`, true);
+    setAdminMessage(`${username} 비밀번호를 ${data.resetPassword}로 초기화했습니다.`, true);
     renderAdminList();
   } catch (error) {
     setAdminMessage(error.message);

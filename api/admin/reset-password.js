@@ -1,5 +1,4 @@
 const {
-  generateTemporaryPassword,
   getUserById,
   hashPassword,
   readJson,
@@ -8,6 +7,8 @@ const {
   sendJson,
   supabaseRequest,
 } = require("../../server/db");
+
+const RESET_PASSWORD = "1234";
 
 module.exports = async function handler(req, res) {
   try {
@@ -24,8 +25,7 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const temporaryPassword = generateTemporaryPassword();
-    const { salt, hash } = hashPassword(temporaryPassword);
+    const { salt, hash } = hashPassword(RESET_PASSWORD);
 
     await supabaseRequest(`users?id=eq.${encodeURIComponent(user.id)}`, {
       method: "PATCH",
@@ -36,7 +36,7 @@ module.exports = async function handler(req, res) {
       },
     });
 
-    sendJson(res, 200, { temporaryPassword });
+    sendJson(res, 200, { resetPassword: RESET_PASSWORD });
   } catch (error) {
     sendJson(res, 500, { message: error.message });
   }
