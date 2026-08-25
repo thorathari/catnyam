@@ -3431,9 +3431,28 @@ function drawHandItem(drop) {
   ctx.restore();
 }
 
+function getActiveMovementDirection() {
+  const inputDirection = game.running && !game.paused ? getMovementDirection() : 0;
+  return isSkullModeActive() ? -inputDirection : inputDirection;
+}
+
+function syncVisualFacing(direction = getActiveMovementDirection()) {
+  if (direction) {
+    game.visualFacing = Math.sign(direction);
+  }
+  return game.visualFacing || 1;
+}
+
 function drawCompanions() {
+  const visualScale = 0.75;
+  const facing = syncVisualFacing();
+
   CatnyamEngine.getCompanionHitboxes(game).forEach((companion) => {
-    drawCompanion(companion.id, companion.x, companion.y, companion.width, companion.height);
+    ctx.save();
+    ctx.translate(companion.x, companion.y);
+    ctx.scale(facing, 1);
+    drawCompanion(companion.id, 0, 0, companion.width * visualScale, companion.height * visualScale);
+    ctx.restore();
   });
 }
 
@@ -3546,8 +3565,7 @@ function getCharacterMotion(reaction) {
   const isPreviewAnimating = Boolean(currentUser && !game.running && !game.paused && !gamePanel.hidden);
   const time = isPreviewAnimating ? idleVisualTime : Number(game.elapsed) || 0;
   const isAnimating = (game.running && !game.paused) || isPreviewAnimating;
-  const inputDirection = game.running && !game.paused ? getMovementDirection() : 0;
-  const direction = isSkullModeActive() ? -inputDirection : inputDirection;
+  const direction = getActiveMovementDirection();
   const moving = Math.abs(direction) > 0;
   const speedCadence = isSpeedModeActive() ? 16 : 10.5;
   const stepWave = Math.sin(time * speedCadence);
@@ -3558,13 +3576,8 @@ function getCharacterMotion(reaction) {
     rotation: 0,
     scaleX: 1,
     scaleY: 1,
-    facing: game.visualFacing || 1,
+    facing: syncVisualFacing(direction),
   };
-
-  if (moving) {
-    game.visualFacing = Math.sign(direction);
-    motion.facing = game.visualFacing;
-  }
 
   if (isAnimating && moving && !isCatnipModeActive()) {
     const stepLift = Math.abs(stepWave);
@@ -3601,7 +3614,7 @@ function getCharacterMotion(reaction) {
   if (reaction === "good" || reaction === "box-open") {
     const progress = Math.min(1, reactionAge / 0.45);
     const pop = Math.sin(progress * Math.PI);
-    motion.y -= pop * 14;
+    motion.y -= pop * 8;
     motion.scaleX *= 1 + pop * 0.08;
     motion.scaleY *= 1 + pop * 0.12;
   }
