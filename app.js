@@ -149,6 +149,7 @@ const EXPRESSION_ARTWORK = {
   good: null,
   bad: null,
 };
+const SHOP_PREVIEW_ARTWORK_CACHE = new Map();
 
 Object.values(ART_ASSETS).forEach((image) => {
   image.addEventListener("load", () => {
@@ -558,19 +559,150 @@ function createShopActionButton(label, className, action, type, itemId, slot = "
 }
 
 function getShopPreviewStyle(type, item) {
-  if (type === "character") {
-    return `--sprite-x:${(item.col / 3) * 100}%;--sprite-y:${(item.row / 3) * 100}%`;
-  }
-
-  if (type === "companion") {
-    return `--sprite-x:${(item.col / 2) * 100}%;--sprite-y:${item.row * 100}%`;
-  }
-
   if (type === "background") {
     return `--sprite-x:${item.col * 100}%;--sprite-y:${(item.row / 2) * 100}%`;
   }
 
   return "";
+}
+
+function getOpaqueArtworkBounds(imageData) {
+  const { data, width, height } = imageData;
+  const labels = new Uint16Array(width * height);
+  let largest = null;
+  let label = 0;
+
+  for (let start = 0; start < labels.length; start += 1) {
+    if (labels[start] || data[start * 4 + 3] < 8) {
+      continue;
+    }
+
+    label += 1;
+    const stack = [start];
+    labels[start] = label;
+    let count = 0;
+    let minX = width;
+    let minY = height;
+    let maxX = 0;
+    let maxY = 0;
+
+    while (stack.length > 0) {
+      const pixel = stack.pop();
+      const x = pixel % width;
+      const y = Math.floor(pixel / width);
+      count += 1;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+
+      const neighbors = [pixel - 1, pixel + 1, pixel - width, pixel + width];
+      neighbors.forEach((neighbor, index) => {
+        const crossesRow = (index === 0 && x === 0) || (index === 1 && x === width - 1);
+        if (crossesRow || neighbor < 0 || neighbor >= labels.length || labels[neighbor]) {
+          return;
+        }
+
+        if (data[neighbor * 4 + 3] >= 8) {
+          labels[neighbor] = label;
+          stack.push(neighbor);
+        }
+      });
+    }
+
+    if (!largest || count > largest.count) {
+      largest = { label, count, minX, minY, maxX, maxY };
+    }
+  }
+
+  if (largest) {
+    for (let pixel = 0; pixel < labels.length; pixel += 1) {
+      if (labels[pixel] !== largest.label) {
+        data[pixel * 4 + 3] = 0;
+      }
+    }
+  }
+
+  return largest;
+}
+
+function drawShopSpritePreview(canvas, type, item) {
+  const image = type === "character" ? ART_ASSETS.character : ART_ASSETS.companion;
+  const columns = type === "character" ? 4 : 3;
+  const rows = type === "character" ? 4 : 2;
+  const draw = () => {
+    if (!isArtworkReady(image)) {
+      return;
+    }
+
+    const cacheKey = `${type}:${item.col}:${item.row}`;
+    let artwork = SHOP_PREVIEW_ARTWORK_CACHE.get(cacheKey);
+    if (!artwork) {
+      const sourceX = Math.floor((item.col * image.naturalWidth) / columns);
+      const sourceY = Math.floor((item.row * image.naturalHeight) / rows);
+      const sourceRight = Math.floor(((item.col + 1) * image.naturalWidth) / columns);
+      const sourceBottom = Math.floor(((item.row + 1) * image.naturalHeight) / rows);
+      const sourceWidth = sourceRight - sourceX;
+      const sourceHeight = sourceBottom - sourceY;
+      const sourceCanvas = document.createElement("canvas");
+      const sourceContext = sourceCanvas.getContext("2d", { willReadFrequently: true });
+      sourceCanvas.width = sourceWidth;
+      sourceCanvas.height = sourceHeight;
+      sourceContext.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
+      const imageData = sourceContext.getImageData(0, 0, sourceWidth, sourceHeight);
+      const bounds = getOpaqueArtworkBounds(imageData);
+      if (bounds) {
+        sourceContext.putImageData(imageData, 0, 0);
+        artwork = { sourceCanvas, sourceWidth, sourceHeight, bounds };
+        SHOP_PREVIEW_ARTWORK_CACHE.set(cacheKey, artwork);
+      }
+    }
+
+    const { sourceCanvas, sourceWidth, sourceHeight, bounds } = artwork || {};
+    if (!bounds) {
+      return;
+    }
+
+    const padding = 2;
+    const cropX = Math.max(0, bounds.minX - padding);
+    const cropY = Math.max(0, bounds.minY - padding);
+    const cropWidth = Math.min(sourceWidth, bounds.maxX + padding + 1) - cropX;
+    const cropHeight = Math.min(sourceHeight, bounds.maxY + padding + 1) - cropY;
+    const context = canvas.getContext("2d");
+    const maxWidth = canvas.width * 0.74;
+    const maxHeight = canvas.height * 0.84;
+    const scale = Math.min(maxWidth / cropWidth, maxHeight / cropHeight);
+    const drawWidth = cropWidth * scale;
+    const drawHeight = cropHeight * scale;
+    const drawX = (canvas.width - drawWidth) / 2;
+    const drawY = canvas.height - drawHeight - canvas.height * 0.035;
+    const flip = type === "companion" && (item.col === 1 || item.col === 2) && item.row === 0;
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.save();
+    if (flip) {
+      context.translate(canvas.width, 0);
+      context.scale(-1, 1);
+    }
+    context.drawImage(
+      sourceCanvas,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
+      flip ? canvas.width - drawX - drawWidth : drawX,
+      drawY,
+      drawWidth,
+      drawHeight,
+    );
+    context.restore();
+  };
+
+  if (isArtworkReady(image)) {
+    draw();
+  } else {
+    image.addEventListener("load", draw, { once: true });
+  }
 }
 
 function renderShop() {
@@ -608,6 +740,14 @@ function renderShop() {
     preview.dataset.shopItem = itemId;
     preview.style.cssText = getShopPreviewStyle(shopTab, item);
     preview.setAttribute("aria-label", `${item.name} 미리보기`);
+    if (shopTab === "character" || shopTab === "companion") {
+      const artworkCanvas = document.createElement("canvas");
+      artworkCanvas.className = "shop-preview-artwork";
+      artworkCanvas.width = 360;
+      artworkCanvas.height = 300;
+      preview.append(artworkCanvas);
+      drawShopSpritePreview(artworkCanvas, shopTab, item);
+    }
     badge.className = `shop-preview-badge${equipped ? " equipped" : owned ? " owned" : ""}`;
     badge.textContent = equipped
       ? "사용 중"
@@ -637,10 +777,8 @@ function renderShop() {
     } else if (shopTab === "companion") {
       const leftEquipped = isShopItemEquipped(shopTab, itemId, "left");
       const rightEquipped = isShopItemEquipped(shopTab, itemId, "right");
-      const leftButton = createShopActionButton(leftEquipped ? "왼쪽 적용 중" : "왼쪽 적용", "ghost-button", "equip", shopTab, itemId, "left");
-      const rightButton = createShopActionButton(rightEquipped ? "오른쪽 적용 중" : "오른쪽 적용", "ghost-button", "equip", shopTab, itemId, "right");
-      leftButton.disabled = leftEquipped;
-      rightButton.disabled = rightEquipped;
+      const leftButton = createShopActionButton(leftEquipped ? "왼쪽 해제" : "왼쪽 적용", leftEquipped ? "secondary-button" : "ghost-button", leftEquipped ? "unequip" : "equip", shopTab, itemId, "left");
+      const rightButton = createShopActionButton(rightEquipped ? "오른쪽 해제" : "오른쪽 적용", rightEquipped ? "secondary-button" : "ghost-button", rightEquipped ? "unequip" : "equip", shopTab, itemId, "right");
       actions.append(leftButton, rightButton);
     } else {
       const equipButton = createShopActionButton(

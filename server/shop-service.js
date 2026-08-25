@@ -65,7 +65,7 @@ async function processShopAction(user, body = {}) {
     return { user: sanitizeUser(updated), message: `${item.name} 구매 완료!` };
   }
 
-  if (shopAction !== "equip") {
+  if (shopAction !== "equip" && shopAction !== "unequip") {
     throw shopError("상점 요청이 올바르지 않습니다.");
   }
 
@@ -75,6 +75,23 @@ async function processShopAction(user, body = {}) {
 
   const loadout = getUserLoadout(user);
   let patch;
+
+  if (shopAction === "unequip") {
+    if (type !== "companion" || (slot !== "left" && slot !== "right")) {
+      throw shopError("해제할 동료 위치가 올바르지 않습니다.");
+    }
+
+    const equippedItem = slot === "left" ? loadout.companionLeft : loadout.companionRight;
+    if (equippedItem !== itemId) {
+      throw shopError("해당 위치에 적용된 동료가 아닙니다.");
+    }
+
+    patch = slot === "left"
+      ? { equipped_companion_left: null }
+      : { equipped_companion_right: null };
+    const updated = await updateUser(user.id, patch);
+    return { user: sanitizeUser(updated), message: `${item.name} 적용 해제!` };
+  }
 
   if (type === "character") {
     patch = { equipped_character: itemId };

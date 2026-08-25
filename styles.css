@@ -1430,44 +1430,26 @@ canvas {
 }
 
 .shop-preview.character::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background-image: url("./assets/character-atlas.png");
-  background-position: var(--sprite-x) var(--sprite-y);
-  background-repeat: no-repeat;
-  background-size: 400% 400%;
-  transform: scale(0.8);
-  transform-origin: center;
+  content: none;
 }
 
-.shop-preview.character[data-shop-item="siamese"]::before,
-.shop-preview.character[data-shop-item="shih_tzu"]::before {
-  clip-path: inset(0 10% 0 0);
+.shop-preview-artwork {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .shop-preview.companion {
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 6 / 5;
   background-image: linear-gradient(180deg, #d8f3ff 0 64%, #dbe9a6 64% 100%);
   background-position: center;
   background-size: cover;
 }
 
 .shop-preview.companion::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: url("./assets/companion-atlas.png");
-  background-position: var(--sprite-x) var(--sprite-y);
-  background-repeat: no-repeat;
-  background-size: 300% 200%;
-  transform-origin: center;
-}
-
-.shop-preview.companion[data-shop-item="chick"]::before,
-.shop-preview.companion[data-shop-item="sparrow"]::before {
-  transform: scaleX(-1);
+  content: none;
 }
 
 .shop-preview.background {
