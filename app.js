@@ -199,6 +199,7 @@ const CHARACTER_FRAME_ARTWORK = {
   good: {},
   bad: {},
 };
+const DARK_FUR_CHARACTER_IDS = new Set(["black", "tuxedo", "calico"]);
 const SHOP_PREVIEW_ARTWORK_CACHE = new Map();
 
 Object.values(ART_ASSETS).forEach((image) => {
@@ -2947,7 +2948,7 @@ function isArtworkReady(image) {
   return width > 0 && height > 0;
 }
 
-function removeConnectedDarkBackground(imageData) {
+function removeConnectedDarkBackground(imageData, darkThreshold = 24) {
   const { data, width, height } = imageData;
   const visited = new Uint8Array(width * height);
   const stack = [];
@@ -2956,7 +2957,8 @@ function removeConnectedDarkBackground(imageData) {
     const red = data[offset];
     const green = data[offset + 1];
     const blue = data[offset + 2];
-    return Math.max(red, green, blue) <= 24 && Math.max(red, green, blue) - Math.min(red, green, blue) <= 8;
+    return Math.max(red, green, blue) <= darkThreshold
+      && Math.max(red, green, blue) - Math.min(red, green, blue) <= 12;
   };
   const enqueue = (pixel) => {
     if (pixel < 0 || pixel >= visited.length || visited[pixel] || !isBackground(pixel)) {
@@ -2986,7 +2988,64 @@ function removeConnectedDarkBackground(imageData) {
   }
 }
 
-function createCharacterFrameArtwork(source, item, columns, rows, removeDarkBackground) {
+function refineOpaqueEdge(imageData) {
+  const { data, width, height } = imageData;
+  const opaque = new Uint8Array(width * height);
+  const eroded = new Uint8Array(width * height);
+
+  for (let pixel = 0; pixel < opaque.length; pixel += 1) {
+    opaque[pixel] = data[pixel * 4 + 3] > 0 ? 1 : 0;
+  }
+
+  for (let y = 1; y < height - 1; y += 1) {
+    for (let x = 1; x < width - 1; x += 1) {
+      const pixel = y * width + x;
+      if (!opaque[pixel]) {
+        continue;
+      }
+
+      let surrounded = true;
+      for (let offsetY = -1; offsetY <= 1 && surrounded; offsetY += 1) {
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          if (!opaque[(y + offsetY) * width + x + offsetX]) {
+            surrounded = false;
+            break;
+          }
+        }
+      }
+      eroded[pixel] = surrounded ? 1 : 0;
+    }
+  }
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const pixel = y * width + x;
+      const alphaOffset = pixel * 4 + 3;
+      if (!eroded[pixel]) {
+        data[alphaOffset] = 0;
+        continue;
+      }
+
+      let boundary = false;
+      for (let offsetY = -1; offsetY <= 1 && !boundary; offsetY += 1) {
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          const neighborX = x + offsetX;
+          const neighborY = y + offsetY;
+          if (neighborX < 0 || neighborX >= width || neighborY < 0 || neighborY >= height
+            || !eroded[neighborY * width + neighborX]) {
+            boundary = true;
+            break;
+          }
+        }
+      }
+      if (boundary) {
+        data[alphaOffset] = Math.min(data[alphaOffset], 200);
+      }
+    }
+  }
+}
+
+function createCharacterFrameArtwork(source, item, columns, rows, removeDarkBackground, darkThreshold) {
   if (!isArtworkReady(source)) {
     return null;
   }
@@ -3005,10 +3064,14 @@ function createCharacterFrameArtwork(source, item, columns, rows, removeDarkBack
   const imageData = frameContext.getImageData(0, 0, frame.width, frame.height);
 
   if (removeDarkBackground) {
-    removeConnectedDarkBackground(imageData);
+    removeConnectedDarkBackground(imageData, darkThreshold);
   }
 
   getOpaqueArtworkBounds(imageData);
+  if (removeDarkBackground) {
+    refineOpaqueEdge(imageData);
+    getOpaqueArtworkBounds(imageData);
+  }
   frameContext.clearRect(0, 0, frame.width, frame.height);
   frameContext.putImageData(imageData, 0, 0);
   return frame;
@@ -3018,6 +3081,7 @@ function prepareCharacterFrameArtwork() {
   Object.entries(SHOP_CATALOG.character).forEach(([characterId, character]) => {
     const atlasId = character.atlas === "extra" ? "extra" : "main";
     const atlas = CHARACTER_ATLASES[atlasId];
+    const darkThreshold = DARK_FUR_CHARACTER_IDS.has(characterId) ? 24 : 72;
     const frames = [
       ["neutral", atlas.neutral, false],
       ["good", atlas.happy, atlasId === "main"],
@@ -3032,6 +3096,7 @@ function prepareCharacterFrameArtwork() {
           atlas.columns,
           atlas.rows,
           removeDarkBackground,
+          darkThreshold,
         );
       }
     });

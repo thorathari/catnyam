@@ -12,6 +12,7 @@ const {
 const SHARE_ORIGIN = "https://catnyam.vercel.app";
 const LEGACY_SHARE_TOKEN_VERSION = 1;
 const SHORT_SHARE_TOKEN_VERSION = 2;
+const SHARE_IMAGE_REVISION = 2;
 const MAX_SHARE_TOKEN_LENGTH = 4096;
 const MAX_SCORE = 500000;
 
@@ -140,6 +141,7 @@ function createShareToken({ sessionId, scope = "allTime" }) {
 function createShareImageToken(payload) {
   const encodedPayload = Buffer.from(JSON.stringify({
     v: LEGACY_SHARE_TOKEN_VERSION,
+    g: SHARE_IMAGE_REVISION,
     n: payload.nickname,
     s: payload.score,
     m: payload.gameMode,
@@ -281,7 +283,111 @@ async function getAtlasCell(filePath, item, columns, rows) {
   return image.extract(getAtlasRect(metadata, item, columns, rows));
 }
 
-async function removeConnectedDarkBackground(imageBuffer) {
+function keepLargestOpaqueComponent(data, width, height, channels) {
+  const labels = new Uint32Array(width * height);
+  const stack = [];
+  let nextLabel = 0;
+  let largestLabel = 0;
+  let largestSize = 0;
+
+  for (let start = 0; start < labels.length; start += 1) {
+    if (labels[start] || data[start * channels + 3] === 0) {
+      continue;
+    }
+
+    nextLabel += 1;
+    labels[start] = nextLabel;
+    stack.push(start);
+    let size = 0;
+
+    while (stack.length > 0) {
+      const pixel = stack.pop();
+      const x = pixel % width;
+      size += 1;
+      const neighbors = [pixel - 1, pixel + 1, pixel - width, pixel + width];
+
+      neighbors.forEach((neighbor, index) => {
+        const crossesRow = (index === 0 && x === 0) || (index === 1 && x === width - 1);
+        if (crossesRow || neighbor < 0 || neighbor >= labels.length || labels[neighbor]) {
+          return;
+        }
+        if (data[neighbor * channels + 3] > 0) {
+          labels[neighbor] = nextLabel;
+          stack.push(neighbor);
+        }
+      });
+    }
+
+    if (size > largestSize) {
+      largestLabel = nextLabel;
+      largestSize = size;
+    }
+  }
+
+  for (let pixel = 0; pixel < labels.length; pixel += 1) {
+    if (labels[pixel] !== largestLabel) {
+      data[pixel * channels + 3] = 0;
+    }
+  }
+}
+
+function refineOpaqueEdge(data, width, height, channels) {
+  const opaque = new Uint8Array(width * height);
+  const eroded = new Uint8Array(width * height);
+
+  for (let pixel = 0; pixel < opaque.length; pixel += 1) {
+    opaque[pixel] = data[pixel * channels + 3] > 0 ? 1 : 0;
+  }
+
+  for (let y = 1; y < height - 1; y += 1) {
+    for (let x = 1; x < width - 1; x += 1) {
+      const pixel = y * width + x;
+      if (!opaque[pixel]) {
+        continue;
+      }
+
+      let surrounded = true;
+      for (let offsetY = -1; offsetY <= 1 && surrounded; offsetY += 1) {
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          if (!opaque[(y + offsetY) * width + x + offsetX]) {
+            surrounded = false;
+            break;
+          }
+        }
+      }
+      eroded[pixel] = surrounded ? 1 : 0;
+    }
+  }
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const pixel = y * width + x;
+      const alphaOffset = pixel * channels + 3;
+      if (!eroded[pixel]) {
+        data[alphaOffset] = 0;
+        continue;
+      }
+
+      let boundary = false;
+      for (let offsetY = -1; offsetY <= 1 && !boundary; offsetY += 1) {
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          const neighborX = x + offsetX;
+          const neighborY = y + offsetY;
+          if (neighborX < 0 || neighborX >= width || neighborY < 0 || neighborY >= height
+            || !eroded[neighborY * width + neighborX]) {
+            boundary = true;
+            break;
+          }
+        }
+      }
+      if (boundary) {
+        data[alphaOffset] = Math.min(data[alphaOffset], 200);
+      }
+    }
+  }
+}
+
+async function removeConnectedDarkBackground(imageBuffer, refineEdge = false, darkThreshold = 24) {
   const { data, info } = await sharp(imageBuffer)
     .ensureAlpha()
     .raw()
@@ -294,7 +400,8 @@ async function removeConnectedDarkBackground(imageBuffer) {
     const red = data[offset];
     const green = data[offset + 1];
     const blue = data[offset + 2];
-    return Math.max(red, green, blue) <= 24 && Math.max(red, green, blue) - Math.min(red, green, blue) <= 8;
+    return Math.max(red, green, blue) <= darkThreshold
+      && Math.max(red, green, blue) - Math.min(red, green, blue) <= 12;
   };
   const enqueue = (pixel) => {
     if (pixel < 0 || pixel >= visited.length || visited[pixel] || !isBackground(pixel)) {
@@ -324,49 +431,11 @@ async function removeConnectedDarkBackground(imageBuffer) {
     enqueue(pixel + info.width);
   }
 
-  const labels = new Uint32Array(info.width * info.height);
-  let nextLabel = 0;
-  let largestLabel = 0;
-  let largestSize = 0;
+  keepLargestOpaqueComponent(data, info.width, info.height, info.channels);
 
-  for (let start = 0; start < labels.length; start += 1) {
-    if (labels[start] || data[start * info.channels + 3] === 0) {
-      continue;
-    }
-
-    nextLabel += 1;
-    labels[start] = nextLabel;
-    stack.push(start);
-    let size = 0;
-
-    while (stack.length > 0) {
-      const pixel = stack.pop();
-      const x = pixel % info.width;
-      size += 1;
-      const neighbors = [pixel - 1, pixel + 1, pixel - info.width, pixel + info.width];
-
-      neighbors.forEach((neighbor, index) => {
-        const crossesRow = (index === 0 && x === 0) || (index === 1 && x === info.width - 1);
-        if (crossesRow || neighbor < 0 || neighbor >= labels.length || labels[neighbor]) {
-          return;
-        }
-        if (data[neighbor * info.channels + 3] > 0) {
-          labels[neighbor] = nextLabel;
-          stack.push(neighbor);
-        }
-      });
-    }
-
-    if (size > largestSize) {
-      largestLabel = nextLabel;
-      largestSize = size;
-    }
-  }
-
-  for (let pixel = 0; pixel < labels.length; pixel += 1) {
-    if (labels[pixel] !== largestLabel) {
-      data[pixel * info.channels + 3] = 0;
-    }
+  if (refineEdge) {
+    refineOpaqueEdge(data, info.width, info.height, info.channels);
+    keepLargestOpaqueComponent(data, info.width, info.height, info.channels);
   }
 
   return sharp(data, { raw: info }).png().toBuffer();
@@ -535,7 +604,12 @@ async function createShareImage(payload) {
     .png()
     .toBuffer();
   const characterHappyBuffer = await characterHappyCell.png().toBuffer();
-  const maskedCharacterBuffer = await removeConnectedDarkBackground(characterHappyBuffer);
+  const darkEdgeThreshold = ["black", "tuxedo", "calico"].includes(payload.character) ? 24 : 72;
+  const maskedCharacterBuffer = await removeConnectedDarkBackground(
+    characterHappyBuffer,
+    characterItem.atlas !== "extra",
+    darkEdgeThreshold,
+  );
   const characterBuffer = await sharp(maskedCharacterBuffer)
     .trim()
     .resize(410, 350, { fit: "inside", withoutEnlargement: false })
