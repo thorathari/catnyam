@@ -11,6 +11,7 @@ const {
 } = require("../server/db");
 const { getUserLoadout } = require("../server/shop-catalog");
 const { processShopAction } = require("../server/shop-service");
+const { createShareUrl, handleShareRequest } = require("../server/share-service");
 
 const CHURU_MIN_PLAY_MS = (CatnyamEngine.GAME_SECONDS - 5) * 1000;
 const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
@@ -311,8 +312,12 @@ async function validateGameSession(user, sessionId, sessionToken, score, coinsEa
 
 module.exports = async function handler(req, res) {
   try {
+    if (req.method === "GET" && await handleShareRequest(req, res)) {
+      return;
+    }
+
     if (req.method !== "POST" && req.method !== "DELETE") {
-      res.setHeader("Allow", "POST, DELETE");
+      res.setHeader("Allow", "GET, POST, DELETE");
       sendJson(res, 405, { message: "허용되지 않은 요청입니다." });
       return;
     }
@@ -440,10 +445,23 @@ module.exports = async function handler(req, res) {
       console.warn("Share ranking lookup failed:", error);
     }
 
+    const shareLoadout = getUserLoadout(updated[0]);
+    const shareUrlOptions = {
+      user: updated[0],
+      score: verifiedScore,
+      gameMode: validation.gameMode,
+      loadout: shareLoadout,
+    };
+    const shareUrls = {
+      daily: createShareUrl({ ...shareUrlOptions, ranking: shareRankings.daily }),
+      allTime: createShareUrl({ ...shareUrlOptions, ranking: shareRankings.allTime }),
+    };
+
     sendJson(res, 200, {
       user: sanitizeUser(updated[0]),
       shareRanking,
       shareRankings,
+      shareUrls,
       coinsEarned: validation.coins,
     });
   } catch (error) {

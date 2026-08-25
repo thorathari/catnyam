@@ -188,6 +188,7 @@ let activePlayerHistoryAccount = null;
 let lastFinishedScore = null;
 let lastFinishedGameMode = null;
 let lastFinishedRanking = null;
+let lastFinishedShareUrls = null;
 let lastFinishedSessionId = null;
 let shopTab = "character";
 const expandedAdminAccountIds = new Set();
@@ -448,6 +449,7 @@ function setGameMode(mode) {
   lastFinishedScore = null;
   lastFinishedGameMode = null;
   lastFinishedRanking = null;
+  lastFinishedShareUrls = null;
   lastFinishedSessionId = null;
   resetShareStatus();
   rankingData = {
@@ -1929,6 +1931,7 @@ async function startGame() {
   lastFinishedScore = null;
   lastFinishedGameMode = null;
   lastFinishedRanking = null;
+  lastFinishedShareUrls = null;
   lastFinishedSessionId = null;
   resetShareStatus();
   currentGameMode = CatnyamEngine.normalizeGameMode(gameSession.gameMode || currentGameMode);
@@ -2002,6 +2005,7 @@ function finishGame() {
   lastFinishedScore = finalScore;
   lastFinishedGameMode = game.gameMode;
   lastFinishedRanking = null;
+  lastFinishedShareUrls = null;
   lastFinishedSessionId = game.gameSession?.id || null;
   stopGame();
   clearModes();
@@ -2045,6 +2049,7 @@ async function submitScore(score) {
     updateProfileName();
     if (lastFinishedSessionId === submittedSessionId) {
       lastFinishedRanking = data.shareRankings || data.shareRanking || null;
+      lastFinishedShareUrls = data.shareUrls || null;
     }
     bestText.textContent = currentUser.bestScore || 0;
     renderRanking();
@@ -2089,6 +2094,7 @@ function returnToGameHome() {
   lastFinishedScore = null;
   lastFinishedGameMode = null;
   lastFinishedRanking = null;
+  lastFinishedShareUrls = null;
   lastFinishedSessionId = null;
   resetShareStatus();
   game = createGameState();
@@ -2136,7 +2142,14 @@ function hideGameOverlay() {
 }
 
 function getSharePageUrl() {
-  return SHARE_PAGE_URL;
+  if (!lastFinishedShareUrls) {
+    return SHARE_PAGE_URL;
+  }
+
+  return lastFinishedShareUrls[rankingMode]
+    || lastFinishedShareUrls.allTime
+    || lastFinishedShareUrls.daily
+    || SHARE_PAGE_URL;
 }
 
 function getShareModeLabel() {
