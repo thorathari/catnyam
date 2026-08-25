@@ -134,6 +134,7 @@ async function buildPlayerHistoryPayload(user, gameMode) {
       bestScore: allScores[0]?.score || 0,
       playSeconds: getPlaySeconds(allScores[0]),
       gamesPlayed: user.games_played || 0,
+      coins: Math.max(0, Number(user.coins) || 0),
       createdAt: user.created_at,
       updatedAt: user.updated_at,
       lastLoginAt: user.last_login_at,

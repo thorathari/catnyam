@@ -607,6 +607,7 @@ function renderShop() {
 
     card.className = `shop-card shop-card-${shopTab}${equipped ? " is-equipped" : ""}`;
     preview.className = `shop-preview ${shopTab}`;
+    preview.dataset.shopItem = itemId;
     preview.style.cssText = getShopPreviewStyle(shopTab, item);
     preview.setAttribute("aria-label", `${item.name} 미리보기`);
     badge.className = `shop-preview-badge${equipped ? " equipped" : owned ? " owned" : ""}`;
@@ -1457,6 +1458,7 @@ function renderPlayerHistorySummary(user, stats) {
   appendPlayerHistoryDetail(details, "게임 모드", getGameModeLabel(stats.gameMode));
   appendPlayerHistoryDetail(details, "가입일", formatPlayDate(user.createdAt));
   appendPlayerHistoryDetail(details, "최종 접속일", formatPlayDate(user.lastLoginAt));
+  appendPlayerHistoryDetail(details, "보유 코인", `${Math.max(0, Number(user.coins) || 0)}코인`);
   appendPlayerHistoryDetail(details, "최고 기록", `${user.bestScore || 0}점`);
   appendPlayerHistoryDetail(details, "전체 횟수", `${totalGames}회`);
   appendPlayerHistoryDetail(details, "오늘 횟수", `${todayGames}회`);

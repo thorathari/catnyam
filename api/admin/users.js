@@ -95,6 +95,7 @@ module.exports = async function handler(req, res) {
         statsByUser.get(user.id)?.bomb.bestScore || 0,
       ),
       gamesPlayed: (statsByUser.get(user.id)?.churu.gamesPlayed || 0) + (statsByUser.get(user.id)?.bomb.gamesPlayed || 0),
+      coins: Math.max(0, Number(user.coins) || 0),
       scoreStats: cloneScoreStats(statsByUser.get(user.id)),
       createdAt: user.created_at,
     }));
