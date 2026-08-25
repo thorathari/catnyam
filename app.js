@@ -194,7 +194,8 @@ function getBackgroundAtlas(item) {
   return item?.atlas === "extra" ? BACKGROUND_ATLASES.extra : BACKGROUND_ATLASES.main;
 }
 
-const EXPRESSION_ARTWORK = {
+const CHARACTER_FRAME_ARTWORK = {
+  neutral: {},
   good: {},
   bad: {},
 };
@@ -202,7 +203,7 @@ const SHOP_PREVIEW_ARTWORK_CACHE = new Map();
 
 Object.values(ART_ASSETS).forEach((image) => {
   image.addEventListener("load", () => {
-    prepareExpressionArtwork();
+    prepareCharacterFrameArtwork();
     if (currentUser && !game.running) {
       drawIntro();
     }
@@ -2946,35 +2947,94 @@ function isArtworkReady(image) {
   return width > 0 && height > 0;
 }
 
-function createMaskedArtwork(source, mask) {
-  const canvasElement = document.createElement("canvas");
-  canvasElement.width = source.naturalWidth;
-  canvasElement.height = source.naturalHeight;
-  const canvasContext = canvasElement.getContext("2d");
-  canvasContext.drawImage(source, 0, 0);
-  canvasContext.globalCompositeOperation = "destination-in";
-  canvasContext.drawImage(mask, 0, 0, canvasElement.width, canvasElement.height);
-  canvasContext.globalCompositeOperation = "source-over";
-  return canvasElement;
-}
-
-function prepareExpressionArtwork() {
-  Object.entries(CHARACTER_ATLASES).forEach(([atlasId, atlas]) => {
-    if (!isArtworkReady(atlas.neutral)) {
+function removeConnectedDarkBackground(imageData) {
+  const { data, width, height } = imageData;
+  const visited = new Uint8Array(width * height);
+  const stack = [];
+  const isBackground = (pixel) => {
+    const offset = pixel * 4;
+    const red = data[offset];
+    const green = data[offset + 1];
+    const blue = data[offset + 2];
+    return Math.max(red, green, blue) <= 24 && Math.max(red, green, blue) - Math.min(red, green, blue) <= 8;
+  };
+  const enqueue = (pixel) => {
+    if (pixel < 0 || pixel >= visited.length || visited[pixel] || !isBackground(pixel)) {
       return;
     }
+    visited[pixel] = 1;
+    stack.push(pixel);
+  };
 
-    if (!EXPRESSION_ARTWORK.good[atlasId] && isArtworkReady(atlas.happy)) {
-      EXPRESSION_ARTWORK.good[atlasId] = atlasId === "extra"
-        ? atlas.happy
-        : createMaskedArtwork(atlas.happy, atlas.neutral);
-    }
+  for (let x = 0; x < width; x += 1) {
+    enqueue(x);
+    enqueue((height - 1) * width + x);
+  }
+  for (let y = 0; y < height; y += 1) {
+    enqueue(y * width);
+    enqueue(y * width + width - 1);
+  }
 
-    if (!EXPRESSION_ARTWORK.bad[atlasId] && isArtworkReady(atlas.hurt)) {
-      EXPRESSION_ARTWORK.bad[atlasId] = atlasId === "extra"
-        ? atlas.hurt
-        : createMaskedArtwork(atlas.hurt, atlas.neutral);
-    }
+  while (stack.length > 0) {
+    const pixel = stack.pop();
+    const x = pixel % width;
+    data[pixel * 4 + 3] = 0;
+    if (x > 0) enqueue(pixel - 1);
+    if (x < width - 1) enqueue(pixel + 1);
+    enqueue(pixel - width);
+    enqueue(pixel + width);
+  }
+}
+
+function createCharacterFrameArtwork(source, item, columns, rows, removeDarkBackground) {
+  if (!isArtworkReady(source)) {
+    return null;
+  }
+
+  const sourceWidth = source.naturalWidth || source.width;
+  const sourceHeight = source.naturalHeight || source.height;
+  const sourceX = Math.floor((item.col * sourceWidth) / columns);
+  const sourceY = Math.floor((item.row * sourceHeight) / rows);
+  const sourceRight = Math.floor(((item.col + 1) * sourceWidth) / columns);
+  const sourceBottom = Math.floor(((item.row + 1) * sourceHeight) / rows);
+  const frame = document.createElement("canvas");
+  frame.width = sourceRight - sourceX;
+  frame.height = sourceBottom - sourceY;
+  const frameContext = frame.getContext("2d", { willReadFrequently: true });
+  frameContext.drawImage(source, sourceX, sourceY, frame.width, frame.height, 0, 0, frame.width, frame.height);
+  const imageData = frameContext.getImageData(0, 0, frame.width, frame.height);
+
+  if (removeDarkBackground) {
+    removeConnectedDarkBackground(imageData);
+  }
+
+  getOpaqueArtworkBounds(imageData);
+  frameContext.clearRect(0, 0, frame.width, frame.height);
+  frameContext.putImageData(imageData, 0, 0);
+  return frame;
+}
+
+function prepareCharacterFrameArtwork() {
+  Object.entries(SHOP_CATALOG.character).forEach(([characterId, character]) => {
+    const atlasId = character.atlas === "extra" ? "extra" : "main";
+    const atlas = CHARACTER_ATLASES[atlasId];
+    const frames = [
+      ["neutral", atlas.neutral, false],
+      ["good", atlas.happy, atlasId === "main"],
+      ["bad", atlas.hurt, atlasId === "main"],
+    ];
+
+    frames.forEach(([state, source, removeDarkBackground]) => {
+      if (!CHARACTER_FRAME_ARTWORK[state][characterId] && isArtworkReady(source)) {
+        CHARACTER_FRAME_ARTWORK[state][characterId] = createCharacterFrameArtwork(
+          source,
+          character,
+          atlas.columns,
+          atlas.rows,
+          removeDarkBackground,
+        );
+      }
+    });
   });
 }
 
@@ -3824,11 +3884,16 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
   const character = SHOP_CATALOG.character[characterId] || SHOP_CATALOG.character.calico;
   const atlasId = character.atlas === "extra" ? "extra" : "main";
   const atlas = CHARACTER_ATLASES[atlasId];
-  const reactionArtwork = reaction === "good"
-    ? EXPRESSION_ARTWORK.good[atlasId]
+  const frameState = reaction === "good"
+    ? "good"
     : reaction === "bad"
-      ? EXPRESSION_ARTWORK.bad[atlasId]
-      : null;
+      ? "bad"
+      : "neutral";
+  if (!CHARACTER_FRAME_ARTWORK[frameState][characterId]) {
+    prepareCharacterFrameArtwork();
+  }
+  const frameArtwork = CHARACTER_FRAME_ARTWORK[frameState][characterId]
+    || CHARACTER_FRAME_ARTWORK.neutral[characterId];
 
   if (!isArtworkReady(atlas.neutral)) {
     return false;
@@ -3854,21 +3919,11 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
   ctx.save();
   applyCharacterMotion(motion, true);
   ctx.rotate(rotation);
-  if (!reactionArtwork || atlasId === "main") {
+  if (isArtworkReady(frameArtwork)) {
+    ctx.drawImage(frameArtwork, drawLeft, drawTop, drawWidth, drawHeight);
+  } else {
     drawAtlasCell(
       atlas.neutral,
-      character,
-      atlas.columns,
-      atlas.rows,
-      drawLeft,
-      drawTop,
-      drawWidth,
-      drawHeight,
-    );
-  }
-  if (isArtworkReady(reactionArtwork)) {
-    drawAtlasCell(
-      reactionArtwork,
       character,
       atlas.columns,
       atlas.rows,
