@@ -130,6 +130,7 @@
                 <button class="pause-action-button home" id="pauseHomeButton" type="button">홈으로</button>
                 <button class="pause-action-button resume" id="resumeButton" type="button">계속하기</button>
               </div>
+              <button class="item-guide-toggle" id="itemGuideToggleButton" type="button" aria-label="아이템 설명 보기" aria-controls="itemGuide" aria-expanded="false" title="아이템 설명">?</button>
               <div class="item-guide" id="itemGuide" aria-label="아이템별 점수와 효과">
                 <div class="guide-group good churu-guide fixed-guide-rows" aria-label="득점과 버프 아이템">
                   <div class="guide-row">
@@ -317,11 +318,12 @@
             <p class="eyebrow">coin shop</p>
             <h2 id="shopModalTitle">냥냥 상점</h2>
           </div>
-          <button class="modal-close-button" id="closeShopModalButton" type="button" aria-label="상점 닫기">×</button>
-        </div>
-        <div class="shop-balance" aria-label="보유 코인">
-          <span>보유 코인</span>
-          <span class="shop-balance-value"><i aria-hidden="true"></i><strong id="shopCoinText">0</strong></span>
+          <div class="shop-header-actions">
+            <div class="shop-balance" aria-label="보유 코인">
+              <span class="shop-balance-value"><i aria-hidden="true"></i><strong id="shopCoinText">0</strong></span>
+            </div>
+            <button class="modal-close-button" id="closeShopModalButton" type="button" aria-label="상점 닫기">×</button>
+          </div>
         </div>
 
         <div class="tab-list shop-tab-list" role="tablist" aria-label="상점 메뉴">

@@ -37,6 +37,7 @@ const pauseRestartButton = document.querySelector("#pauseRestartButton");
 const pauseHomeButton = document.querySelector("#pauseHomeButton");
 const resumeButton = document.querySelector("#resumeButton");
 const itemGuide = document.querySelector("#itemGuide");
+const itemGuideToggleButton = document.querySelector("#itemGuideToggleButton");
 const touchLeftButton = document.querySelector("#touchLeftButton");
 const touchRightButton = document.querySelector("#touchRightButton");
 const rankingList = document.querySelector("#rankingList");
@@ -2308,6 +2309,10 @@ function showGameOverlay(buttonText, resultText = "", mode = "default") {
   }
   pauseActions.hidden = !isPaused;
   itemGuide.hidden = isPaused;
+  itemGuide.classList.remove("mobile-open");
+  itemGuideToggleButton.hidden = isPaused;
+  itemGuideToggleButton.setAttribute("aria-expanded", "false");
+  itemGuideToggleButton.setAttribute("aria-label", "아이템 설명 보기");
   overlayResult.textContent = resultText;
   overlayResult.hidden = !resultText;
   pauseButton.hidden = true;
@@ -2322,7 +2327,20 @@ function hideGameOverlay() {
   shareResultButton.hidden = true;
   shareStatus.hidden = true;
   itemGuide.hidden = false;
+  itemGuide.classList.remove("mobile-open");
+  itemGuideToggleButton.hidden = false;
+  itemGuideToggleButton.setAttribute("aria-expanded", "false");
+  itemGuideToggleButton.setAttribute("aria-label", "아이템 설명 보기");
   pauseButton.hidden = !game.running;
+}
+
+function toggleMobileItemGuide() {
+  const isOpen = itemGuide.classList.toggle("mobile-open");
+  itemGuideToggleButton.setAttribute("aria-expanded", String(isOpen));
+  itemGuideToggleButton.setAttribute("aria-label", isOpen ? "아이템 설명 닫기" : "아이템 설명 보기");
+  if (!isOpen) {
+    closeGuideTooltips();
+  }
 }
 
 function getSharePageUrl() {
@@ -4522,6 +4540,7 @@ profileButton.addEventListener("click", openAccountModal);
 shopButton.addEventListener("click", openShopModal);
 closeAccountModalButton.addEventListener("click", closeAccountModal);
 closeShopModalButton.addEventListener("click", closeShopModal);
+itemGuideToggleButton.addEventListener("click", toggleMobileItemGuide);
 closePlayerHistoryButton.addEventListener("click", closePlayerHistoryModal);
 accountModal.addEventListener("click", (event) => {
   if (event.target === accountModal) {

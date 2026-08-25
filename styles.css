@@ -763,6 +763,10 @@ button:disabled {
   font-weight: 900;
 }
 
+.item-guide-toggle {
+  display: none;
+}
+
 .guide-group {
   display: flex;
   flex-wrap: wrap;
@@ -1324,6 +1328,12 @@ button:disabled {
   font-size: 2rem;
 }
 
+.shop-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
 .shop-modal .modal-close-button {
   width: 38px;
   min-height: 38px;
@@ -1334,17 +1344,18 @@ button:disabled {
   font-size: 1.35rem;
 }
 
-.shop-balance {
-  display: flex;
-  justify-content: space-between;
-  min-height: 46px;
-  margin: 0 18px 10px;
-  padding: 0 14px;
+.shop-modal .shop-balance {
+  display: inline-flex;
+  justify-content: center;
+  min-width: 70px;
+  min-height: 38px;
+  margin: 0;
+  padding: 0 10px;
   border: 2px solid #4a433a;
-  border-radius: 10px;
+  border-radius: 999px;
   color: #38332c;
   background: #fff5d7;
-  box-shadow: 3px 3px 0 rgba(56, 51, 44, 0.9);
+  box-shadow: 2px 2px 0 rgba(56, 51, 44, 0.9);
   font-size: 0.92rem;
   font-weight: 900;
 }
@@ -2257,8 +2268,8 @@ button:disabled {
     display: flex;
   }
 
-  .shop-modal .shop-balance {
-    margin-inline: 12px;
+  .shop-modal .shop-header-actions .shop-balance {
+    margin: 0;
   }
 
   .shop-grid {
@@ -2384,6 +2395,53 @@ button:disabled {
     flex-wrap: wrap;
     gap: 5px 6px;
     font-size: 0.72rem;
+  }
+
+  .item-guide:not(.mobile-open) {
+    display: none;
+  }
+
+  .item-guide.mobile-open {
+    position: absolute;
+    inset: 8px;
+    z-index: 4;
+    justify-content: flex-start;
+    max-width: none;
+    max-height: calc(100% - 16px);
+    overflow-y: auto;
+    padding: 42px 8px 10px;
+    border: 2px solid rgba(56, 51, 44, 0.76);
+    border-radius: 8px;
+    background: rgba(255, 253, 248, 0.97);
+    box-shadow: 3px 4px 0 rgba(56, 51, 44, 0.76);
+    overscroll-behavior: contain;
+  }
+
+  .item-guide-toggle {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    z-index: 5;
+    display: grid;
+    place-items: center;
+    width: 30px;
+    min-height: 30px;
+    border: 2px solid rgba(56, 51, 44, 0.82);
+    border-radius: 50%;
+    padding: 0;
+    color: #554b42;
+    background: rgba(255, 253, 248, 0.92);
+    box-shadow: 2px 2px 0 rgba(56, 51, 44, 0.82);
+    font-size: 0.9rem;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .item-guide-toggle[aria-expanded="true"] {
+    top: 10px;
+    bottom: auto;
+    color: white;
+    background: var(--berry);
   }
 
   .guide-group {
