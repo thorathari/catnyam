@@ -6,6 +6,10 @@
       "destination": "/api/scores?share=:token"
     },
     {
+      "source": "/i/:token/result.jpg",
+      "destination": "/api/scores?shareImage=:token"
+    },
+    {
       "source": "/i/:token",
       "destination": "/api/scores?shareImage=:token"
     }

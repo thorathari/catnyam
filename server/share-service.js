@@ -137,6 +137,24 @@ function createShareToken({ sessionId, scope = "allTime" }) {
   return `${reference}.${signReference(reference)}`;
 }
 
+function createShareImageToken(payload) {
+  const encodedPayload = Buffer.from(JSON.stringify({
+    v: LEGACY_SHARE_TOKEN_VERSION,
+    n: payload.nickname,
+    s: payload.score,
+    m: payload.gameMode,
+    r: payload.rank,
+    o: payload.overtakenNickname,
+    q: payload.scope,
+    c: payload.character,
+    x: payload.companionLeft,
+    y: payload.companionRight,
+    b: payload.background,
+  })).toString("base64url");
+
+  return `${encodedPayload}.${signPayload(encodedPayload)}`;
+}
+
 function readShortShareToken(token) {
   const separatorIndex = token.lastIndexOf(".");
 
@@ -438,7 +456,7 @@ async function createShareImage(payload) {
       { input: characterBuffer, left: characterLeft, top: characterTop },
       { input: createUiSvg(payload), left: 0, top: 0 },
     ])
-    .jpeg({ quality: 86, chromaSubsampling: "4:4:4" })
+    .jpeg({ quality: 86, chromaSubsampling: "4:2:0", progressive: false })
     .toBuffer();
 }
 
@@ -452,7 +470,7 @@ function sendInvalidShare(res) {
 function sendSharePage(res, token, payload) {
   const copy = getShareCopy(payload);
   const shareUrl = `${SHARE_ORIGIN}/s/${token}`;
-  const imageUrl = `${SHARE_ORIGIN}/i/${token}`;
+  const imageUrl = `${SHARE_ORIGIN}/i/${createShareImageToken(payload)}/result.jpg`;
   const title = escapeHtml(copy.headline);
   const description = escapeHtml(copy.description);
   const message = escapeHtml(copy.message).replace(/\n/g, "<br>");
@@ -540,6 +558,7 @@ async function handleShareRequest(req, res, resolveShareReference) {
     res.statusCode = 200;
     res.setHeader("Content-Type", "image/jpeg");
     res.setHeader("Content-Length", image.length);
+    res.setHeader("Content-Disposition", "inline; filename=catnyam-result.jpg");
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     res.end(image);
     return true;

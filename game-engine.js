@@ -31,6 +31,13 @@
   const CHURU_FIRST_TIMER_MAX_SECONDS = 30;
   const CHURU_TIMER_MIN_INTERVAL = 25;
   const CHURU_TIMER_MAX_INTERVAL = 55;
+  const CHURU_COIN_WINDOWS = [
+    [8, 15],
+    [28, 35],
+    [48, 53],
+  ];
+  const CHURU_COIN_MIN_INTERVAL = 25;
+  const CHURU_COIN_MAX_INTERVAL = 55;
   const BOMB_START_HEARTS = 3;
   const BOMB_RAIN_INTERVAL = 15;
   const BOMB_FIRST_HEART_MIN_SECONDS = 8;
@@ -147,6 +154,9 @@
         durationSeconds: GAME_SECONDS,
         nextTimerAt: CHURU_FIRST_TIMER_MIN_SECONDS
           + rng() * (CHURU_FIRST_TIMER_MAX_SECONDS - CHURU_FIRST_TIMER_MIN_SECONDS),
+        churuCoinWindowIndex: 0,
+        nextCoinAt: CHURU_COIN_WINDOWS[0][0]
+          + rng() * (CHURU_COIN_WINDOWS[0][1] - CHURU_COIN_WINDOWS[0][0]),
       }
       : {};
     const bombModeState = gameMode === GAME_MODES.BOMB
@@ -289,7 +299,6 @@
       ["tuna", canSpawnLimitedDrop(state, "tuna") ? 0.045 : 0],
       ["clipper", canSpawnLimitedDrop(state, "clipper") ? 0.045 : 0],
       ["skull", 0.045],
-      ["coin", 0.02],
       ["bomb", 0.135],
       ["gold", 0.16],
       ["normal", 0.44],
@@ -411,6 +420,19 @@
     });
     state.nextTimerAt = state.elapsed + CHURU_TIMER_MIN_INTERVAL
       + state.rng() * (CHURU_TIMER_MAX_INTERVAL - CHURU_TIMER_MIN_INTERVAL);
+  }
+
+  function spawnChuruCoinDrop(state) {
+    addDrop(state, "coin", {
+      speed: 150 + state.rng() * 80,
+      rotation: 0,
+    });
+    state.churuCoinWindowIndex += 1;
+    const nextWindow = CHURU_COIN_WINDOWS[state.churuCoinWindowIndex];
+    state.nextCoinAt = nextWindow
+      ? nextWindow[0] + state.rng() * (nextWindow[1] - nextWindow[0])
+      : state.elapsed + CHURU_COIN_MIN_INTERVAL
+        + state.rng() * (CHURU_COIN_MAX_INTERVAL - CHURU_COIN_MIN_INTERVAL);
   }
 
   function spawnHeartDrop(state) {
@@ -850,6 +872,10 @@
 
     if (state.gameMode === GAME_MODES.CHURU && state.elapsed >= state.nextTimerAt) {
       spawnChuruTimerDrop(state);
+    }
+
+    if (state.gameMode === GAME_MODES.CHURU && state.elapsed >= state.nextCoinAt) {
+      spawnChuruCoinDrop(state);
     }
 
     state.drops.forEach((drop) => {
