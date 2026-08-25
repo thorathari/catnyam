@@ -438,7 +438,7 @@ async function createShareImage(payload) {
       { input: characterBuffer, left: characterLeft, top: characterTop },
       { input: createUiSvg(payload), left: 0, top: 0 },
     ])
-    .png({ compressionLevel: 9 })
+    .jpeg({ quality: 86, chromaSubsampling: "4:4:4" })
     .toBuffer();
 }
 
@@ -469,8 +469,9 @@ function sendSharePage(res, token, payload) {
   <meta property="og:description" content="${description}">
   <meta property="og:url" content="${escapeHtml(shareUrl)}">
   <meta property="og:image" content="${escapeHtml(imageUrl)}">
+  <meta property="og:image:url" content="${escapeHtml(imageUrl)}">
   <meta property="og:image:secure_url" content="${escapeHtml(imageUrl)}">
-  <meta property="og:image:type" content="image/png">
+  <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="Cat Nyam 게임 결과">
@@ -496,7 +497,6 @@ function sendSharePage(res, token, payload) {
     <p>${message}</p>
     <a href="${SHARE_ORIGIN}/">게임하러 가기</a>
   </main>
-  <script>window.setTimeout(function () { window.location.replace("${SHARE_ORIGIN}/"); }, 600);</script>
 </body>
 </html>`;
 
@@ -538,7 +538,7 @@ async function handleShareRequest(req, res, resolveShareReference) {
   if (imageToken) {
     const image = await createShareImage(payload);
     res.statusCode = 200;
-    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Content-Type", "image/jpeg");
     res.setHeader("Content-Length", image.length);
     res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
     res.end(image);

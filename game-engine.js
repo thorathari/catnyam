@@ -49,10 +49,10 @@
   const BOMB_FIRST_SKULL_MAX_SECONDS = 30;
   const BOMB_SKULL_MIN_INTERVAL = 24;
   const BOMB_SKULL_MAX_INTERVAL = 52;
-  const BOMB_FIRST_COIN_MIN_SECONDS = 18;
-  const BOMB_FIRST_COIN_MAX_SECONDS = 36;
-  const BOMB_COIN_MIN_INTERVAL = 34;
-  const BOMB_COIN_MAX_INTERVAL = 64;
+  const BOMB_FIRST_COIN_MIN_SECONDS = 15;
+  const BOMB_FIRST_COIN_MAX_SECONDS = 32;
+  const BOMB_COIN_MIN_INTERVAL = 29;
+  const BOMB_COIN_MAX_INTERVAL = 56;
   const BOMB_GOLD_WINDOW_SECONDS = 1;
   const SURVIVAL_SCORE_INTERVAL = 0.1;
 
@@ -289,7 +289,7 @@
       ["tuna", canSpawnLimitedDrop(state, "tuna") ? 0.045 : 0],
       ["clipper", canSpawnLimitedDrop(state, "clipper") ? 0.045 : 0],
       ["skull", 0.045],
-      ["coin", 0.012],
+      ["coin", 0.02],
       ["bomb", 0.135],
       ["gold", 0.16],
       ["normal", 0.44],
