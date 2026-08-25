@@ -4153,6 +4153,10 @@ function roundRect(x, y, width, height, radius) {
 }
 
 function getControlKey(key) {
+  if (typeof key !== "string") {
+    return "";
+  }
+
   if (key === "ArrowLeft" || key === "ArrowRight") {
     return key;
   }
