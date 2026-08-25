@@ -19,11 +19,11 @@ const CATALOG = {
     beagle: { name: "비글", price: 20, col: 1, row: 3 },
   },
   companion: {
-    hamster: { name: "햄스터", price: 50, buff: "좋은 아이템 획득 범위 +30%" },
-    chick: { name: "병아리", price: 50, buff: "시간 아이템 +1초" },
-    sparrow: { name: "참새", price: 50, buff: "이동속도 +8%" },
-    rabbit: { name: "토끼", price: 50, buff: "득점 아이템 +1점" },
-    mole: { name: "두더지", price: 50, buff: "폭탄피하기 시작 목숨 +1" },
+    hamster: { name: "햄스터", price: 50, buff: "좋은 아이템 획득 범위 +30%", col: 0, row: 0 },
+    chick: { name: "병아리", price: 50, buff: "시간 아이템 +1초", col: 1, row: 0 },
+    sparrow: { name: "참새", price: 50, buff: "이동속도 +8%", col: 2, row: 0 },
+    rabbit: { name: "토끼", price: 50, buff: "득점 아이템 +1점", col: 0, row: 1 },
+    mole: { name: "두더지", price: 50, buff: "폭탄피하기 시작 목숨 +1", col: 1, row: 1 },
   },
   background: {
     village: { name: "시골동네", price: 0, col: 0, row: 0 },

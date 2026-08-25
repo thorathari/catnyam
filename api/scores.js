@@ -155,6 +155,8 @@ async function resolveShareReference({ sessionId, scope }) {
     overtakenNickname: useRanking ? ranking.overtakenNickname : null,
     scope,
     character: loadout.character,
+    companionLeft: loadout.companionLeft,
+    companionRight: loadout.companionRight,
     background: loadout.background,
   };
 }

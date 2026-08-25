@@ -61,6 +61,8 @@ function normalizeSharePayload(value) {
   const mode = CatnyamEngine.normalizeGameMode(value?.m);
   const character = CATALOG.character[value?.c] ? value.c : DEFAULT_CHARACTER;
   const background = CATALOG.background[value?.b] ? value.b : DEFAULT_BACKGROUND;
+  const companionLeft = CATALOG.companion[value?.x] ? value.x : null;
+  const companionRight = CATALOG.companion[value?.y] && value.y !== companionLeft ? value.y : null;
 
   if (value?.v !== LEGACY_SHARE_TOKEN_VERSION || !Number.isInteger(score) || score < 0 || score > MAX_SCORE) {
     return null;
@@ -75,6 +77,8 @@ function normalizeSharePayload(value) {
     overtakenNickname: cleanText(value.o),
     scope: value.q === "daily" ? "daily" : "allTime",
     character,
+    companionLeft,
+    companionRight,
     background,
   };
 }
@@ -89,6 +93,8 @@ function normalizeResolvedPayload(value) {
     o: value?.overtakenNickname,
     q: value?.scope,
     c: value?.character,
+    x: value?.companionLeft,
+    y: value?.companionRight,
     b: value?.background,
   });
 }
@@ -257,7 +263,23 @@ async function getAtlasCell(filePath, item, columns, rows) {
   return image.extract(getAtlasRect(metadata, item, columns, rows));
 }
 
-function createUnderlaySvg() {
+function getShareCompanionLayout(payload) {
+  const companionIds = [payload.companionLeft, payload.companionRight]
+    .filter((companionId, index, values) => CATALOG.companion[companionId] && values.indexOf(companionId) === index);
+  const centers = companionIds.length > 1 ? [310, 420] : [385];
+
+  return companionIds.map((companionId, index) => ({
+    id: companionId,
+    centerX: centers[index],
+    baselineY: 588,
+  }));
+}
+
+function createUnderlaySvg(payload) {
+  const companionShadows = getShareCompanionLayout(payload)
+    .map(({ centerX, baselineY }) => `<ellipse cx="${centerX}" cy="${baselineY}" rx="70" ry="18" fill="#2b2a27" fill-opacity="0.17"/>`)
+    .join("");
+
   return Buffer.from(`
     <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -268,6 +290,7 @@ function createUnderlaySvg() {
         </linearGradient>
       </defs>
       <rect width="1200" height="630" fill="url(#shade)"/>
+      ${companionShadows}
       <ellipse cx="600" cy="576" rx="205" ry="35" fill="#2b2a27" fill-opacity="0.2"/>
     </svg>
   `);
@@ -346,8 +369,8 @@ function createUiSvg(payload) {
   return Buffer.from(`
     <svg width="1200" height="630" xmlns="http://www.w3.org/2000/svg">
       <rect x="46" y="42" width="390" height="118" rx="22" fill="#fffaf0" stroke="#3b372f" stroke-width="4"/>
-      ${renderPixelText("CAT NYAM", 72, 66, 6, "#2c2925")}
-      ${renderPixelText(modeText, 73, 126, 3, "#e95e83")}
+      ${renderPixelText("CAT NYAM", 241, 66, 6, "#2c2925", "center")}
+      ${renderPixelText(modeText, 241, 126, 3, "#e95e83", "center")}
       ${rankMarkup}
       <rect x="805" y="438" width="347" height="146" rx="25" fill="#fffaf0" stroke="#3b372f" stroke-width="5"/>
       ${renderPixelText("SCORE", 838, 467, 3, "#70685e")}
@@ -363,6 +386,7 @@ async function createShareImage(payload) {
   const backgroundPath = path.join(__dirname, "..", "assets", "background-atlas.png");
   const characterMaskPath = path.join(__dirname, "..", "assets", "character-atlas.png");
   const characterHappyPath = path.join(__dirname, "..", "assets", "character-happy-atlas.png");
+  const companionPath = path.join(__dirname, "..", "assets", "companion-atlas.png");
   const backgroundCell = await getAtlasCell(backgroundPath, backgroundItem, 2, 3);
   const characterHappyCell = await getAtlasCell(characterHappyPath, characterItem, 4, 4);
   const characterMaskCell = await getAtlasCell(characterMaskPath, characterItem, 4, 4);
@@ -389,10 +413,28 @@ async function createShareImage(payload) {
   const characterMetadata = await sharp(characterBuffer).metadata();
   const characterLeft = Math.round(600 - characterMetadata.width / 2);
   const characterTop = Math.round(600 - characterMetadata.height);
+  const companionComposites = [];
+
+  for (const companion of getShareCompanionLayout(payload)) {
+    const companionItem = CATALOG.companion[companion.id];
+    const companionCell = await getAtlasCell(companionPath, companionItem, 3, 2);
+    const companionBuffer = await companionCell
+      .trim()
+      .resize(150, 145, { fit: "inside", withoutEnlargement: false })
+      .png()
+      .toBuffer();
+    const companionMetadata = await sharp(companionBuffer).metadata();
+    companionComposites.push({
+      input: companionBuffer,
+      left: Math.round(companion.centerX - companionMetadata.width / 2),
+      top: Math.round(companion.baselineY - companionMetadata.height),
+    });
+  }
 
   return sharp(backgroundBuffer)
     .composite([
-      { input: createUnderlaySvg(), left: 0, top: 0 },
+      { input: createUnderlaySvg(payload), left: 0, top: 0 },
+      ...companionComposites,
       { input: characterBuffer, left: characterLeft, top: characterTop },
       { input: createUiSvg(payload), left: 0, top: 0 },
     ])
