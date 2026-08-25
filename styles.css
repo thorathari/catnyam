@@ -1461,9 +1461,9 @@ button:disabled {
 .shop-preview.background {
   aspect-ratio: 3 / 2;
   border-color: rgba(56, 51, 44, 0.32);
-  background-image: url("./assets/background-atlas.png");
+  background-image: var(--shop-background-image, url("./assets/background-atlas.png"));
   background-position: var(--sprite-x) var(--sprite-y);
-  background-size: 200% 300%;
+  background-size: var(--shop-background-size, 200% 300%);
 }
 
 .shop-preview-badge {

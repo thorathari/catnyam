@@ -112,12 +112,21 @@ const SHOP_CATALOG = {
     calico: { name: "얼룩냥이", price: 0, kind: "cat", fur: "#ffcf8a", accent: "#69544a", col: 1, row: 1 },
     tuxedo: { name: "턱시도냥이", price: 20, kind: "cat", fur: "#30343b", accent: "#fffaf2", col: 2, row: 1 },
     black: { name: "깜냥이", price: 20, kind: "cat", fur: "#29282d", accent: "#55525d", col: 3, row: 1 },
+    abyssinian: { name: "아비시니안", price: 20, kind: "cat", fur: "#b86d2d", accent: "#6d3a22", atlas: "extra", col: 0, row: 0 },
+    bengal: { name: "뱅갈", price: 20, kind: "cat", fur: "#d9933c", accent: "#57351f", atlas: "extra", col: 1, row: 0 },
+    ragdoll: { name: "렉돌", price: 20, kind: "cat", fur: "#f7eee2", accent: "#665047", atlas: "extra", col: 2, row: 0 },
     maltese: { name: "말티즈", price: 20, kind: "dog", fur: "#fffdf5", accent: "#ddd8cc", col: 0, row: 2 },
     poodle: { name: "푸들", price: 20, kind: "dog", fur: "#a86e47", accent: "#7d4d32", col: 1, row: 2 },
     shih_tzu: { name: "시츄", price: 20, kind: "dog", fur: "#f0dfc6", accent: "#76584b", col: 2, row: 2 },
     pomeranian: { name: "포메라니안", price: 20, kind: "dog", fur: "#e7a858", accent: "#fff0d2", col: 3, row: 2 },
     bichon: { name: "비숑", price: 20, kind: "dog", fur: "#fffdf8", accent: "#e5e1d9", col: 0, row: 3 },
     beagle: { name: "비글", price: 20, kind: "dog", fur: "#e6a25e", accent: "#5b443a", col: 1, row: 3 },
+    jindo: { name: "진돗개", price: 20, kind: "dog", fur: "#fff9e9", accent: "#e8d7bc", atlas: "extra", col: 0, row: 1 },
+    pug: { name: "퍼그", price: 20, kind: "dog", fur: "#e5c69a", accent: "#473b35", atlas: "extra", col: 1, row: 1 },
+    pompitz: { name: "폼피츠", price: 20, kind: "dog", fur: "#fffdf7", accent: "#e9e1d5", atlas: "extra", col: 2, row: 1 },
+    chihuahua: { name: "치와와", price: 20, kind: "dog", fur: "#e8b26f", accent: "#fff5df", atlas: "extra", col: 0, row: 2 },
+    welsh_corgi: { name: "웰시코기", price: 20, kind: "dog", fur: "#e99536", accent: "#fff8e8", atlas: "extra", col: 1, row: 2 },
+    husky: { name: "허스키", price: 20, kind: "dog", fur: "#69717a", accent: "#f4f5f3", atlas: "extra", col: 2, row: 2 },
   },
   companion: {
     hamster: { name: "햄스터", price: 50, buff: "좋은 아이템 획득 범위 +30%", col: 0, row: 0 },
@@ -128,10 +137,12 @@ const SHOP_CATALOG = {
   },
   background: {
     village: { name: "시골동네", price: 0, col: 0, row: 0 },
-    promenade: { name: "고급산책로", price: 30, col: 1, row: 0 },
-    beach: { name: "해변가", price: 30, col: 0, row: 1 },
+    small_room: { name: "작은 방구석", price: 10, atlas: "extra", col: 0, row: 0 },
+    promenade: { name: "고급산책로", price: 50, col: 1, row: 0 },
+    beach: { name: "해변가", price: 50, col: 0, row: 1 },
     mountain: { name: "산동네", price: 30, col: 1, row: 1 },
     alley: { name: "뒷골목", price: 30, col: 0, row: 2 },
+    suite: { name: "스위트룸", price: 50, atlas: "extra", col: 1, row: 0 },
   },
 };
 
@@ -139,15 +150,52 @@ const ART_ASSETS = {
   character: Object.assign(new Image(), { src: "./assets/character-atlas.png" }),
   characterHappy: Object.assign(new Image(), { src: "./assets/character-happy-atlas.png" }),
   characterHurt: Object.assign(new Image(), { src: "./assets/character-hurt-atlas.png" }),
+  characterExtra: Object.assign(new Image(), { src: "./assets/character-extra-atlas.png" }),
+  characterExtraHappy: Object.assign(new Image(), { src: "./assets/character-extra-happy-atlas.png" }),
+  characterExtraHurt: Object.assign(new Image(), { src: "./assets/character-extra-hurt-atlas.png" }),
   companion: Object.assign(new Image(), { src: "./assets/companion-atlas.png" }),
   background: Object.assign(new Image(), { src: "./assets/background-atlas.png" }),
+  backgroundExtra: Object.assign(new Image(), { src: "./assets/background-extra-atlas.png" }),
   boxPaw: Object.assign(new Image(), { src: "./assets/box-paw-atlas.png" }),
+  boxPawExtra: Object.assign(new Image(), { src: "./assets/box-paw-extra-atlas.png" }),
   boxClosed: Object.assign(new Image(), { src: "./assets/box-closed-atlas.png" }),
 };
 
+const CHARACTER_ATLASES = {
+  main: {
+    neutral: ART_ASSETS.character,
+    happy: ART_ASSETS.characterHappy,
+    hurt: ART_ASSETS.characterHurt,
+    boxPaw: ART_ASSETS.boxPaw,
+    columns: 4,
+    rows: 4,
+  },
+  extra: {
+    neutral: ART_ASSETS.characterExtra,
+    happy: ART_ASSETS.characterExtraHappy,
+    hurt: ART_ASSETS.characterExtraHurt,
+    boxPaw: ART_ASSETS.boxPawExtra,
+    columns: 3,
+    rows: 3,
+  },
+};
+
+const BACKGROUND_ATLASES = {
+  main: { image: ART_ASSETS.background, columns: 2, rows: 3, url: "./assets/background-atlas.png" },
+  extra: { image: ART_ASSETS.backgroundExtra, columns: 2, rows: 1, url: "./assets/background-extra-atlas.png" },
+};
+
+function getCharacterAtlas(item) {
+  return item?.atlas === "extra" ? CHARACTER_ATLASES.extra : CHARACTER_ATLASES.main;
+}
+
+function getBackgroundAtlas(item) {
+  return item?.atlas === "extra" ? BACKGROUND_ATLASES.extra : BACKGROUND_ATLASES.main;
+}
+
 const EXPRESSION_ARTWORK = {
-  good: null,
-  bad: null,
+  good: {},
+  bad: {},
 };
 const SHOP_PREVIEW_ARTWORK_CACHE = new Map();
 
@@ -560,7 +608,10 @@ function createShopActionButton(label, className, action, type, itemId, slot = "
 
 function getShopPreviewStyle(type, item) {
   if (type === "background") {
-    return `--sprite-x:${item.col * 100}%;--sprite-y:${(item.row / 2) * 100}%`;
+    const atlas = getBackgroundAtlas(item);
+    const x = atlas.columns > 1 ? (item.col / (atlas.columns - 1)) * 100 : 0;
+    const y = atlas.rows > 1 ? (item.row / (atlas.rows - 1)) * 100 : 0;
+    return `--shop-background-image:url("${atlas.url}");--shop-background-size:${atlas.columns * 100}% ${atlas.rows * 100}%;--sprite-x:${x}%;--sprite-y:${y}%`;
   }
 
   return "";
@@ -627,15 +678,16 @@ function getOpaqueArtworkBounds(imageData) {
 }
 
 function drawShopSpritePreview(canvas, type, item) {
-  const image = type === "character" ? ART_ASSETS.character : ART_ASSETS.companion;
-  const columns = type === "character" ? 4 : 3;
-  const rows = type === "character" ? 4 : 2;
+  const characterAtlas = type === "character" ? getCharacterAtlas(item) : null;
+  const image = characterAtlas?.neutral || ART_ASSETS.companion;
+  const columns = characterAtlas?.columns || 3;
+  const rows = characterAtlas?.rows || 2;
   const draw = () => {
     if (!isArtworkReady(image)) {
       return;
     }
 
-    const cacheKey = `${type}:${item.col}:${item.row}`;
+    const cacheKey = `${type}:${item.atlas || "main"}:${item.col}:${item.row}`;
     let artwork = SHOP_PREVIEW_ARTWORK_CACHE.get(cacheKey);
     if (!artwork) {
       const sourceX = Math.floor((item.col * image.naturalWidth) / columns);
@@ -2865,17 +2917,19 @@ function createMaskedArtwork(source, mask) {
 }
 
 function prepareExpressionArtwork() {
-  if (!isArtworkReady(ART_ASSETS.character)) {
-    return;
-  }
+  Object.entries(CHARACTER_ATLASES).forEach(([atlasId, atlas]) => {
+    if (!isArtworkReady(atlas.neutral)) {
+      return;
+    }
 
-  if (!EXPRESSION_ARTWORK.good && isArtworkReady(ART_ASSETS.characterHappy)) {
-    EXPRESSION_ARTWORK.good = createMaskedArtwork(ART_ASSETS.characterHappy, ART_ASSETS.character);
-  }
+    if (!EXPRESSION_ARTWORK.good[atlasId] && isArtworkReady(atlas.happy)) {
+      EXPRESSION_ARTWORK.good[atlasId] = createMaskedArtwork(atlas.happy, atlas.neutral);
+    }
 
-  if (!EXPRESSION_ARTWORK.bad && isArtworkReady(ART_ASSETS.characterHurt)) {
-    EXPRESSION_ARTWORK.bad = createMaskedArtwork(ART_ASSETS.characterHurt, ART_ASSETS.character);
-  }
+    if (!EXPRESSION_ARTWORK.bad[atlasId] && isArtworkReady(atlas.hurt)) {
+      EXPRESSION_ARTWORK.bad[atlasId] = createMaskedArtwork(atlas.hurt, atlas.neutral);
+    }
+  });
 }
 
 function drawAtlasCell(image, item, columns, rows, x, y, width, height) {
@@ -2902,13 +2956,15 @@ function drawAtlasCell(image, item, columns, rows, x, y, width, height) {
 }
 
 function drawBackgroundArtwork(background) {
-  if (!isArtworkReady(ART_ASSETS.background)) {
+  const atlas = getBackgroundAtlas(background);
+
+  if (!isArtworkReady(atlas.image)) {
     return false;
   }
 
   ctx.save();
   ctx.filter = "saturate(0.7) brightness(1.08)";
-  drawAtlasCell(ART_ASSETS.background, background, 2, 3, 0, 0, canvas.width, canvas.height);
+  drawAtlasCell(atlas.image, background, atlas.columns, atlas.rows, 0, 0, canvas.width, canvas.height);
   ctx.restore();
   const wash = ctx.createLinearGradient(0, 0, 0, canvas.height);
   wash.addColorStop(0, "rgba(255, 255, 255, 0.2)");
@@ -3729,13 +3785,15 @@ function applyCharacterMotion(motion, mirrorFacing = false) {
 function drawCharacterArtwork(width, height, rotation, reaction) {
   const characterId = game.loadout?.character || currentUser?.loadout?.character || "calico";
   const character = SHOP_CATALOG.character[characterId] || SHOP_CATALOG.character.calico;
+  const atlasId = character.atlas === "extra" ? "extra" : "main";
+  const atlas = CHARACTER_ATLASES[atlasId];
   const reactionArtwork = reaction === "good"
-    ? EXPRESSION_ARTWORK.good
+    ? EXPRESSION_ARTWORK.good[atlasId]
     : reaction === "bad"
-      ? EXPRESSION_ARTWORK.bad
+      ? EXPRESSION_ARTWORK.bad[atlasId]
       : null;
 
-  if (!isArtworkReady(ART_ASSETS.character)) {
+  if (!isArtworkReady(atlas.neutral)) {
     return false;
   }
 
@@ -3754,10 +3812,10 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
   applyCharacterMotion(motion, true);
   ctx.rotate(rotation);
   drawAtlasCell(
-    ART_ASSETS.character,
+    atlas.neutral,
     character,
-    4,
-    4,
+    atlas.columns,
+    atlas.rows,
     drawLeft,
     drawTop,
     drawWidth,
@@ -3767,8 +3825,8 @@ function drawCharacterArtwork(width, height, rotation, reaction) {
     drawAtlasCell(
       reactionArtwork,
       character,
-      4,
-      4,
+      atlas.columns,
+      atlas.rows,
       drawLeft,
       drawTop,
       drawWidth,
@@ -3976,8 +4034,9 @@ function drawClosedBoxArtwork(width, height) {
 function drawBoxPawArtwork(width, height) {
   const characterId = game.loadout?.character || currentUser?.loadout?.character || "calico";
   const character = SHOP_CATALOG.character[characterId] || SHOP_CATALOG.character.calico;
+  const atlas = getCharacterAtlas(character);
 
-  if (!isArtworkReady(ART_ASSETS.boxPaw)) {
+  if (!isArtworkReady(atlas.boxPaw)) {
     return false;
   }
 
@@ -3988,10 +4047,10 @@ function drawBoxPawArtwork(width, height) {
   ctx.ellipse(0, height / 2 + 7, width * 0.5, Math.max(7, height * 0.12), 0, 0, Math.PI * 2);
   ctx.fill();
   return drawAtlasCell(
-    ART_ASSETS.boxPaw,
+    atlas.boxPaw,
     character,
-    4,
-    4,
+    atlas.columns,
+    atlas.rows,
     -drawSize / 2,
     drawBottom - drawSize,
     drawSize,

@@ -281,6 +281,28 @@ async function getAtlasCell(filePath, item, columns, rows) {
   return image.extract(getAtlasRect(metadata, item, columns, rows));
 }
 
+function getShareCharacterAtlas(item) {
+  return item?.atlas === "extra"
+    ? {
+      neutralFile: "character-extra-atlas.png",
+      happyFile: "character-extra-happy-atlas.png",
+      columns: 3,
+      rows: 3,
+    }
+    : {
+      neutralFile: "character-atlas.png",
+      happyFile: "character-happy-atlas.png",
+      columns: 4,
+      rows: 4,
+    };
+}
+
+function getShareBackgroundAtlas(item) {
+  return item?.atlas === "extra"
+    ? { file: "background-extra-atlas.png", columns: 2, rows: 1 }
+    : { file: "background-atlas.png", columns: 2, rows: 3 };
+}
+
 function getShareCompanionLayout(payload) {
   const companionIds = [payload.companionLeft, payload.companionRight]
     .filter((companionId, index, values) => CATALOG.companion[companionId] && values.indexOf(companionId) === index);
@@ -401,13 +423,30 @@ function createUiSvg(payload) {
 async function createShareImage(payload) {
   const backgroundItem = CATALOG.background[payload.background] || CATALOG.background[DEFAULT_BACKGROUND];
   const characterItem = CATALOG.character[payload.character] || CATALOG.character[DEFAULT_CHARACTER];
-  const backgroundPath = path.join(__dirname, "..", "assets", "background-atlas.png");
-  const characterMaskPath = path.join(__dirname, "..", "assets", "character-atlas.png");
-  const characterHappyPath = path.join(__dirname, "..", "assets", "character-happy-atlas.png");
+  const backgroundAtlas = getShareBackgroundAtlas(backgroundItem);
+  const characterAtlas = getShareCharacterAtlas(characterItem);
+  const backgroundPath = path.join(__dirname, "..", "assets", backgroundAtlas.file);
+  const characterMaskPath = path.join(__dirname, "..", "assets", characterAtlas.neutralFile);
+  const characterHappyPath = path.join(__dirname, "..", "assets", characterAtlas.happyFile);
   const companionPath = path.join(__dirname, "..", "assets", "companion-atlas.png");
-  const backgroundCell = await getAtlasCell(backgroundPath, backgroundItem, 2, 3);
-  const characterHappyCell = await getAtlasCell(characterHappyPath, characterItem, 4, 4);
-  const characterMaskCell = await getAtlasCell(characterMaskPath, characterItem, 4, 4);
+  const backgroundCell = await getAtlasCell(
+    backgroundPath,
+    backgroundItem,
+    backgroundAtlas.columns,
+    backgroundAtlas.rows,
+  );
+  const characterHappyCell = await getAtlasCell(
+    characterHappyPath,
+    characterItem,
+    characterAtlas.columns,
+    characterAtlas.rows,
+  );
+  const characterMaskCell = await getAtlasCell(
+    characterMaskPath,
+    characterItem,
+    characterAtlas.columns,
+    characterAtlas.rows,
+  );
   const backgroundBuffer = await backgroundCell
     .resize(1200, 630, { fit: "cover" })
     .modulate({ brightness: 0.88, saturation: 0.82 })
