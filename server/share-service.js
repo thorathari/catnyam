@@ -284,7 +284,7 @@ async function getAtlasCell(filePath, item, columns, rows) {
 function getShareCompanionLayout(payload) {
   const companionIds = [payload.companionLeft, payload.companionRight]
     .filter((companionId, index, values) => CATALOG.companion[companionId] && values.indexOf(companionId) === index);
-  const centers = companionIds.length > 1 ? [310, 420] : [385];
+  const centers = companionIds.length > 1 ? [210, 355] : [355];
 
   return companionIds.map((companionId, index) => ({
     id: companionId,
@@ -437,11 +437,16 @@ async function createShareImage(payload) {
     try {
       const companionItem = CATALOG.companion[companion.id];
       const companionCell = await getAtlasCell(companionPath, companionItem, 3, 2);
-      const companionBuffer = await companionCell
+      const companionCellBuffer = await companionCell.png().toBuffer();
+      let companionArtwork = sharp(companionCellBuffer)
         .trim()
-        .resize(150, 145, { fit: "inside", withoutEnlargement: false })
-        .png()
-        .toBuffer();
+        .resize(150, 145, { fit: "inside", withoutEnlargement: false });
+
+      if (companion.id === "chick" || companion.id === "sparrow") {
+        companionArtwork = companionArtwork.flop();
+      }
+
+      const companionBuffer = await companionArtwork.png().toBuffer();
       const companionMetadata = await sharp(companionBuffer).metadata();
       companionComposites.push({
         input: companionBuffer,
