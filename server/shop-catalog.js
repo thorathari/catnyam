@@ -3,8 +3,8 @@ const DEFAULT_BACKGROUND = "village";
 
 const CATALOG = {
   character: {
-    gray_scottish: { name: "회색 스코티시 폴드", price: 20, col: 0, row: 0 },
-    white_munchkin: { name: "흰색 먼치킨", price: 20, col: 1, row: 0 },
+    gray_scottish: { name: "스코티시 폴드", price: 20, col: 0, row: 0 },
+    white_munchkin: { name: "먼치킨", price: 20, col: 1, row: 0 },
     siamese: { name: "샴 고양이", price: 20, col: 2, row: 0 },
     norwegian_forest: { name: "노르웨이숲", price: 20, col: 3, row: 0 },
     cheese: { name: "치즈냥이", price: 20, col: 0, row: 1 },

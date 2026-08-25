@@ -773,7 +773,12 @@ function renderShop() {
       ? "좋은 아이템만 먹는 동료를 왼쪽과 오른쪽에 최대 두 마리 배치할 수 있어요."
       : "게임 화면의 풍경을 바꿔보세요.";
 
-  Object.entries(catalog).forEach(([itemId, item]) => {
+  const catalogEntries = Object.entries(catalog);
+  if (shopTab === "background") {
+    catalogEntries.sort(([, first], [, second]) => first.price - second.price);
+  }
+
+  catalogEntries.forEach(([itemId, item]) => {
     const owned = ownedItems.includes(itemId);
     const card = document.createElement("article");
     const preview = document.createElement("div");
