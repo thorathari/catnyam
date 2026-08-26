@@ -1367,8 +1367,17 @@ button:disabled {
   font-size: 2rem;
 }
 
+.attendance-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 20px 14px;
+}
+
 .attendance-summary {
-  margin: 0 68px 14px 20px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
   color: #5e554c;
   font-size: 0.9rem;
   font-weight: 900;
@@ -1507,10 +1516,9 @@ button:disabled {
 }
 
 .attendance-rules-toggle {
-  position: absolute;
+  position: relative;
   z-index: 5;
-  top: 68px;
-  right: 20px;
+  flex: 0 0 auto;
 }
 
 .attendance-rules-toggle summary {
@@ -2804,8 +2812,11 @@ button:disabled {
     font-size: 1.55rem;
   }
 
+  .attendance-summary-row {
+    margin: 0 12px 14px;
+  }
+
   .attendance-summary {
-    margin: 0 54px 14px 12px;
     font-size: 0.8rem;
   }
 
@@ -2822,10 +2833,6 @@ button:disabled {
 
   .attendance-reward-list li strong {
     font-size: 0.64rem;
-  }
-
-  .attendance-rules-toggle {
-    right: 12px;
   }
 
   .attendance-claim-button {
