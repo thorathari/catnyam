@@ -84,6 +84,7 @@ const attendanceModal = document.querySelector("#attendanceModal");
 const closeAttendanceModalButton = document.querySelector("#closeAttendanceModalButton");
 const attendanceSummary = document.querySelector("#attendanceSummary");
 const attendanceRewardItems = Array.from(document.querySelectorAll("[data-attendance-day]"));
+const attendanceRulesToggle = document.querySelector(".attendance-rules-toggle");
 const attendanceClaimButton = document.querySelector("#attendanceClaimButton");
 const attendanceMessage = document.querySelector("#attendanceMessage");
 const shopModal = document.querySelector("#shopModal");
@@ -701,6 +702,7 @@ function openAttendanceModal() {
 
 function closeAttendanceModal() {
   attendanceModal.hidden = true;
+  attendanceRulesToggle.open = false;
   setAttendanceMessage("");
 }
 

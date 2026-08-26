@@ -325,6 +325,13 @@
           </div>
           <button class="modal-close-button" id="closeAttendanceModalButton" type="button" aria-label="출석 창 닫기">×</button>
         </div>
+        <details class="attendance-rules-toggle">
+          <summary aria-label="출석 규칙 보기" title="출석 규칙">?</summary>
+          <div class="attendance-rules-popover">
+            <strong>연속 출석 규칙</strong>
+            <p>매일 한 번 보상을 받을 수 있어요. 7일차 보상을 받으면 다음 날 새로운 1일차가 시작됩니다.</p>
+          </div>
+        </details>
         <p class="attendance-summary" id="attendanceSummary"></p>
         <ol class="attendance-reward-list" id="attendanceRewardList">
           <li data-attendance-day="1"><span>1일차</span><i class="reward-coin" aria-hidden="true"></i><strong>3코인</strong></li>
@@ -334,13 +341,11 @@
           <li data-attendance-day="5"><span>5일차</span><i class="reward-coin" aria-hidden="true"></i><strong>7코인</strong></li>
           <li data-attendance-day="6"><span>6일차</span><i class="reward-coin" aria-hidden="true"></i><strong>7코인</strong></li>
           <li data-attendance-day="7" class="attendance-final-reward">
-            <span>7일차</span><i class="reward-ticket" aria-hidden="true"></i><strong>10코인 + 가챠권 1장</strong>
+            <span>7일차</span>
+            <span class="reward-combo" aria-hidden="true"><i class="reward-coin"></i><i class="reward-ticket"></i></span>
+            <strong>10코인 + 가챠권 1장</strong>
           </li>
         </ol>
-        <div class="attendance-rules">
-          <strong>연속 출석 규칙</strong>
-          <p>하루라도 빠지면 1일차부터 다시 시작합니다. 7일차 보상을 받으면 다음 날 새로운 1일차가 시작됩니다.</p>
-        </div>
         <button class="primary-button attendance-claim-button" id="attendanceClaimButton" type="button">오늘 출석 보상 받기</button>
         <p class="form-message attendance-message" id="attendanceMessage" role="status"></p>
       </div>

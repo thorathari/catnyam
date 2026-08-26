@@ -1354,6 +1354,7 @@ button:disabled {
 }
 
 .attendance-modal {
+  position: relative;
   width: min(720px, 100%);
   overflow: auto;
   border: 3px solid #38332c;
@@ -1367,7 +1368,7 @@ button:disabled {
 }
 
 .attendance-summary {
-  margin: 0 20px 14px;
+  margin: 0 68px 14px 20px;
   color: #5e554c;
   font-size: 0.9rem;
   font-weight: 900;
@@ -1482,21 +1483,82 @@ button:disabled {
   right: -5px;
 }
 
-.attendance-rules {
-  margin: 16px 20px 12px;
+.reward-combo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 58px;
+  height: 34px;
+}
+
+.reward-combo .reward-coin {
+  z-index: 1;
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+}
+
+.reward-combo .reward-ticket {
+  z-index: 2;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 28px;
+  margin-left: -16px;
+}
+
+.attendance-rules-toggle {
+  position: absolute;
+  z-index: 5;
+  top: 68px;
+  right: 20px;
+}
+
+.attendance-rules-toggle summary {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid #514a42;
+  border-radius: 50%;
+  color: #514a42;
+  background: #fff5d7;
+  box-shadow: 2px 2px 0 rgba(56, 51, 44, 0.82);
+  font-size: 0.86rem;
+  font-weight: 900;
+  cursor: pointer;
+  list-style: none;
+}
+
+.attendance-rules-toggle summary::-webkit-details-marker {
+  display: none;
+}
+
+.attendance-rules-toggle[open] summary {
+  color: white;
+  background: #ef6f8f;
+}
+
+.attendance-rules-popover {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  width: min(280px, calc(100vw - 64px));
   padding: 12px 14px;
-  border-left: 4px solid #ef6f8f;
-  background: #fff0f3;
+  border: 2px solid #514a42;
+  border-radius: 8px;
+  color: #514a42;
+  background: #fffdf8;
+  box-shadow: 4px 4px 0 rgba(56, 51, 44, 0.82);
 }
 
-.attendance-rules strong {
-  font-size: 0.82rem;
+.attendance-rules-popover strong {
+  font-size: 0.8rem;
 }
 
-.attendance-rules p {
+.attendance-rules-popover p {
   margin: 4px 0 0;
   color: #675d55;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 700;
   line-height: 1.5;
 }
@@ -1505,7 +1567,7 @@ button:disabled {
   display: block;
   width: calc(100% - 40px);
   min-height: 46px;
-  margin: 0 20px;
+  margin: 16px 20px 0;
   border: 2px solid #38332c;
   border-radius: 8px;
   color: white;
@@ -2743,7 +2805,7 @@ button:disabled {
   }
 
   .attendance-summary {
-    margin-inline: 12px;
+    margin: 0 54px 14px 12px;
     font-size: 0.8rem;
   }
 
@@ -2762,8 +2824,8 @@ button:disabled {
     font-size: 0.64rem;
   }
 
-  .attendance-rules {
-    margin-inline: 12px;
+  .attendance-rules-toggle {
+    right: 12px;
   }
 
   .attendance-claim-button {
