@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 
 const { CATALOG } = require("../server/shop-catalog");
 const { getAttendanceStatus } = require("../server/reward-rules");
-const { selectGachaOutcome } = require("../server/reward-service");
+const { getGachaDrawPayment, selectGachaOutcome } = require("../server/reward-service");
 
 const TEST_NOW = new Date("2026-08-26T03:00:00Z");
 
@@ -63,4 +63,21 @@ test("gacha uses 15 percent miss, 5 percent duplicate, and then new character", 
 test("gacha stops after every paid character is owned", () => {
   const allCharacters = Object.keys(CATALOG.character);
   assert.equal(selectGachaOutcome(allCharacters, 9000, 0), null);
+});
+
+test("gacha uses an attendance ticket before charging coins", () => {
+  assert.deepEqual(getGachaDrawPayment(100, 2), {
+    coinCost: 0,
+    ticketsAfter: 1,
+    paymentType: "ticket",
+  });
+});
+
+test("gacha charges 20 coins when no attendance ticket is available", () => {
+  assert.deepEqual(getGachaDrawPayment(20, 0), {
+    coinCost: 20,
+    ticketsAfter: 0,
+    paymentType: "coins",
+  });
+  assert.equal(getGachaDrawPayment(19, 0), null);
 });

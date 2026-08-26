@@ -96,7 +96,6 @@ const shopMessage = document.querySelector("#shopMessage");
 const shopTabButtons = Array.from(document.querySelectorAll("[data-shop-tab]"));
 const gachaPanel = document.querySelector("#gachaPanel");
 const gachaTicketText = document.querySelector("#gachaTicketText");
-const buyGachaTicketButton = document.querySelector("#buyGachaTicketButton");
 const drawGachaButton = document.querySelector("#drawGachaButton");
 const gachaOverlay = document.querySelector("#gachaOverlay");
 const gachaStage = document.querySelector("#gachaStage");
@@ -912,13 +911,14 @@ function getUnownedGachaCharacterIds() {
 function renderGachaPanel() {
   const isCharacterTab = shopTab === "character";
   const tickets = Math.max(0, Number(currentUser?.gachaTickets) || 0);
+  const coins = Math.max(0, Number(currentUser?.coins) || 0);
   const allCollected = getUnownedGachaCharacterIds().length === 0;
+  const canDraw = tickets > 0 || coins >= 20;
 
   gachaPanel.hidden = !isCharacterTab;
   gachaTicketText.textContent = tickets;
-  buyGachaTicketButton.disabled = !isCharacterTab || allCollected || gachaDrawing;
-  drawGachaButton.disabled = !isCharacterTab || allCollected || tickets < 1 || gachaDrawing;
-  drawGachaButton.textContent = allCollected ? "모두 모았어요" : "1장으로 뽑기";
+  drawGachaButton.disabled = !isCharacterTab || allCollected || !canDraw || gachaDrawing;
+  drawGachaButton.textContent = allCollected ? "모두 모았어요" : "뽑기";
 }
 
 function createGachaDelay() {
@@ -1002,33 +1002,9 @@ function revealGachaResult(data) {
   syncCurrentUser(data.user);
 }
 
-async function buyGachaTicket() {
-  if (!currentUser || gachaDrawing) {
-    return;
-  }
-
-  buyGachaTicketButton.disabled = true;
-  drawGachaButton.disabled = true;
-  setShopMessage("뽑기권을 준비하고 있어요...");
-
-  try {
-    const data = await requestApi("/api/scores", {
-      method: "POST",
-      body: {
-        action: "shop",
-        shopAction: "buy-gacha-ticket",
-      },
-    });
-    syncCurrentUser(data.user);
-    setShopMessage(data.message || "가챠 뽑기권을 구매했습니다.", true);
-  } catch (error) {
-    setShopMessage(error.message);
-    renderShop();
-  }
-}
-
 async function startGachaDraw() {
-  if (!currentUser || gachaDrawing || Number(currentUser.gachaTickets) < 1) {
+  const canDraw = Number(currentUser?.gachaTickets) > 0 || Number(currentUser?.coins) >= 20;
+  if (!currentUser || gachaDrawing || !canDraw) {
     return;
   }
 
@@ -1091,9 +1067,13 @@ function renderShop() {
       : "게임 화면의 풍경을 바꿔보세요.";
 
   const catalogEntries = Object.entries(catalog);
-  if (shopTab === "background") {
-    catalogEntries.sort(([, first], [, second]) => first.price - second.price);
-  }
+  catalogEntries.sort(([, first], [, second]) => {
+    const defaultOrder = Number(first.price > 0) - Number(second.price > 0);
+    if (defaultOrder !== 0) {
+      return defaultOrder;
+    }
+    return shopTab === "background" ? first.price - second.price : 0;
+  });
 
   catalogEntries.forEach(([itemId, item]) => {
     const owned = ownedItems.includes(itemId);
@@ -5045,7 +5025,6 @@ shopModal.addEventListener("click", (event) => {
   }
 });
 attendanceClaimButton.addEventListener("click", claimAttendance);
-buyGachaTicketButton.addEventListener("click", buyGachaTicket);
 drawGachaButton.addEventListener("click", startGachaDraw);
 gachaSkipButton.addEventListener("click", skipGachaAnimation);
 gachaConfirmButton.addEventListener("click", confirmGachaResult);

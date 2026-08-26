@@ -40,7 +40,7 @@ async function updateUser(userId, patch, expectedCoins = null) {
 async function processShopAction(user, body = {}) {
   const { shopAction, type, itemId, slot } = body;
 
-  if (shopAction === "buy-gacha-ticket" || shopAction === "draw-gacha") {
+  if (shopAction === "draw-gacha") {
     return processGachaAction(user, shopAction);
   }
 

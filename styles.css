@@ -1763,7 +1763,7 @@ button:disabled {
 
 .gacha-panel-actions {
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: minmax(110px, 1fr);
   gap: 7px;
 }
 
@@ -2115,13 +2115,13 @@ button:disabled {
 
 .drum-stick-left {
   left: 54px;
-  transform: rotate(-35deg);
+  transform: rotate(35deg);
   animation: gacha-stick-left 0.34s ease-in-out infinite alternate;
 }
 
 .drum-stick-right {
   right: 54px;
-  transform: rotate(35deg);
+  transform: rotate(-35deg);
   animation: gacha-stick-right 0.34s ease-in-out infinite alternate-reverse;
 }
 
@@ -2171,13 +2171,13 @@ button:disabled {
 }
 
 @keyframes gacha-stick-left {
-  from { transform: rotate(-42deg); }
-  to { transform: rotate(-10deg); }
+  from { transform: rotate(42deg); }
+  to { transform: rotate(10deg); }
 }
 
 @keyframes gacha-stick-right {
-  from { transform: rotate(42deg); }
-  to { transform: rotate(10deg); }
+  from { transform: rotate(-42deg); }
+  to { transform: rotate(-10deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2857,7 +2857,7 @@ button:disabled {
 
   .gacha-panel-actions {
     grid-column: 1 / -1;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .gacha-panel-actions button {

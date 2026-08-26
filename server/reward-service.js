@@ -81,32 +81,29 @@ async function updateRewardUser(userId, patch, expected = {}) {
   return rows[0];
 }
 
-async function buyGachaTicket(user) {
-  const coins = Math.max(0, Number(user.coins) || 0);
-  const tickets = Math.max(0, Number(user.gacha_tickets) || 0);
+function getGachaDrawPayment(coinsValue, ticketsValue) {
+  const coins = Math.max(0, Number(coinsValue) || 0);
+  const tickets = Math.max(0, Number(ticketsValue) || 0);
 
-  if (coins < GACHA_TICKET_PRICE) {
-    throw rewardError("가챠 뽑기권을 구매할 코인이 부족합니다.");
+  if (tickets > 0) {
+    return { coinCost: 0, ticketsAfter: tickets - 1, paymentType: "ticket" };
   }
 
-  const updated = await updateRewardUser(user.id, {
-    coins: coins - GACHA_TICKET_PRICE,
-    gacha_tickets: tickets + 1,
-  }, { coins, tickets });
+  if (coins >= GACHA_TICKET_PRICE) {
+    return { coinCost: GACHA_TICKET_PRICE, ticketsAfter: 0, paymentType: "coins" };
+  }
 
-  return {
-    user: sanitizeUser(updated),
-    message: "가챠 뽑기권 1장을 구매했습니다!",
-  };
+  return null;
 }
 
 async function drawGacha(user) {
   const coins = Math.max(0, Number(user.coins) || 0);
   const tickets = Math.max(0, Number(user.gacha_tickets) || 0);
   const inventory = getUserInventory(user);
+  const payment = getGachaDrawPayment(coins, tickets);
 
-  if (tickets < 1) {
-    throw rewardError("가챠 뽑기권이 없습니다.");
+  if (!payment) {
+    throw rewardError("뽑기에 필요한 20코인이 부족합니다.");
   }
 
   const roll = crypto.randomInt(10000);
@@ -118,8 +115,8 @@ async function drawGacha(user) {
 
   const item = outcome.itemId ? CATALOG.character[outcome.itemId] : null;
   const patch = {
-    coins: coins + outcome.refundCoins,
-    gacha_tickets: tickets - 1,
+    coins: coins - payment.coinCost + outcome.refundCoins,
+    gacha_tickets: payment.ticketsAfter,
   };
 
   if (outcome.type === "win") {
@@ -141,14 +138,12 @@ async function drawGacha(user) {
       itemId: outcome.itemId,
       name: item?.name || "꽝",
       refundCoins: outcome.refundCoins,
+      paymentType: payment.paymentType,
     },
   };
 }
 
 async function processGachaAction(user, shopAction) {
-  if (shopAction === "buy-gacha-ticket") {
-    return buyGachaTicket(user);
-  }
   if (shopAction === "draw-gacha") {
     return drawGacha(user);
   }
@@ -188,6 +183,7 @@ async function processAttendanceClaim(user, now = new Date()) {
 module.exports = {
   GACHA_REFUND_COINS,
   GACHA_TICKET_PRICE,
+  getGachaDrawPayment,
   processAttendanceClaim,
   processGachaAction,
   selectGachaOutcome,
