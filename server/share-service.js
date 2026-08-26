@@ -12,7 +12,7 @@ const {
 const SHARE_ORIGIN = "https://catnyam.vercel.app";
 const LEGACY_SHARE_TOKEN_VERSION = 1;
 const SHORT_SHARE_TOKEN_VERSION = 2;
-const SHARE_IMAGE_REVISION = 5;
+const SHARE_IMAGE_REVISION = 6;
 const MAX_SHARE_TOKEN_LENGTH = 4096;
 const MAX_SCORE = 500000;
 
@@ -651,13 +651,7 @@ async function createShareImage(payload) {
     .png()
     .toBuffer();
   const characterHappyBuffer = await characterHappyCell.png().toBuffer();
-  const darkEdgeThreshold = ["black", "tuxedo", "calico"].includes(payload.character) ? 24 : 72;
-  const maskedCharacterBuffer = await removeConnectedDarkBackground(
-    characterHappyBuffer,
-    characterItem.atlas !== "extra",
-    darkEdgeThreshold,
-  );
-  const characterBuffer = await sharp(maskedCharacterBuffer)
+  const characterBuffer = await sharp(characterHappyBuffer)
     .trim()
     .resize(410, 350, { fit: "inside", withoutEnlargement: false })
     .png()

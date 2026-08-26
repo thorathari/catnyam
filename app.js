@@ -200,7 +200,6 @@ const CHARACTER_FRAME_ARTWORK = {
   bad: {},
 };
 const BOX_PAW_FRAME_ARTWORK = {};
-const DARK_FUR_CHARACTER_IDS = new Set(["black", "tuxedo", "calico"]);
 const SHOP_PREVIEW_ARTWORK_CACHE = new Map();
 
 Object.values(ART_ASSETS).forEach((image) => {
@@ -3093,15 +3092,7 @@ function addCharacterOutline(imageData, radius = 4) {
   }
 }
 
-function createCharacterFrameArtwork(
-  source,
-  item,
-  columns,
-  rows,
-  removeDarkBackground,
-  darkThreshold,
-  edgeErosionPasses = 0,
-) {
+function createCharacterFrameArtwork(source, item, columns, rows) {
   if (!isArtworkReady(source)) {
     return null;
   }
@@ -3117,23 +3108,6 @@ function createCharacterFrameArtwork(
   frame.height = sourceBottom - sourceY;
   const frameContext = frame.getContext("2d", { willReadFrequently: true });
   frameContext.drawImage(source, sourceX, sourceY, frame.width, frame.height, 0, 0, frame.width, frame.height);
-  const imageData = frameContext.getImageData(0, 0, frame.width, frame.height);
-
-  if (removeDarkBackground) {
-    removeConnectedDarkBackground(imageData, darkThreshold);
-  }
-
-  getOpaqueArtworkBounds(imageData);
-  const totalEdgePasses = removeDarkBackground ? 1 : edgeErosionPasses;
-  for (let pass = 0; pass < totalEdgePasses; pass += 1) {
-    refineOpaqueEdge(imageData);
-    getOpaqueArtworkBounds(imageData);
-  }
-  if (removeDarkBackground) {
-    addCharacterOutline(imageData);
-  }
-  frameContext.clearRect(0, 0, frame.width, frame.height);
-  frameContext.putImageData(imageData, 0, 0);
   return frame;
 }
 
@@ -3141,23 +3115,19 @@ function prepareCharacterFrameArtwork() {
   Object.entries(SHOP_CATALOG.character).forEach(([characterId, character]) => {
     const atlasId = character.atlas === "extra" ? "extra" : "main";
     const atlas = CHARACTER_ATLASES[atlasId];
-    const darkThreshold = DARK_FUR_CHARACTER_IDS.has(characterId) ? 24 : 72;
     const frames = [
-      ["neutral", atlas.neutral, false, 3],
-      ["good", atlas.happy, atlasId === "main", 0],
-      ["bad", atlas.hurt, atlasId === "main", 0],
+      ["neutral", atlas.neutral],
+      ["good", atlas.happy],
+      ["bad", atlas.hurt],
     ];
 
-    frames.forEach(([state, source, removeDarkBackground, edgeErosionPasses]) => {
+    frames.forEach(([state, source]) => {
       if (!CHARACTER_FRAME_ARTWORK[state][characterId] && isArtworkReady(source)) {
         CHARACTER_FRAME_ARTWORK[state][characterId] = createCharacterFrameArtwork(
           source,
           character,
           atlas.columns,
           atlas.rows,
-          removeDarkBackground,
-          darkThreshold,
-          edgeErosionPasses,
         );
       }
     });
@@ -4260,9 +4230,6 @@ function drawBoxPawArtwork(width, height) {
       character,
       atlas.columns,
       atlas.rows,
-      false,
-      24,
-      4,
     );
   }
   const boxArtwork = BOX_PAW_FRAME_ARTWORK[characterId];
