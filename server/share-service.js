@@ -12,7 +12,7 @@ const {
 const SHARE_ORIGIN = "https://catnyam.vercel.app";
 const LEGACY_SHARE_TOKEN_VERSION = 1;
 const SHORT_SHARE_TOKEN_VERSION = 2;
-const SHARE_IMAGE_REVISION = 4;
+const SHARE_IMAGE_REVISION = 5;
 const MAX_SHARE_TOKEN_LENGTH = 4096;
 const MAX_SCORE = 500000;
 
@@ -387,7 +387,7 @@ function refineOpaqueEdge(data, width, height, channels) {
   }
 }
 
-function addCharacterOutline(data, width, height, channels, radius = 3) {
+function addCharacterOutline(data, width, height, channels, radius = 4) {
   const alpha = new Uint8Array(width * height);
 
   for (let pixel = 0; pixel < alpha.length; pixel += 1) {
@@ -428,7 +428,7 @@ function addCharacterOutline(data, width, height, channels, radius = 3) {
       data[offset] = 52;
       data[offset + 1] = 42;
       data[offset + 2] = 35;
-      data[offset + 3] = nearestDistance <= 4 ? 255 : 205;
+      data[offset + 3] = nearestDistance <= 9 ? 255 : 205;
     }
   }
 }

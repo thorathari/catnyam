@@ -3046,7 +3046,7 @@ function refineOpaqueEdge(imageData) {
   }
 }
 
-function addCharacterOutline(imageData, radius = 3) {
+function addCharacterOutline(imageData, radius = 4) {
   const { data, width, height } = imageData;
   const alpha = new Uint8Array(width * height);
 
@@ -3088,7 +3088,7 @@ function addCharacterOutline(imageData, radius = 3) {
       data[offset] = 52;
       data[offset + 1] = 42;
       data[offset + 2] = 35;
-      data[offset + 3] = nearestDistance <= 4 ? 255 : 205;
+      data[offset + 3] = nearestDistance <= 9 ? 255 : 205;
     }
   }
 }
@@ -3100,7 +3100,7 @@ function createCharacterFrameArtwork(
   rows,
   removeDarkBackground,
   darkThreshold,
-  thinOuterEdge = false,
+  edgeErosionPasses = 0,
 ) {
   if (!isArtworkReady(source)) {
     return null;
@@ -3124,7 +3124,8 @@ function createCharacterFrameArtwork(
   }
 
   getOpaqueArtworkBounds(imageData);
-  if (removeDarkBackground || thinOuterEdge) {
+  const totalEdgePasses = removeDarkBackground ? 1 : edgeErosionPasses;
+  for (let pass = 0; pass < totalEdgePasses; pass += 1) {
     refineOpaqueEdge(imageData);
     getOpaqueArtworkBounds(imageData);
   }
@@ -3142,12 +3143,12 @@ function prepareCharacterFrameArtwork() {
     const atlas = CHARACTER_ATLASES[atlasId];
     const darkThreshold = DARK_FUR_CHARACTER_IDS.has(characterId) ? 24 : 72;
     const frames = [
-      ["neutral", atlas.neutral, false, true],
-      ["good", atlas.happy, atlasId === "main", false],
-      ["bad", atlas.hurt, atlasId === "main", false],
+      ["neutral", atlas.neutral, false, 3],
+      ["good", atlas.happy, atlasId === "main", 0],
+      ["bad", atlas.hurt, atlasId === "main", 0],
     ];
 
-    frames.forEach(([state, source, removeDarkBackground, thinOuterEdge]) => {
+    frames.forEach(([state, source, removeDarkBackground, edgeErosionPasses]) => {
       if (!CHARACTER_FRAME_ARTWORK[state][characterId] && isArtworkReady(source)) {
         CHARACTER_FRAME_ARTWORK[state][characterId] = createCharacterFrameArtwork(
           source,
@@ -3156,7 +3157,7 @@ function prepareCharacterFrameArtwork() {
           atlas.rows,
           removeDarkBackground,
           darkThreshold,
-          thinOuterEdge,
+          edgeErosionPasses,
         );
       }
     });
@@ -4261,7 +4262,7 @@ function drawBoxPawArtwork(width, height) {
       atlas.rows,
       false,
       24,
-      true,
+      4,
     );
   }
   const boxArtwork = BOX_PAW_FRAME_ARTWORK[characterId];
