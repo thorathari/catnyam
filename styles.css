@@ -753,6 +753,48 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.guest-start-notice-popup {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  width: min(330px, 100%);
+  border: 2px solid rgba(56, 51, 44, 0.8);
+  border-radius: 8px;
+  padding: 16px 18px 13px;
+  color: var(--ink);
+  background: rgba(255, 253, 248, 0.96);
+  box-shadow: 4px 5px 0 rgba(56, 51, 44, 0.78), 0 12px 30px rgba(37, 33, 29, 0.16);
+}
+
+.guest-start-notice-popup p {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 900;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.guest-start-notice-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 32px;
+  padding: 3px 5px;
+  color: #5f574e;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.guest-start-notice-option input {
+  width: 17px;
+  min-height: 17px;
+  margin: 0;
+  accent-color: var(--berry);
+}
+
 .game-mode-selector {
   display: inline-flex;
   gap: 4px;

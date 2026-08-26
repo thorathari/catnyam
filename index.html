@@ -115,6 +115,13 @@
             </button>
             <div class="game-overlay" id="gameOverlay">
               <p class="overlay-result" id="overlayResult" hidden></p>
+              <div class="guest-start-notice-popup" id="guestStartNoticePopup" role="status" hidden>
+                <p id="guestStartNoticeText"></p>
+                <label class="guest-start-notice-option">
+                  <input id="guestStartNoticeCheckbox" type="checkbox">
+                  <span>다시 보지 않기</span>
+                </label>
+              </div>
               <div class="game-mode-selector" id="gameModeSelector" role="group" aria-label="게임 모드 선택">
                 <button class="game-mode-button active" type="button" data-game-mode="churu" aria-pressed="true">츄르먹기</button>
                 <button class="game-mode-button" type="button" data-game-mode="bomb" aria-pressed="false">폭탄피하기</button>

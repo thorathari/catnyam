@@ -33,6 +33,9 @@ const logoutButton = document.querySelector("#logoutButton");
 const startButton = document.querySelector("#startButton");
 const gameOverlay = document.querySelector("#gameOverlay");
 const overlayResult = document.querySelector("#overlayResult");
+const guestStartNoticePopup = document.querySelector("#guestStartNoticePopup");
+const guestStartNoticeText = document.querySelector("#guestStartNoticeText");
+const guestStartNoticeCheckbox = document.querySelector("#guestStartNoticeCheckbox");
 const gameModeSelector = document.querySelector("#gameModeSelector");
 const gameModeButtons = Array.from(document.querySelectorAll(".game-mode-button"));
 const shareResultButton = document.querySelector("#shareResultButton");
@@ -245,6 +248,7 @@ Object.values(ART_ASSETS).forEach((image) => {
 
 const REMEMBER_LOGIN_KEY = "catnyam_auto_login";
 const PENDING_GUEST_GAME_KEY = "catnyam_pending_guest_game";
+const HIDE_GUEST_START_NOTICE_KEY = "catnyam_hide_guest_start_notice";
 const ADSENSE_CLIENT_ID = "ca-pub-1434022792706022";
 const SHARE_PAGE_URL = "https://catnyam.vercel.app/";
 const RANKING_REFRESH_MS = 15000;
@@ -424,6 +428,26 @@ function clearRememberedLogin() {
     localStorage.removeItem(REMEMBER_LOGIN_KEY);
   } catch {
     // Nothing else is required if browser storage is unavailable.
+  }
+}
+
+function shouldHideGuestStartNotice() {
+  try {
+    return localStorage.getItem(HIDE_GUEST_START_NOTICE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function setGuestStartNoticeHidden(hidden) {
+  try {
+    if (hidden) {
+      localStorage.setItem(HIDE_GUEST_START_NOTICE_KEY, "1");
+    } else {
+      localStorage.removeItem(HIDE_GUEST_START_NOTICE_KEY);
+    }
+  } catch {
+    // The notice can still be shown normally if browser storage is unavailable.
   }
 }
 
@@ -2644,6 +2668,7 @@ function cancelGuestStartCountdown() {
 async function runGuestStartCountdown() {
   const countdownId = ++guestStartCountdownId;
   guestStartCountdownActive = true;
+  guestStartNoticeCheckbox.checked = shouldHideGuestStartNotice();
   gameModeButtons.forEach((button) => {
     button.disabled = true;
   });
@@ -2653,10 +2678,8 @@ async function runGuestStartCountdown() {
       return false;
     }
 
-    showGameOverlay(
-      "게임 시작",
-      `로그인 전에는 랭킹과 코인이 저장되지 않아요 · ${remaining}초`,
-    );
+    guestStartNoticeText.textContent = `로그인 전에는 랭킹과 코인이 저장되지 않아요 · ${remaining}초`;
+    showGameOverlay("게임 시작", "", "guest-start-notice");
     startButton.disabled = true;
     await new Promise((resolve) => window.setTimeout(resolve, 1000));
   }
@@ -2666,8 +2689,7 @@ async function runGuestStartCountdown() {
   }
 
   guestStartCountdownActive = false;
-  overlayResult.textContent = "";
-  overlayResult.hidden = true;
+  guestStartNoticePopup.hidden = true;
   updateGameModeUI();
   return true;
 }
@@ -2684,7 +2706,7 @@ async function startGame() {
   startButton.disabled = true;
   pauseRestartButton.disabled = true;
 
-  if (guestMode && !await runGuestStartCountdown()) {
+  if (guestMode && !shouldHideGuestStartNotice() && !await runGuestStartCountdown()) {
     startButton.disabled = false;
     pauseRestartButton.disabled = false;
     return;
@@ -2916,20 +2938,22 @@ function showPauseOverlay() {
 
 function showGameOverlay(buttonText, resultText = "", mode = "default") {
   const isPaused = mode === "pause";
+  const isGuestStartNotice = mode === "guest-start-notice";
   const isGuestResult = mode === "result" && guestMode && lastFinishedScore !== null;
   const canShareResult = mode === "result" && !guestMode && lastFinishedScore !== null;
   startButton.textContent = buttonText;
-  startButton.hidden = isPaused;
-  gameModeSelector.hidden = isPaused;
+  startButton.hidden = isPaused || isGuestStartNotice;
+  gameModeSelector.hidden = isPaused || isGuestStartNotice;
+  guestStartNoticePopup.hidden = !isGuestStartNotice;
   guestSaveScoreButton.hidden = !isGuestResult;
   shareResultButton.hidden = !canShareResult;
   if (!canShareResult) {
     resetShareStatus();
   }
   pauseActions.hidden = !isPaused;
-  itemGuide.hidden = isPaused;
+  itemGuide.hidden = isPaused || isGuestStartNotice;
   itemGuide.classList.remove("mobile-open");
-  itemGuideToggleButton.hidden = isPaused;
+  itemGuideToggleButton.hidden = isPaused || isGuestStartNotice;
   itemGuideToggleButton.setAttribute("aria-expanded", "false");
   itemGuideToggleButton.setAttribute("aria-label", "아이템 설명 보기");
   overlayResult.textContent = resultText;
@@ -2943,6 +2967,7 @@ function hideGameOverlay() {
   pauseActions.hidden = true;
   startButton.hidden = false;
   gameModeSelector.hidden = true;
+  guestStartNoticePopup.hidden = true;
   guestSaveScoreButton.hidden = true;
   shareResultButton.hidden = true;
   shareStatus.hidden = true;
@@ -5298,6 +5323,9 @@ window.addEventListener("keyup", (event) => {
 authForm.addEventListener("submit", handleAuthSubmit);
 authModalCloseButton.addEventListener("click", closeGuestAuthModal);
 authModalBackdrop.addEventListener("click", closeGuestAuthModal);
+guestStartNoticeCheckbox.addEventListener("change", () => {
+  setGuestStartNoticeHidden(guestStartNoticeCheckbox.checked);
+});
 signupButton.addEventListener("click", () => setAuthMode("signup"));
 loginModeButton.addEventListener("click", () => setAuthMode("login"));
 guestButton.addEventListener("click", enterGuestMode);
