@@ -13,6 +13,7 @@ const { getUserLoadout } = require("../server/shop-catalog");
 const { processAttendanceClaim } = require("../server/reward-service");
 const { processShopAction } = require("../server/shop-service");
 const { createShareUrl, handleShareRequest } = require("../server/share-service");
+const { createSignedGuestToken, readSignedGuestToken } = require("../server/guest-session");
 
 const CHURU_MIN_PLAY_MS = (CatnyamEngine.GAME_SECONDS - 5) * 1000;
 const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
@@ -183,6 +184,10 @@ function timingSafeEqualText(left, right) {
   return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
+function isMissingColumn(error, column) {
+  return new RegExp(column, "i").test(error?.message || "");
+}
+
 function isMissingPlaySecondsColumn(error) {
   return /play_seconds/i.test(error.message || "");
 }
@@ -250,6 +255,96 @@ async function createGameSession(user, gameMode) {
     loadout,
     minSubmitAfterMs: normalizedMode === CatnyamEngine.GAME_MODES.BOMB ? 0 : CHURU_MIN_PLAY_MS,
   };
+}
+
+function createGuestGameSession(gameMode) {
+  const sessionId = crypto.randomUUID();
+  const seed = crypto.randomBytes(16).toString("hex");
+  const normalizedMode = normalizeGameMode(gameMode);
+  const loadout = getUserLoadout({});
+  const now = Date.now();
+  const payload = {
+    version: 1,
+    id: sessionId,
+    seed,
+    gameMode: normalizedMode,
+    loadout,
+    startedAt: new Date(now).toISOString(),
+    expiresAt: new Date(now + SESSION_TTL_MS).toISOString(),
+  };
+  const token = createSignedGuestToken(payload, getSessionSecret());
+
+  return {
+    id: sessionId,
+    token,
+    seed,
+    gameMode: normalizedMode,
+    loadout,
+    minSubmitAfterMs: normalizedMode === CatnyamEngine.GAME_MODES.BOMB ? 0 : CHURU_MIN_PLAY_MS,
+  };
+}
+
+async function prepareGuestSessionForClaim(user, sessionId, sessionToken) {
+  const payload = readSignedGuestToken(sessionToken, getSessionSecret());
+
+  if (!payload
+    || payload.version !== 1
+    || payload.id !== sessionId
+    || !payload.seed
+    || !payload.startedAt
+    || !payload.expiresAt) {
+    return { error: "게스트 게임 세션이 올바르지 않습니다." };
+  }
+
+  const normalizedMode = normalizeGameMode(payload.gameMode);
+  const expiresAt = new Date(payload.expiresAt).getTime();
+
+  if (Number.isNaN(expiresAt) || Date.now() > expiresAt) {
+    return { error: "게스트 게임 세션이 만료되었습니다." };
+  }
+
+  const existingSessions = await supabaseRequest(`game_sessions?id=eq.${encodeURIComponent(sessionId)}&select=*&limit=1`, {
+    prefer: "",
+  });
+  const existingSession = existingSessions?.[0];
+
+  if (existingSession) {
+    if (existingSession.user_id !== user.id) {
+      return { error: "이미 다른 계정에 등록된 게스트 게임입니다." };
+    }
+
+    return { session: existingSession };
+  }
+
+  const sessionBody = {
+    id: sessionId,
+    user_id: user.id,
+    token_hash: hashGameToken(sessionToken),
+    seed: payload.seed,
+    game_mode: normalizedMode,
+    loadout: payload.loadout || getUserLoadout({}),
+    started_at: payload.startedAt,
+    expires_at: payload.expiresAt,
+  };
+
+  try {
+    await supabaseRequest("game_sessions", {
+      method: "POST",
+      body: sessionBody,
+    });
+  } catch (error) {
+    if (!isMissingColumn(error, "loadout")) {
+      throw error;
+    }
+
+    const { loadout: unusedLoadout, ...fallbackBody } = sessionBody;
+    await supabaseRequest("game_sessions", {
+      method: "POST",
+      body: fallbackBody,
+    });
+  }
+
+  return { session: sessionBody };
 }
 
 async function validateGameSession(user, sessionId, sessionToken, score, coinsEarned, inputLog, gameMode, steps) {
@@ -372,10 +467,9 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const user = await requireUser(req, res);
-    if (!user) return;
-
     if (req.method === "DELETE") {
+      const user = await requireUser(req, res);
+      if (!user) return;
       const body = await readJson(req);
 
       if (!body.gameMode) {
@@ -390,6 +484,15 @@ module.exports = async function handler(req, res) {
 
     const body = await readJson(req);
     const { action, score, coinsEarned, sessionId, sessionToken, inputLog, gameMode, steps } = body;
+
+    if (action === "start-guest-game") {
+      const gameSession = createGuestGameSession(gameMode);
+      sendJson(res, 200, { gameSession });
+      return;
+    }
+
+    const user = await requireUser(req, res);
+    if (!user) return;
 
     if (!Object.prototype.hasOwnProperty.call(user, "coins")) {
       sendJson(res, 503, {
@@ -441,7 +544,9 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    if (action !== "finish-game") {
+    const isGuestClaim = action === "claim-guest-game";
+
+    if (!isGuestClaim && action !== "finish-game") {
       sendJson(res, 400, { message: "게임 시작 토큰이 필요합니다." });
       return;
     }
@@ -453,11 +558,24 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    if (isGuestClaim) {
+      const preparedSession = await prepareGuestSessionForClaim(user, sessionId, sessionToken);
+
+      if (preparedSession.error) {
+        sendJson(res, 400, { message: preparedSession.error });
+        return;
+      }
+    }
+
     const validation = await validateGameSession(user, sessionId, sessionToken, numericScore, coinsEarned, inputLog, gameMode, steps);
 
     if (validation.error) {
       sendJson(res, 400, { message: validation.error });
       return;
+    }
+
+    if (isGuestClaim) {
+      validation.coins = 0;
     }
 
     const verifiedScore = validation.score;

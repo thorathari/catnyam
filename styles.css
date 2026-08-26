@@ -333,7 +333,9 @@ input:focus {
 .primary-button,
 .secondary-button,
 .ghost-button,
-.danger-button {
+.danger-button,
+.guest-entry-button,
+.guest-save-button {
   min-height: 44px;
   border: 2px solid var(--outline);
   border-radius: 8px;
@@ -356,6 +358,26 @@ input:focus {
 .ghost-button {
   color: var(--ink);
   background: rgba(37, 33, 29, 0.08);
+}
+
+.guest-entry-button {
+  flex: 1 0 100%;
+  color: #2b6455;
+  background: rgba(220, 247, 238, 0.82);
+  border-color: rgba(43, 100, 85, 0.68);
+  box-shadow: 2px 3px 0 rgba(43, 100, 85, 0.68);
+}
+
+.guest-entry-button:hover,
+.guest-entry-button:focus-visible {
+  background: #c8f0e2;
+}
+
+.guest-save-button {
+  color: #43351f;
+  background: #ffd668;
+  border-color: #695431;
+  box-shadow: 2px 3px 0 #695431;
 }
 
 .danger-button {
@@ -413,6 +435,10 @@ button:disabled {
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   margin-bottom: 12px;
+}
+
+.game-layout.guest-mode .hud {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .hud div {
@@ -2773,6 +2799,10 @@ button:disabled {
     align-items: center;
   }
 
+  .profile.guest-profile {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
   .profile-button {
     width: 100%;
     max-width: none;
@@ -3004,6 +3034,10 @@ button:disabled {
 
   .auth-actions button {
     flex: 1 1 150px;
+  }
+
+  .auth-actions .guest-entry-button {
+    flex-basis: 100%;
   }
 
   .touch-button {

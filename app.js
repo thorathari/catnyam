@@ -7,6 +7,7 @@ const profileButton = document.querySelector("#profileButton");
 const currentUserName = document.querySelector("#currentUserName");
 const adminBadge = document.querySelector("#adminBadge");
 const coinText = document.querySelector("#coinText");
+const profileCoin = document.querySelector(".profile-coin");
 const attendanceButton = document.querySelector("#attendanceButton");
 const attendanceNotice = document.querySelector("#attendanceNotice");
 const shopButton = document.querySelector("#shopButton");
@@ -25,6 +26,7 @@ const authMessage = document.querySelector("#authMessage");
 const authSubmitButton = document.querySelector("#authSubmitButton");
 const signupButton = document.querySelector("#signupButton");
 const loginModeButton = document.querySelector("#loginModeButton");
+const guestButton = document.querySelector("#guestButton");
 const logoutButton = document.querySelector("#logoutButton");
 const startButton = document.querySelector("#startButton");
 const gameOverlay = document.querySelector("#gameOverlay");
@@ -32,6 +34,7 @@ const overlayResult = document.querySelector("#overlayResult");
 const gameModeSelector = document.querySelector("#gameModeSelector");
 const gameModeButtons = Array.from(document.querySelectorAll(".game-mode-button"));
 const shareResultButton = document.querySelector("#shareResultButton");
+const guestSaveScoreButton = document.querySelector("#guestSaveScoreButton");
 const shareStatus = document.querySelector("#shareStatus");
 const pauseButton = document.querySelector("#pauseButton");
 const pauseActions = document.querySelector("#pauseActions");
@@ -110,6 +113,7 @@ const timeLabel = document.querySelector("#timeLabel");
 const timeText = document.querySelector("#timeText");
 const bestText = document.querySelector("#bestText");
 const runCoinText = document.querySelector("#runCoinText");
+const runCoinHud = document.querySelector(".run-coin-hud");
 const speedModeBadge = document.querySelector("#speedModeBadge");
 const hideModeBadge = document.querySelector("#hideModeBadge");
 const purrModeBadge = document.querySelector("#purrModeBadge");
@@ -238,12 +242,14 @@ Object.values(ART_ASSETS).forEach((image) => {
 });
 
 const REMEMBER_LOGIN_KEY = "catnyam_auto_login";
+const PENDING_GUEST_GAME_KEY = "catnyam_pending_guest_game";
 const ADSENSE_CLIENT_ID = "ca-pub-1434022792706022";
 const SHARE_PAGE_URL = "https://catnyam.vercel.app/";
 const RANKING_REFRESH_MS = 15000;
 const keys = new Set();
 let authMode = "login";
 let currentUser = null;
+let guestMode = false;
 let animationId = null;
 let idleAnimationId = null;
 let idleVisualTime = 0;
@@ -332,6 +338,28 @@ function getCurrentLoadout() {
   };
 }
 
+function createGuestUser() {
+  const loadout = CatnyamEngine.normalizeLoadout({});
+
+  return {
+    id: "guest",
+    username: "guest",
+    nickname: "게스트",
+    role: "guest",
+    bestScore: 0,
+    gamesPlayed: 0,
+    coins: 0,
+    gachaTickets: 0,
+    attendance: { canClaim: false },
+    inventory: {
+      characters: [loadout.character],
+      companions: [],
+      backgrounds: [loadout.background],
+    },
+    loadout,
+  };
+}
+
 function createGameState(seed = "catnyam-local", mode = currentGameMode, loadout = getCurrentLoadout()) {
   return {
     ...CatnyamEngine.createGameState({ seed, mode, loadout }),
@@ -391,6 +419,36 @@ function clearRememberedLogin() {
     localStorage.removeItem(REMEMBER_LOGIN_KEY);
   } catch {
     // Nothing else is required if browser storage is unavailable.
+  }
+}
+
+function getPendingGuestGame() {
+  try {
+    const pendingGame = JSON.parse(sessionStorage.getItem(PENDING_GUEST_GAME_KEY));
+
+    if (pendingGame?.sessionId && pendingGame?.sessionToken && Number.isInteger(pendingGame.score)) {
+      return pendingGame;
+    }
+  } catch {
+    // A guest can still play even if session storage is unavailable.
+  }
+
+  return null;
+}
+
+function savePendingGuestGame(pendingGame) {
+  try {
+    sessionStorage.setItem(PENDING_GUEST_GAME_KEY, JSON.stringify(pendingGame));
+  } catch {
+    // The score can still be shown locally when browser storage is unavailable.
+  }
+}
+
+function clearPendingGuestGame() {
+  try {
+    sessionStorage.removeItem(PENDING_GUEST_GAME_KEY);
+  } catch {
+    // No further cleanup is needed when browser storage is unavailable.
   }
 }
 
@@ -611,9 +669,16 @@ function updateProfileName() {
   const displayName = getUserDisplayName(currentUser);
   currentUserName.textContent = displayName;
   adminBadge.hidden = !isAdmin(currentUser);
+  profileCoin.hidden = guestMode;
+  attendanceButton.hidden = guestMode;
+  shopButton.hidden = guestMode;
+  runCoinHud.hidden = guestMode;
+  gamePanel.classList.toggle("guest-mode", guestMode);
+  profileBox.classList.toggle("guest-profile", guestMode);
+  logoutButton.textContent = guestMode ? "로그인 / 가입" : "로그아웃";
   coinText.textContent = currentUser?.coins || 0;
   shopCoinText.textContent = currentUser?.coins || 0;
-  const attendanceAvailable = Boolean(currentUser?.attendance?.canClaim);
+  const attendanceAvailable = !guestMode && Boolean(currentUser?.attendance?.canClaim);
   attendanceNotice.hidden = !attendanceAvailable;
   attendanceButton.classList.toggle("has-reward", attendanceAvailable);
   attendanceButton.setAttribute(
@@ -1269,6 +1334,7 @@ function setAuthMode(mode) {
   authSubmitButton.textContent = isSignup ? "가입 완료" : "로그인";
   signupButton.hidden = isSignup;
   loginModeButton.hidden = !isSignup;
+  guestButton.hidden = isSignup;
   authForm.reset();
   if (!isSignup) {
     fillRememberedLogin();
@@ -1277,7 +1343,8 @@ function setAuthMode(mode) {
   usernameInput.focus();
 }
 
-function showGameFor(user) {
+function showGameFor(user, options = {}) {
+  guestMode = Boolean(options.guest);
   currentUser = user;
   game = createGameState(`${currentGameMode}-preview`, currentGameMode, currentUser.loadout);
   authPanel.hidden = true;
@@ -1306,10 +1373,13 @@ function showGameFor(user) {
   drawIntro();
   startIdleAnimation();
   loadAdsense();
-  scheduleAttendancePrompt();
+  if (!guestMode && !options.deferAttendance) {
+    scheduleAttendancePrompt();
+  }
 }
 
-function showAuth() {
+function showAuth(message = "") {
+  guestMode = false;
   currentUser = null;
   cancelIdleAnimation();
   stopRankingRefresh();
@@ -1330,6 +1400,88 @@ function showAuth() {
   setAccountActionMessage("");
   setAdminMessage("");
   setAuthMode("login");
+  if (message) {
+    setMessage(message, true);
+  }
+}
+
+function enterGuestMode() {
+  lastFinishedScore = null;
+  lastFinishedShareUrls = null;
+  lastFinishedSessionId = null;
+  showGameFor(createGuestUser(), { guest: true });
+  showGameOverlay("게임 시작", "게스트 플레이 · 랭킹과 코인 저장은 로그인 후 가능해요");
+}
+
+function showLoginForGuestScore() {
+  const pendingGame = getPendingGuestGame();
+  const message = pendingGame
+    ? `방금 플레이한 ${pendingGame.score}점은 로그인하거나 가입하면 자동으로 등록됩니다.`
+    : "랭킹 등록과 코인 적립은 로그인이 필요합니다.";
+
+  showAuth(message);
+}
+
+async function claimPendingGuestScore(pendingGame) {
+  try {
+    const data = await requestApi("/api/scores", {
+      method: "POST",
+      body: {
+        action: "claim-guest-game",
+        score: pendingGame.score,
+        gameMode: pendingGame.gameMode,
+        sessionId: pendingGame.sessionId,
+        sessionToken: pendingGame.sessionToken,
+        steps: pendingGame.steps,
+        inputLog: pendingGame.inputLog,
+        coinsEarned: pendingGame.coinsEarned,
+      },
+    });
+
+    clearPendingGuestGame();
+    currentUser = data.user;
+    currentGameMode = CatnyamEngine.normalizeGameMode(pendingGame.gameMode);
+    game = createGameState(`${currentGameMode}-claimed`, currentGameMode, currentUser.loadout);
+    game.score = pendingGame.score;
+    lastFinishedScore = pendingGame.score;
+    lastFinishedSessionId = pendingGame.sessionId;
+    lastFinishedShareUrls = data.shareUrls || null;
+    updateProfileName();
+    updateGameModeUI();
+    updateTimeDisplay();
+    bestText.textContent = currentUser.bestScore || 0;
+    scoreText.textContent = String(pendingGame.score);
+    renderRanking();
+    drawFinish();
+    showGameOverlay("다시하기", `${pendingGame.score}점 · 랭킹 등록 완료`, "result");
+    startIdleAnimation();
+    return true;
+  } catch (error) {
+    console.warn("Guest score claim failed:", error);
+    currentGameMode = CatnyamEngine.normalizeGameMode(pendingGame.gameMode);
+    game = createGameState(`${currentGameMode}-claim-failed`, currentGameMode, currentUser.loadout);
+    game.score = pendingGame.score;
+    lastFinishedScore = pendingGame.score;
+    lastFinishedSessionId = pendingGame.sessionId;
+    lastFinishedShareUrls = null;
+    updateGameModeUI();
+    updateTimeDisplay();
+    scoreText.textContent = String(pendingGame.score);
+    drawFinish();
+    showGameOverlay("다시하기", `${pendingGame.score}점 · 등록 실패: ${error.message}`, "result");
+    startIdleAnimation();
+    return false;
+  }
+}
+
+async function enterAuthenticatedUser(user) {
+  const pendingGame = getPendingGuestGame();
+  showGameFor(user, { deferAttendance: Boolean(pendingGame) });
+
+  if (pendingGame) {
+    await claimPendingGuestScore(pendingGame);
+    scheduleAttendancePrompt();
+  }
 }
 
 async function handleAuthSubmit(event) {
@@ -1375,7 +1527,7 @@ async function signup() {
       body: { username, nickname, password },
     });
     setMessage(data.user.role === "admin" ? "첫 관리자 계정으로 가입되었습니다." : "가입 완료! 바로 시작해볼까요?", true);
-    showGameFor(data.user);
+    await enterAuthenticatedUser(data.user);
   } catch (error) {
     setMessage(error.message);
   }
@@ -1395,13 +1547,18 @@ async function login() {
     } else {
       clearRememberedLogin();
     }
-    showGameFor(data.user);
+    await enterAuthenticatedUser(data.user);
   } catch (error) {
     setMessage(error.message);
   }
 }
 
 async function logout() {
+  if (guestMode) {
+    showLoginForGuestScore();
+    return;
+  }
+
   try {
     await requestApi("/api/logout", { method: "POST" });
   } catch {
@@ -1413,13 +1570,18 @@ async function logout() {
     window.location.reload();
     return;
   }
+  if (getPendingGuestGame()) {
+    showLoginForGuestScore();
+    return;
+  }
+
   showAuth();
 }
 
 async function restoreSession() {
   try {
     const data = await requestApi("/api/login");
-    showGameFor(data.user);
+    await enterAuthenticatedUser(data.user);
     return true;
   } catch {
     return false;
@@ -1442,7 +1604,7 @@ async function loginWithRememberedCredentials() {
       method: "POST",
       body: remembered,
     });
-    showGameFor(data.user);
+    await enterAuthenticatedUser(data.user);
     return true;
   } catch {
     clearRememberedLogin();
@@ -1462,6 +1624,11 @@ async function initializeApp() {
   }
 
   if (await loginWithRememberedCredentials()) {
+    return;
+  }
+
+  if (getPendingGuestGame()) {
+    showLoginForGuestScore();
     return;
   }
 
@@ -2421,7 +2588,7 @@ async function startGame() {
     const data = await requestApi("/api/scores", {
       method: "POST",
       body: {
-        action: "start-game",
+        action: guestMode ? "start-guest-game" : "start-game",
         gameMode: currentGameMode,
       },
     });
@@ -2531,6 +2698,25 @@ async function submitScore(score) {
     return;
   }
 
+  if (guestMode) {
+    if (!game.gameSession?.id || !game.gameSession?.token) {
+      showGameOverlay("다시하기", `${score}점 · 게스트 점수 보관 실패`, "result");
+      return;
+    }
+
+    savePendingGuestGame({
+      score,
+      gameMode: game.gameMode,
+      sessionId: game.gameSession.id,
+      sessionToken: game.gameSession.token,
+      steps: game.step,
+      inputLog: game.inputLog,
+      coinsEarned: game.coins,
+    });
+    showGameOverlay("다시하기", `${score}점 · 로그인하면 랭킹에 등록돼요`, "result");
+    return;
+  }
+
   if (!game.gameSession?.id || !game.gameSession?.token) {
     updateProfileName();
     showGameOverlay("다시하기", `${score}점 · 저장 실패`, "result");
@@ -2622,10 +2808,12 @@ function showPauseOverlay() {
 
 function showGameOverlay(buttonText, resultText = "", mode = "default") {
   const isPaused = mode === "pause";
-  const canShareResult = mode === "result" && lastFinishedScore !== null;
+  const isGuestResult = mode === "result" && guestMode && lastFinishedScore !== null;
+  const canShareResult = mode === "result" && !guestMode && lastFinishedScore !== null;
   startButton.textContent = buttonText;
   startButton.hidden = isPaused;
   gameModeSelector.hidden = isPaused;
+  guestSaveScoreButton.hidden = !isGuestResult;
   shareResultButton.hidden = !canShareResult;
   if (!canShareResult) {
     resetShareStatus();
@@ -2647,6 +2835,7 @@ function hideGameOverlay() {
   pauseActions.hidden = true;
   startButton.hidden = false;
   gameModeSelector.hidden = true;
+  guestSaveScoreButton.hidden = true;
   shareResultButton.hidden = true;
   shareStatus.hidden = true;
   itemGuide.hidden = false;
@@ -5000,8 +5189,16 @@ window.addEventListener("keyup", (event) => {
 authForm.addEventListener("submit", handleAuthSubmit);
 signupButton.addEventListener("click", () => setAuthMode("signup"));
 loginModeButton.addEventListener("click", () => setAuthMode("login"));
+guestButton.addEventListener("click", enterGuestMode);
 logoutButton.addEventListener("click", logout);
-profileButton.addEventListener("click", openAccountModal);
+profileButton.addEventListener("click", () => {
+  if (guestMode) {
+    showLoginForGuestScore();
+    return;
+  }
+
+  openAccountModal();
+});
 attendanceButton.addEventListener("click", openAttendanceModal);
 shopButton.addEventListener("click", openShopModal);
 closeAccountModalButton.addEventListener("click", closeAccountModal);
@@ -5045,6 +5242,7 @@ gameModeButtons.forEach((button) => {
   button.addEventListener("click", () => setGameMode(button.dataset.gameMode));
 });
 startButton.addEventListener("click", startGame);
+guestSaveScoreButton.addEventListener("click", showLoginForGuestScore);
 shareResultButton.addEventListener("click", shareResult);
 pauseButton.addEventListener("click", pauseGame);
 pauseRestartButton.addEventListener("click", startGame);

@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "check": "node --check game-engine.js && node --check app.js && node --check server/db.js && node --check server/reward-rules.js && node --check server/reward-service.js && node --check server/shop-catalog.js && node --check server/shop-service.js && node --check server/share-service.js && node --check api/signup.js && node --check api/login.js && node --check api/logout.js && node --check api/change-password.js && node --check api/change-username.js && node --check api/rankings.js && node --check api/scores.js && node --check api/admin/users.js && node --check api/admin/reset-password.js && node --check api/admin/delete-user.js && node --check api/admin/reset-rankings.js && node --check api/admin/rename-user.js",
-    "test": "node --test tests/reward-rules.test.js"
+    "check": "node --check game-engine.js && node --check app.js && node --check server/db.js && node --check server/guest-session.js && node --check server/reward-rules.js && node --check server/reward-service.js && node --check server/shop-catalog.js && node --check server/shop-service.js && node --check server/share-service.js && node --check api/signup.js && node --check api/login.js && node --check api/logout.js && node --check api/change-password.js && node --check api/change-username.js && node --check api/rankings.js && node --check api/scores.js && node --check api/admin/users.js && node --check api/admin/reset-password.js && node --check api/admin/delete-user.js && node --check api/admin/reset-rankings.js && node --check api/admin/rename-user.js",
+    "test": "node --test tests/*.test.js"
   },
   "dependencies": {
     "sharp": "^0.35.3"
