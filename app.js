@@ -1173,14 +1173,19 @@ function renderShop() {
       ? "사용 중"
       : owned
         ? "보유"
-        : shopTab === "companion" ? "동료" : shopTab === "background" ? "배경" : "가챠";
+        : shopTab === "companion" ? "동료" : shopTab === "background" ? "배경" : "미보유";
     preview.append(badge);
 
     copy.className = "shop-card-copy";
     title.textContent = item.name;
-    meta.textContent = gachaLocked ? "가챠 전용" : item.price > 0 ? `● ${item.price}` : "기본";
+    meta.textContent = shopTab === "character"
+      ? item.price > 0 ? "" : "기본"
+      : item.price > 0 ? `● ${item.price}` : "기본";
     description.textContent = shopTab === "companion" ? item.buff : "";
-    copy.append(title, meta);
+    copy.append(title);
+    if (meta.textContent) {
+      copy.append(meta);
+    }
     if (shopTab === "companion") {
       copy.append(description);
     }
@@ -1198,7 +1203,7 @@ function renderShop() {
       actions.append(lockedButton);
     } else if (!owned) {
       actions.append(createShopActionButton(
-        `${item.price}코인 구매`,
+        "구매하기",
         "secondary-button wide",
         "purchase",
         shopTab,
