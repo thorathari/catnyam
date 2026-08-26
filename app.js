@@ -1207,7 +1207,7 @@ function renderShop() {
     copy.className = "shop-card-copy";
     title.textContent = item.name;
     meta.textContent = shopTab === "character"
-      ? item.price > 0 && !owned ? `${item.price}코인` : item.price > 0 ? "" : "기본"
+      ? item.price > 0 && !owned ? `● ${item.price}` : item.price > 0 ? "" : "기본"
       : item.price > 0 ? `● ${item.price}` : "기본";
     description.textContent = shopTab === "companion" ? item.buff : "";
     copy.append(title);
