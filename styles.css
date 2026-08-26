@@ -2092,36 +2092,28 @@ button:disabled {
 .drum-stick {
   position: absolute;
   z-index: 2;
-  top: 20px;
-  width: 8px;
-  height: 60px;
+  top: -20px;
+  width: 7px;
+  height: 72px;
   border: 2px solid #4f382b;
-  border-radius: 999px;
+  border-radius: 5px;
   background: #c98a48;
-  transform-origin: 50% 90%;
+  transform-origin: 50% 100%;
 }
 
 .drum-stick::before {
-  content: "";
-  position: absolute;
-  top: -8px;
-  left: -5px;
-  width: 14px;
-  height: 14px;
-  border: 2px solid #4f382b;
-  border-radius: 50%;
-  background: #e2ad67;
+  content: none;
 }
 
 .drum-stick-left {
-  left: 54px;
-  transform: rotate(35deg);
+  left: 78px;
+  transform: rotate(-18deg);
   animation: gacha-stick-left 0.34s ease-in-out infinite alternate;
 }
 
 .drum-stick-right {
-  right: 54px;
-  transform: rotate(-35deg);
+  right: 78px;
+  transform: rotate(18deg);
   animation: gacha-stick-right 0.34s ease-in-out infinite alternate-reverse;
 }
 
@@ -2171,13 +2163,13 @@ button:disabled {
 }
 
 @keyframes gacha-stick-left {
-  from { transform: rotate(42deg); }
-  to { transform: rotate(10deg); }
+  from { transform: translateY(-8px) rotate(-24deg); }
+  to { transform: translateY(0) rotate(-18deg); }
 }
 
 @keyframes gacha-stick-right {
-  from { transform: rotate(-42deg); }
-  to { transform: rotate(-10deg); }
+  from { transform: translateY(-8px) rotate(24deg); }
+  to { transform: translateY(0) rotate(18deg); }
 }
 
 @media (prefers-reduced-motion: reduce) {
