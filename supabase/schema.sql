@@ -33,6 +33,15 @@ alter table public.users
   add column if not exists coins integer not null default 0;
 
 alter table public.users
+  add column if not exists gacha_tickets integer not null default 0;
+
+alter table public.users
+  add column if not exists attendance_streak integer not null default 0;
+
+alter table public.users
+  add column if not exists attendance_last_date date;
+
+alter table public.users
   add column if not exists owned_characters jsonb not null default '["calico"]'::jsonb;
 
 alter table public.users
@@ -56,6 +65,11 @@ alter table public.users
 update public.users
 set
   coins = greatest(coalesce(coins, 0), 0),
+  gacha_tickets = greatest(coalesce(gacha_tickets, 0), 0),
+  attendance_streak = case
+    when attendance_streak between 1 and 7 then attendance_streak
+    else 0
+  end,
   owned_characters = case
     when owned_characters is null or jsonb_typeof(owned_characters) <> 'array' then '["calico"]'::jsonb
     when not (owned_characters ? 'calico') then owned_characters || '["calico"]'::jsonb

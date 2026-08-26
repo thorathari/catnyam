@@ -224,6 +224,23 @@ h2 {
   background: #fffaf0;
 }
 
+.attendance-open-button {
+  position: relative;
+  background: #fff5d7;
+}
+
+.attendance-notice {
+  position: absolute;
+  top: -4px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #fffdf8;
+  border-radius: 50%;
+  background: #ef5f75;
+  box-shadow: 0 0 0 1px #8f2c40;
+}
+
 .auth-panel {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
@@ -1336,7 +1353,182 @@ button:disabled {
   width: min(460px, 100%);
 }
 
+.attendance-modal {
+  width: min(720px, 100%);
+  overflow: auto;
+  border: 3px solid #38332c;
+  border-radius: 12px;
+  background: #fffdf8;
+  box-shadow: 8px 9px 0 #38332c, 0 28px 90px rgba(37, 33, 29, 0.28);
+}
+
+.attendance-modal .modal-header h2 {
+  font-size: 2rem;
+}
+
+.attendance-summary {
+  margin: 0 20px 14px;
+  color: #5e554c;
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.attendance-reward-list {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0 20px;
+  list-style: none;
+}
+
+.attendance-reward-list li {
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 7px;
+  min-width: 0;
+  min-height: 126px;
+  padding: 10px 5px;
+  border: 2px solid #bdb3a4;
+  border-radius: 8px;
+  color: #6f665d;
+  background: #f3eee4;
+}
+
+.attendance-reward-list li span {
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.attendance-reward-list li strong {
+  max-width: 100%;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.attendance-reward-list li.is-complete {
+  border-color: #4e967f;
+  color: #286650;
+  background: #dff5ec;
+}
+
+.attendance-reward-list li.is-complete::after {
+  content: "완료";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  border-radius: 999px;
+  padding: 2px 5px;
+  color: white;
+  background: #2f9678;
+  font-size: 0.52rem;
+  font-weight: 900;
+}
+
+.attendance-reward-list li.is-next {
+  border-color: #d99b19;
+  color: #5e4308;
+  background: #fff3c2;
+  box-shadow: 0 0 0 3px rgba(255, 216, 79, 0.34);
+}
+
+.reward-coin {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border: 3px solid #b87e0f;
+  border-radius: 50%;
+  background: #ffd84f;
+  box-shadow: inset 0 0 0 3px rgba(255, 250, 242, 0.55);
+}
+
+.reward-coin::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 2px solid rgba(184, 126, 15, 0.54);
+  border-radius: 50%;
+}
+
+.reward-ticket {
+  position: relative;
+  width: 43px;
+  height: 30px;
+  border: 2px solid #7b5263;
+  border-radius: 5px;
+  background: #ffc9d8;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.44);
+}
+
+.reward-ticket::before,
+.reward-ticket::after {
+  content: "";
+  position: absolute;
+  top: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fffdf8;
+}
+
+.reward-ticket::before {
+  left: -5px;
+}
+
+.reward-ticket::after {
+  right: -5px;
+}
+
+.attendance-rules {
+  margin: 16px 20px 12px;
+  padding: 12px 14px;
+  border-left: 4px solid #ef6f8f;
+  background: #fff0f3;
+}
+
+.attendance-rules strong {
+  font-size: 0.82rem;
+}
+
+.attendance-rules p {
+  margin: 4px 0 0;
+  color: #675d55;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.attendance-claim-button {
+  display: block;
+  width: calc(100% - 40px);
+  min-height: 46px;
+  margin: 0 20px;
+  border: 2px solid #38332c;
+  border-radius: 8px;
+  color: white;
+  background: #ef6f8f;
+  box-shadow: 3px 3px 0 #38332c;
+  font-weight: 900;
+}
+
+.attendance-claim-button:disabled {
+  color: #756d64;
+  background: #eee7da;
+  box-shadow: none;
+  cursor: default;
+}
+
+.attendance-message {
+  min-height: 34px;
+  margin: 8px 20px 6px;
+  text-align: center;
+}
+
 .shop-modal {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: min(820px, 100%);
@@ -1428,6 +1620,109 @@ button:disabled {
   color: #38332c;
   background: #fff;
   box-shadow: 2px 2px 0 rgba(56, 51, 44, 0.86);
+}
+
+.gacha-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  margin: 0 18px 10px;
+  padding: 11px 12px;
+  border: 2px solid #4a433a;
+  border-radius: 9px;
+  background: #fff4cf;
+  box-shadow: 3px 3px 0 rgba(56, 51, 44, 0.82);
+}
+
+.gacha-panel-copy {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.gacha-label {
+  color: #d74d70;
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.gacha-panel-copy strong {
+  font-size: 0.92rem;
+}
+
+.gacha-panel-copy small {
+  color: #766d62;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.gacha-ticket-count {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 0 6px;
+  min-width: 80px;
+  padding: 5px 9px;
+  border: 1px solid rgba(75, 64, 50, 0.34);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.gacha-ticket-count i {
+  grid-row: 1 / 3;
+  width: 30px;
+  height: 22px;
+  border: 2px solid #7b5263;
+  border-radius: 4px;
+  background: #ffc9d8;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
+}
+
+.gacha-ticket-count span {
+  color: #756a60;
+  font-size: 0.58rem;
+  font-weight: 900;
+}
+
+.gacha-ticket-count strong {
+  color: #38332c;
+  font-size: 0.94rem;
+}
+
+.gacha-panel-actions {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 7px;
+}
+
+.gacha-panel-actions button {
+  min-height: 38px;
+  border: 2px solid #4a433a;
+  border-radius: 7px;
+  padding: 0 11px;
+  box-shadow: 2px 2px 0 rgba(56, 51, 44, 0.86);
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.gacha-panel-actions .secondary-button {
+  color: #493313;
+  background: #f6bd3d;
+}
+
+.gacha-panel-actions .primary-button {
+  color: white;
+  background: #ef6f8f;
+}
+
+.gacha-panel-actions button:disabled {
+  color: #777066;
+  background: #e5ded2;
+  box-shadow: none;
+  cursor: default;
 }
 
 .shop-help {
@@ -1636,6 +1931,17 @@ button:disabled {
   box-shadow: 4px 4px 0 #ff6334;
 }
 
+.shop-card.is-gacha-locked {
+  background: #f8f3e9;
+}
+
+.shop-card-actions .shop-gacha-only-button:disabled {
+  color: #716960;
+  background: #e8e1d5;
+  box-shadow: none;
+  cursor: default;
+}
+
 .shop-message {
   display: flex;
   flex: 0 0 38px;
@@ -1646,6 +1952,170 @@ button:disabled {
   overflow: hidden;
   padding: 4px 20px 10px;
   line-height: 1.25;
+}
+
+.gacha-overlay {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(255, 250, 242, 0.96);
+  backdrop-filter: blur(5px);
+}
+
+.gacha-stage {
+  display: grid;
+  place-items: center;
+  width: min(440px, 100%);
+  min-height: 440px;
+  align-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.gacha-stage h3 {
+  margin: 4px 0 0;
+  font-size: 2rem;
+}
+
+.gacha-stage p {
+  min-height: 24px;
+  margin: 0;
+  color: #6b6158;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.gacha-drum {
+  position: relative;
+  width: 190px;
+  height: 150px;
+}
+
+.gacha-drum span {
+  position: absolute;
+  left: 20px;
+  bottom: 12px;
+  width: 150px;
+  height: 96px;
+  border: 5px solid #4f382b;
+  border-radius: 18px 18px 42px 42px;
+  background: #ef6f8f;
+  box-shadow: inset 0 -14px 0 rgba(147, 42, 70, 0.22), 4px 5px 0 rgba(56, 51, 44, 0.82);
+  animation: gacha-drum-bounce 0.34s ease-in-out infinite alternate;
+}
+
+.gacha-drum span::before {
+  content: "";
+  position: absolute;
+  left: -8px;
+  right: -8px;
+  top: -12px;
+  height: 30px;
+  border: 5px solid #4f382b;
+  border-radius: 50%;
+  background: #fff8df;
+}
+
+.drum-stick {
+  position: absolute;
+  z-index: 2;
+  top: 4px;
+  width: 8px;
+  height: 78px;
+  border: 2px solid #4f382b;
+  border-radius: 999px;
+  background: #c98a48;
+  transform-origin: 50% 90%;
+}
+
+.drum-stick::before {
+  content: "";
+  position: absolute;
+  top: -8px;
+  left: -5px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #4f382b;
+  border-radius: 50%;
+  background: #e2ad67;
+}
+
+.drum-stick-left {
+  left: 54px;
+  transform: rotate(-35deg);
+  animation: gacha-stick-left 0.34s ease-in-out infinite alternate;
+}
+
+.drum-stick-right {
+  right: 54px;
+  transform: rotate(35deg);
+  animation: gacha-stick-right 0.34s ease-in-out infinite alternate-reverse;
+}
+
+.gacha-result-art {
+  position: relative;
+  width: 240px;
+  aspect-ratio: 6 / 5;
+  overflow: hidden;
+  border: 3px solid #4a433a;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #c9f0f6 0 62%, #cfe5a4 62% 100%);
+  box-shadow: 4px 4px 0 rgba(56, 51, 44, 0.84);
+}
+
+.gacha-result-art canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.gacha-overlay.is-result .gacha-drum {
+  display: none;
+}
+
+.gacha-skip-button,
+.gacha-confirm-button {
+  min-width: 150px;
+  min-height: 42px;
+  border: 2px solid #38332c;
+  border-radius: 8px;
+  box-shadow: 3px 3px 0 #38332c;
+  font-weight: 900;
+}
+
+.gacha-skip-button {
+  background: #eee7da;
+}
+
+.gacha-confirm-button {
+  color: white;
+  background: #2f9678;
+}
+
+@keyframes gacha-drum-bounce {
+  from { transform: translateY(0) scaleX(1); }
+  to { transform: translateY(3px) scaleX(1.025); }
+}
+
+@keyframes gacha-stick-left {
+  from { transform: rotate(-42deg); }
+  to { transform: rotate(-10deg); }
+}
+
+@keyframes gacha-stick-right {
+  from { transform: rotate(42deg); }
+  to { transform: rotate(10deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gacha-drum span,
+  .drum-stick-left,
+  .drum-stick-right {
+    animation-duration: 0.85s;
+  }
 }
 
 .modal-header {
@@ -2235,7 +2705,7 @@ button:disabled {
 
   .profile {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     gap: 6px;
     width: 100%;
     align-items: center;
@@ -2266,6 +2736,73 @@ button:disabled {
   .shop-tab-list .tab-button {
     padding-inline: 4px;
     font-size: 0.78rem;
+  }
+
+  .attendance-modal .modal-header h2 {
+    font-size: 1.55rem;
+  }
+
+  .attendance-summary {
+    margin-inline: 12px;
+    font-size: 0.8rem;
+  }
+
+  .attendance-reward-list {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+    padding-inline: 12px;
+  }
+
+  .attendance-reward-list li {
+    min-height: 108px;
+    padding: 8px 3px;
+  }
+
+  .attendance-reward-list li strong {
+    font-size: 0.64rem;
+  }
+
+  .attendance-rules {
+    margin-inline: 12px;
+  }
+
+  .attendance-claim-button {
+    width: calc(100% - 24px);
+    margin-inline: 12px;
+  }
+
+  .attendance-message {
+    margin-inline: 12px;
+  }
+
+  .gacha-panel {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    margin-inline: 12px;
+    padding: 9px;
+  }
+
+  .gacha-panel-copy small {
+    font-size: 0.62rem;
+  }
+
+  .gacha-panel-actions {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gacha-panel-actions button {
+    width: 100%;
+    padding-inline: 5px;
+    white-space: normal;
+  }
+
+  .gacha-stage {
+    min-height: 380px;
+  }
+
+  .gacha-stage h3 {
+    font-size: 1.6rem;
   }
 
   .game-stage {

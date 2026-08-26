@@ -7,6 +7,8 @@ const profileButton = document.querySelector("#profileButton");
 const currentUserName = document.querySelector("#currentUserName");
 const adminBadge = document.querySelector("#adminBadge");
 const coinText = document.querySelector("#coinText");
+const attendanceButton = document.querySelector("#attendanceButton");
+const attendanceNotice = document.querySelector("#attendanceNotice");
 const shopButton = document.querySelector("#shopButton");
 const authTitle = document.querySelector("#authTitle");
 const authDescription = document.querySelector("#authDescription");
@@ -78,6 +80,12 @@ const resetMyScoreButton = document.querySelector("#resetMyScoreButton");
 const resetMyBombScoreButton = document.querySelector("#resetMyBombScoreButton");
 const deleteMyAccountButton = document.querySelector("#deleteMyAccountButton");
 const accountActionMessage = document.querySelector("#accountActionMessage");
+const attendanceModal = document.querySelector("#attendanceModal");
+const closeAttendanceModalButton = document.querySelector("#closeAttendanceModalButton");
+const attendanceSummary = document.querySelector("#attendanceSummary");
+const attendanceRewardItems = Array.from(document.querySelectorAll("[data-attendance-day]"));
+const attendanceClaimButton = document.querySelector("#attendanceClaimButton");
+const attendanceMessage = document.querySelector("#attendanceMessage");
 const shopModal = document.querySelector("#shopModal");
 const closeShopModalButton = document.querySelector("#closeShopModalButton");
 const shopCoinText = document.querySelector("#shopCoinText");
@@ -85,6 +93,18 @@ const shopGrid = document.querySelector("#shopGrid");
 const shopHelp = document.querySelector("#shopHelp");
 const shopMessage = document.querySelector("#shopMessage");
 const shopTabButtons = Array.from(document.querySelectorAll("[data-shop-tab]"));
+const gachaPanel = document.querySelector("#gachaPanel");
+const gachaTicketText = document.querySelector("#gachaTicketText");
+const buyGachaTicketButton = document.querySelector("#buyGachaTicketButton");
+const drawGachaButton = document.querySelector("#drawGachaButton");
+const gachaOverlay = document.querySelector("#gachaOverlay");
+const gachaStage = document.querySelector("#gachaStage");
+const gachaResultArt = document.querySelector("#gachaResultArt");
+const gachaResultCanvas = document.querySelector("#gachaResultCanvas");
+const gachaResultTitle = document.querySelector("#gachaResultTitle");
+const gachaResultMessage = document.querySelector("#gachaResultMessage");
+const gachaSkipButton = document.querySelector("#gachaSkipButton");
+const gachaConfirmButton = document.querySelector("#gachaConfirmButton");
 const scoreText = document.querySelector("#scoreText");
 const timeLabel = document.querySelector("#timeLabel");
 const timeText = document.querySelector("#timeText");
@@ -248,6 +268,10 @@ let lastFinishedScore = null;
 let lastFinishedShareUrls = null;
 let lastFinishedSessionId = null;
 let shopTab = "character";
+let gachaDrawing = false;
+let gachaDelayTimer = null;
+let resolveGachaDelay = null;
+let lastGachaMessage = "";
 const expandedAdminAccountIds = new Set();
 let game = createGameState();
 
@@ -579,12 +603,23 @@ function setShopMessage(message, isGood = false) {
   setFieldMessage(shopMessage, message, isGood);
 }
 
+function setAttendanceMessage(message, isGood = false) {
+  setFieldMessage(attendanceMessage, message, isGood);
+}
+
 function updateProfileName() {
   const displayName = getUserDisplayName(currentUser);
   currentUserName.textContent = displayName;
   adminBadge.hidden = !isAdmin(currentUser);
   coinText.textContent = currentUser?.coins || 0;
   shopCoinText.textContent = currentUser?.coins || 0;
+  const attendanceAvailable = Boolean(currentUser?.attendance?.canClaim);
+  attendanceNotice.hidden = !attendanceAvailable;
+  attendanceButton.classList.toggle("has-reward", attendanceAvailable);
+  attendanceButton.setAttribute(
+    "aria-label",
+    attendanceAvailable ? "받을 수 있는 출석 보상이 있습니다" : "일주일 출석 확인",
+  );
 }
 
 function syncCurrentUser(user) {
@@ -596,6 +631,9 @@ function syncCurrentUser(user) {
   updateProfileName();
   bestText.textContent = currentUser.bestScore || 0;
   renderShop();
+  if (!attendanceModal.hidden) {
+    renderAttendance();
+  }
 }
 
 function getOwnedShopItems(type) {
@@ -615,6 +653,88 @@ function isShopItemEquipped(type, itemId, slot = "") {
   return slot === "left"
     ? currentUser?.loadout?.companionLeft === itemId
     : currentUser?.loadout?.companionRight === itemId;
+}
+
+function renderAttendance() {
+  if (!currentUser) {
+    return;
+  }
+
+  const status = currentUser.attendance || {
+    completedDay: 0,
+    nextDay: 1,
+    canClaim: true,
+  };
+  const completedDay = Math.max(0, Math.min(7, Number(status.completedDay) || 0));
+  const nextDay = Math.max(1, Math.min(7, Number(status.nextDay) || 1));
+
+  attendanceRewardItems.forEach((item) => {
+    const day = Number(item.dataset.attendanceDay);
+    item.classList.toggle("is-complete", day <= completedDay);
+    item.classList.toggle("is-next", Boolean(status.canClaim) && day === nextDay);
+  });
+
+  if (status.canClaim) {
+    attendanceSummary.textContent = completedDay > 0
+      ? `${completedDay}일 연속 출석 중 · 오늘은 ${nextDay}일차 보상을 받을 수 있어요.`
+      : `오늘은 새로운 출석의 ${nextDay}일차입니다.`;
+    attendanceClaimButton.textContent = `${nextDay}일차 출석 보상 받기`;
+    attendanceClaimButton.disabled = false;
+  } else {
+    attendanceSummary.textContent = `${completedDay}일차 출석 완료 · 다음 보상은 내일 받을 수 있어요.`;
+    attendanceClaimButton.textContent = "오늘 출석 완료";
+    attendanceClaimButton.disabled = true;
+  }
+}
+
+function openAttendanceModal() {
+  if (!currentUser || game.running || game.paused) {
+    return;
+  }
+
+  closeAccountModal();
+  closeShopModal();
+  attendanceModal.hidden = false;
+  setAttendanceMessage("");
+  renderAttendance();
+}
+
+function closeAttendanceModal() {
+  attendanceModal.hidden = true;
+  setAttendanceMessage("");
+}
+
+async function claimAttendance() {
+  if (!currentUser || !currentUser.attendance?.canClaim) {
+    return;
+  }
+
+  attendanceClaimButton.disabled = true;
+  setAttendanceMessage("출석을 확인하고 있어요...");
+
+  try {
+    const data = await requestApi("/api/scores", {
+      method: "POST",
+      body: { action: "attendance" },
+    });
+    syncCurrentUser(data.user);
+    setAttendanceMessage(data.message || "출석 보상을 받았습니다.", true);
+  } catch (error) {
+    setAttendanceMessage(error.message);
+    renderAttendance();
+  }
+}
+
+function scheduleAttendancePrompt() {
+  if (!currentUser?.attendance?.canClaim) {
+    return;
+  }
+
+  window.setTimeout(() => {
+    if (currentUser?.attendance?.canClaim && !game.running && !game.paused) {
+      openAttendanceModal();
+    }
+  }, 250);
 }
 
 function createShopActionButton(label, className, action, type, itemId, slot = "") {
@@ -780,6 +900,177 @@ function drawShopSpritePreview(canvas, type, item) {
   }
 }
 
+function getUnownedGachaCharacterIds() {
+  const owned = getOwnedShopItems("character");
+  return Object.entries(SHOP_CATALOG.character)
+    .filter(([itemId, item]) => Number(item.price) > 0 && !owned.includes(itemId))
+    .map(([itemId]) => itemId);
+}
+
+function renderGachaPanel() {
+  const isCharacterTab = shopTab === "character";
+  const tickets = Math.max(0, Number(currentUser?.gachaTickets) || 0);
+  const allCollected = getUnownedGachaCharacterIds().length === 0;
+
+  gachaPanel.hidden = !isCharacterTab;
+  gachaTicketText.textContent = tickets;
+  buyGachaTicketButton.disabled = !isCharacterTab || allCollected || gachaDrawing;
+  drawGachaButton.disabled = !isCharacterTab || allCollected || tickets < 1 || gachaDrawing;
+  drawGachaButton.textContent = allCollected ? "모두 모았어요" : "1장으로 뽑기";
+}
+
+function createGachaDelay() {
+  return new Promise((resolve) => {
+    const finish = () => {
+      if (gachaDelayTimer) {
+        window.clearTimeout(gachaDelayTimer);
+        gachaDelayTimer = null;
+      }
+      if (resolveGachaDelay === finish) {
+        resolveGachaDelay = null;
+      }
+      resolve();
+    };
+
+    resolveGachaDelay = finish;
+    gachaDelayTimer = window.setTimeout(finish, 3000);
+  });
+}
+
+function finishGachaDelay() {
+  if (resolveGachaDelay) {
+    resolveGachaDelay();
+  }
+}
+
+function resetGachaOverlay() {
+  finishGachaDelay();
+  gachaDrawing = false;
+  closeShopModalButton.disabled = false;
+  gachaOverlay.hidden = true;
+  gachaOverlay.classList.remove("is-result");
+  gachaResultArt.hidden = true;
+  gachaSkipButton.hidden = false;
+  gachaSkipButton.disabled = false;
+  gachaSkipButton.textContent = "스킵";
+  gachaConfirmButton.hidden = true;
+  const context = gachaResultCanvas.getContext("2d");
+  context.clearRect(0, 0, gachaResultCanvas.width, gachaResultCanvas.height);
+}
+
+function skipGachaAnimation() {
+  if (!gachaDrawing) {
+    return;
+  }
+
+  gachaSkipButton.disabled = true;
+  gachaSkipButton.textContent = "결과 확인 중";
+  finishGachaDelay();
+}
+
+function revealGachaResult(data) {
+  const result = data.gachaResult;
+  const item = result?.itemId ? SHOP_CATALOG.character[result.itemId] : null;
+
+  gachaDrawing = false;
+  closeShopModalButton.disabled = false;
+  gachaOverlay.classList.add("is-result");
+  gachaSkipButton.hidden = true;
+  gachaConfirmButton.hidden = false;
+  lastGachaMessage = data.message || "가챠 결과를 확인했습니다.";
+
+  if (item) {
+    gachaResultArt.hidden = false;
+    drawShopSpritePreview(gachaResultCanvas, "character", item);
+  } else {
+    gachaResultArt.hidden = true;
+  }
+
+  if (result?.type === "win") {
+    gachaResultTitle.textContent = `${item.name} 등장!`;
+    gachaResultMessage.textContent = "새로운 친구를 만났다냥!";
+  } else if (result?.type === "duplicate") {
+    gachaResultTitle.textContent = `중복! ${item?.name || "친구"}`;
+    gachaResultMessage.textContent = "이미 만난 친구라 5코인을 돌려받았어요.";
+  } else {
+    gachaResultTitle.textContent = "꽝!";
+    gachaResultMessage.textContent = "아쉽지만 5코인을 돌려받았어요.";
+  }
+
+  syncCurrentUser(data.user);
+}
+
+async function buyGachaTicket() {
+  if (!currentUser || gachaDrawing) {
+    return;
+  }
+
+  buyGachaTicketButton.disabled = true;
+  drawGachaButton.disabled = true;
+  setShopMessage("뽑기권을 준비하고 있어요...");
+
+  try {
+    const data = await requestApi("/api/scores", {
+      method: "POST",
+      body: {
+        action: "shop",
+        shopAction: "buy-gacha-ticket",
+      },
+    });
+    syncCurrentUser(data.user);
+    setShopMessage(data.message || "가챠 뽑기권을 구매했습니다.", true);
+  } catch (error) {
+    setShopMessage(error.message);
+    renderShop();
+  }
+}
+
+async function startGachaDraw() {
+  if (!currentUser || gachaDrawing || Number(currentUser.gachaTickets) < 1) {
+    return;
+  }
+
+  gachaDrawing = true;
+  lastGachaMessage = "";
+  closeShopModalButton.disabled = true;
+  gachaOverlay.hidden = false;
+  gachaOverlay.classList.remove("is-result");
+  gachaResultArt.hidden = true;
+  gachaResultTitle.textContent = "두구두구...";
+  gachaResultMessage.textContent = "어떤 친구가 찾아올까냥?";
+  gachaSkipButton.hidden = false;
+  gachaSkipButton.disabled = false;
+  gachaSkipButton.textContent = "스킵";
+  gachaConfirmButton.hidden = true;
+  renderGachaPanel();
+
+  try {
+    const request = requestApi("/api/scores", {
+      method: "POST",
+      body: {
+        action: "shop",
+        shopAction: "draw-gacha",
+      },
+    });
+    const [data] = await Promise.all([request, createGachaDelay()]);
+    revealGachaResult(data);
+  } catch (error) {
+    resetGachaOverlay();
+    setShopMessage(error.message);
+    renderShop();
+  }
+}
+
+function confirmGachaResult() {
+  if (gachaDrawing) {
+    return;
+  }
+
+  resetGachaOverlay();
+  renderShop();
+  setShopMessage(lastGachaMessage, true);
+}
+
 function renderShop() {
   if (!shopGrid || !currentUser) {
     return;
@@ -790,8 +1081,9 @@ function renderShop() {
   const fragment = document.createDocumentFragment();
   shopGrid.innerHTML = "";
   shopCoinText.textContent = currentUser.coins || 0;
+  renderGachaPanel();
   shopHelp.textContent = shopTab === "character"
-    ? "게임에서 사용할 주인공을 골라보세요."
+    ? "보유한 주인공을 골라보세요. 새로운 캐릭터는 가챠에서만 만날 수 있어요."
     : shopTab === "companion"
       ? "좋은 아이템만 먹는 동료를 왼쪽과 오른쪽에 최대 두 마리 배치할 수 있어요."
       : "게임 화면의 풍경을 바꿔보세요.";
@@ -803,6 +1095,7 @@ function renderShop() {
 
   catalogEntries.forEach(([itemId, item]) => {
     const owned = ownedItems.includes(itemId);
+    const gachaLocked = shopTab === "character" && !owned;
     const card = document.createElement("article");
     const preview = document.createElement("div");
     const copy = document.createElement("div");
@@ -815,7 +1108,7 @@ function renderShop() {
       ? isShopItemEquipped(shopTab, itemId, "left") || isShopItemEquipped(shopTab, itemId, "right")
       : isShopItemEquipped(shopTab, itemId);
 
-    card.className = `shop-card shop-card-${shopTab}${equipped ? " is-equipped" : ""}`;
+    card.className = `shop-card shop-card-${shopTab}${equipped ? " is-equipped" : ""}${gachaLocked ? " is-gacha-locked" : ""}`;
     preview.className = `shop-preview ${shopTab}`;
     preview.dataset.shopItem = itemId;
     preview.style.cssText = getShopPreviewStyle(shopTab, item);
@@ -833,12 +1126,12 @@ function renderShop() {
       ? "사용 중"
       : owned
         ? "보유"
-        : shopTab === "companion" ? "동료" : shopTab === "background" ? "배경" : "스킨";
+        : shopTab === "companion" ? "동료" : shopTab === "background" ? "배경" : "가챠";
     preview.append(badge);
 
     copy.className = "shop-card-copy";
     title.textContent = item.name;
-    meta.textContent = item.price > 0 ? `● ${item.price}` : "기본";
+    meta.textContent = gachaLocked ? "가챠 전용" : item.price > 0 ? `● ${item.price}` : "기본";
     description.textContent = shopTab === "companion" ? item.buff : "";
     copy.append(title, meta);
     if (shopTab === "companion") {
@@ -846,7 +1139,17 @@ function renderShop() {
     }
     actions.className = "shop-card-actions";
 
-    if (!owned) {
+    if (gachaLocked) {
+      const lockedButton = createShopActionButton(
+        "가챠 전용",
+        "ghost-button wide",
+        "gacha-only",
+        shopTab,
+        itemId,
+      );
+      lockedButton.disabled = true;
+      actions.append(lockedButton);
+    } else if (!owned) {
       actions.append(createShopActionButton(
         `${item.price}코인 구매`,
         "secondary-button wide",
@@ -880,7 +1183,7 @@ function renderShop() {
 }
 
 function setShopTab(type) {
-  if (!SHOP_CATALOG[type]) {
+  if (!SHOP_CATALOG[type] || gachaDrawing) {
     return;
   }
 
@@ -900,12 +1203,18 @@ async function openShopModal() {
   }
 
   closeAccountModal();
+  closeAttendanceModal();
   shopModal.hidden = false;
   setShopMessage("");
   renderShop();
 }
 
 function closeShopModal() {
+  if (gachaDrawing) {
+    return;
+  }
+
+  resetGachaOverlay();
   shopModal.hidden = true;
   setShopMessage("");
 }
@@ -1015,6 +1324,7 @@ function showGameFor(user) {
   drawIntro();
   startIdleAnimation();
   loadAdsense();
+  scheduleAttendancePrompt();
 }
 
 function showAuth() {
@@ -1026,6 +1336,7 @@ function showAuth() {
   gamePanel.hidden = true;
   profileBox.hidden = true;
   closeAccountModal();
+  closeAttendanceModal();
   closeShopModal();
   closePlayerHistoryModal();
   changeUsernameForm.reset();
@@ -1316,6 +1627,7 @@ function openAccountModal() {
   setPasswordMessage("");
   setAccountActionMessage("");
   setAdminMessage("");
+  closeAttendanceModal();
   closeShopModal();
   accountModal.hidden = false;
   newUsernameInput.focus();
@@ -2166,6 +2478,7 @@ async function startGame() {
   lastFrame = performance.now();
   animationId = requestAnimationFrame(loop);
   shopButton.disabled = true;
+  attendanceButton.disabled = true;
   startButton.disabled = false;
   pauseRestartButton.disabled = false;
 }
@@ -2213,6 +2526,7 @@ function stopGame() {
   game.paused = false;
   pauseButton.hidden = true;
   shopButton.disabled = false;
+  attendanceButton.disabled = false;
   canvasWrap.classList.remove("mode-highlight", "danger-highlight", "catnip-highlight", "reverse-highlight");
   clearMovementInput();
 }
@@ -4706,8 +5020,10 @@ signupButton.addEventListener("click", () => setAuthMode("signup"));
 loginModeButton.addEventListener("click", () => setAuthMode("login"));
 logoutButton.addEventListener("click", logout);
 profileButton.addEventListener("click", openAccountModal);
+attendanceButton.addEventListener("click", openAttendanceModal);
 shopButton.addEventListener("click", openShopModal);
 closeAccountModalButton.addEventListener("click", closeAccountModal);
+closeAttendanceModalButton.addEventListener("click", closeAttendanceModal);
 closeShopModalButton.addEventListener("click", closeShopModal);
 itemGuideToggleButton.addEventListener("click", toggleMobileItemGuide);
 closePlayerHistoryButton.addEventListener("click", closePlayerHistoryModal);
@@ -4716,11 +5032,21 @@ accountModal.addEventListener("click", (event) => {
     closeAccountModal();
   }
 });
+attendanceModal.addEventListener("click", (event) => {
+  if (event.target === attendanceModal) {
+    closeAttendanceModal();
+  }
+});
 shopModal.addEventListener("click", (event) => {
   if (event.target === shopModal) {
     closeShopModal();
   }
 });
+attendanceClaimButton.addEventListener("click", claimAttendance);
+buyGachaTicketButton.addEventListener("click", buyGachaTicket);
+drawGachaButton.addEventListener("click", startGachaDraw);
+gachaSkipButton.addEventListener("click", skipGachaAnimation);
+gachaConfirmButton.addEventListener("click", confirmGachaResult);
 shopGrid.addEventListener("click", handleShopAction);
 shopTabButtons.forEach((button) => {
   button.addEventListener("click", () => setShopTab(button.dataset.shopTab));
@@ -4776,6 +5102,12 @@ window.addEventListener("keydown", (event) => {
 
   closeGuideTooltips();
 
+  if (gachaDrawing && !shopModal.hidden) {
+    event.preventDefault();
+    skipGachaAnimation();
+    return;
+  }
+
   if (!playerHistoryModal.hidden) {
     closePlayerHistoryModal();
     return;
@@ -4783,6 +5115,11 @@ window.addEventListener("keydown", (event) => {
 
   if (!accountModal.hidden) {
     closeAccountModal();
+    return;
+  }
+
+  if (!attendanceModal.hidden) {
+    closeAttendanceModal();
     return;
   }
 

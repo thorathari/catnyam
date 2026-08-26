@@ -1,5 +1,6 @@
 const { sanitizeUser, supabaseRequest } = require("./db");
 const { getCatalogItem, getUserInventory, getUserLoadout } = require("./shop-catalog");
+const { processGachaAction } = require("./reward-service");
 
 const INVENTORY_KEYS = {
   character: "owned_characters",
@@ -38,6 +39,11 @@ async function updateUser(userId, patch, expectedCoins = null) {
 
 async function processShopAction(user, body = {}) {
   const { shopAction, type, itemId, slot } = body;
+
+  if (shopAction === "buy-gacha-ticket" || shopAction === "draw-gacha") {
+    return processGachaAction(user, shopAction);
+  }
+
   const item = getCatalogItem(type, itemId);
 
   if (!item || !INVENTORY_KEYS[type]) {
@@ -51,6 +57,10 @@ async function processShopAction(user, body = {}) {
   if (shopAction === "purchase") {
     if (ownedItems.includes(itemId)) {
       return { user: sanitizeUser(user), message: "이미 보유한 상품입니다." };
+    }
+
+    if (type === "character") {
+      throw shopError("캐릭터는 가챠 뽑기로만 획득할 수 있습니다.");
     }
 
     const coins = Math.max(0, Number(user.coins) || 0);

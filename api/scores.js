@@ -10,6 +10,7 @@ const {
   supabaseRequest,
 } = require("../server/db");
 const { getUserLoadout } = require("../server/shop-catalog");
+const { processAttendanceClaim } = require("../server/reward-service");
 const { processShopAction } = require("../server/shop-service");
 const { createShareUrl, handleShareRequest } = require("../server/share-service");
 
@@ -402,7 +403,22 @@ module.exports = async function handler(req, res) {
         const result = await processShopAction(user, body);
         sendJson(res, 200, result);
       } catch (error) {
-        const isMissingColumn = /coins|owned_|equipped_/i.test(error.message || "");
+        const isMissingColumn = /coins|gacha_tickets|owned_|equipped_/i.test(error.message || "");
+        sendJson(res, error.statusCode || 500, {
+          message: isMissingColumn
+            ? "Supabase SQL Editor에서 최신 supabase/schema.sql을 실행해주세요."
+            : error.message,
+        });
+      }
+      return;
+    }
+
+    if (action === "attendance") {
+      try {
+        const result = await processAttendanceClaim(user);
+        sendJson(res, 200, result);
+      } catch (error) {
+        const isMissingColumn = /attendance_|gacha_tickets/i.test(error.message || "");
         sendJson(res, error.statusCode || 500, {
           message: isMissingColumn
             ? "Supabase SQL Editor에서 최신 supabase/schema.sql을 실행해주세요."
