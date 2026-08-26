@@ -199,6 +199,7 @@ const CHARACTER_FRAME_ARTWORK = {
   good: {},
   bad: {},
 };
+const BOX_PAW_FRAME_ARTWORK = {};
 const DARK_FUR_CHARACTER_IDS = new Set(["black", "tuxedo", "calico"]);
 const SHOP_PREVIEW_ARTWORK_CACHE = new Map();
 
@@ -3092,7 +3093,15 @@ function addCharacterOutline(imageData, radius = 3) {
   }
 }
 
-function createCharacterFrameArtwork(source, item, columns, rows, removeDarkBackground, darkThreshold) {
+function createCharacterFrameArtwork(
+  source,
+  item,
+  columns,
+  rows,
+  removeDarkBackground,
+  darkThreshold,
+  thinOuterEdge = false,
+) {
   if (!isArtworkReady(source)) {
     return null;
   }
@@ -3115,9 +3124,11 @@ function createCharacterFrameArtwork(source, item, columns, rows, removeDarkBack
   }
 
   getOpaqueArtworkBounds(imageData);
-  if (removeDarkBackground) {
+  if (removeDarkBackground || thinOuterEdge) {
     refineOpaqueEdge(imageData);
     getOpaqueArtworkBounds(imageData);
+  }
+  if (removeDarkBackground) {
     addCharacterOutline(imageData);
   }
   frameContext.clearRect(0, 0, frame.width, frame.height);
@@ -3131,12 +3142,12 @@ function prepareCharacterFrameArtwork() {
     const atlas = CHARACTER_ATLASES[atlasId];
     const darkThreshold = DARK_FUR_CHARACTER_IDS.has(characterId) ? 24 : 72;
     const frames = [
-      ["neutral", atlas.neutral, false],
-      ["good", atlas.happy, atlasId === "main"],
-      ["bad", atlas.hurt, atlasId === "main"],
+      ["neutral", atlas.neutral, false, true],
+      ["good", atlas.happy, atlasId === "main", false],
+      ["bad", atlas.hurt, atlasId === "main", false],
     ];
 
-    frames.forEach(([state, source, removeDarkBackground]) => {
+    frames.forEach(([state, source, removeDarkBackground, thinOuterEdge]) => {
       if (!CHARACTER_FRAME_ARTWORK[state][characterId] && isArtworkReady(source)) {
         CHARACTER_FRAME_ARTWORK[state][characterId] = createCharacterFrameArtwork(
           source,
@@ -3145,6 +3156,7 @@ function prepareCharacterFrameArtwork() {
           atlas.rows,
           removeDarkBackground,
           darkThreshold,
+          thinOuterEdge,
         );
       }
     });
@@ -4241,22 +4253,30 @@ function drawBoxPawArtwork(width, height) {
     return false;
   }
 
+  if (!BOX_PAW_FRAME_ARTWORK[characterId]) {
+    BOX_PAW_FRAME_ARTWORK[characterId] = createCharacterFrameArtwork(
+      atlas.boxPaw,
+      character,
+      atlas.columns,
+      atlas.rows,
+      false,
+      24,
+      true,
+    );
+  }
+  const boxArtwork = BOX_PAW_FRAME_ARTWORK[characterId];
+  if (!isArtworkReady(boxArtwork)) {
+    return false;
+  }
+
   const drawSize = Math.max(width * 1.34, height * 1.78);
   const drawBottom = height * 0.52;
   ctx.fillStyle = "rgba(37, 33, 29, 0.16)";
   ctx.beginPath();
   ctx.ellipse(0, height / 2 + 7, width * 0.5, Math.max(7, height * 0.12), 0, 0, Math.PI * 2);
   ctx.fill();
-  return drawAtlasCell(
-    atlas.boxPaw,
-    character,
-    atlas.columns,
-    atlas.rows,
-    -drawSize / 2,
-    drawBottom - drawSize,
-    drawSize,
-    drawSize,
-  );
+  ctx.drawImage(boxArtwork, -drawSize / 2, drawBottom - drawSize, drawSize, drawSize);
+  return true;
 }
 
 function drawBoxCat(width, height, isOpen = false) {
