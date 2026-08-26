@@ -1,6 +1,8 @@
 const GAME_SECONDS = 60;
 
 const authPanel = document.querySelector("#authPanel");
+const authModalBackdrop = document.querySelector("#authModalBackdrop");
+const authModalCloseButton = document.querySelector("#authModalCloseButton");
 const gamePanel = document.querySelector("#gamePanel");
 const profileBox = document.querySelector("#profileBox");
 const profileButton = document.querySelector("#profileButton");
@@ -250,6 +252,9 @@ const keys = new Set();
 let authMode = "login";
 let currentUser = null;
 let guestMode = false;
+let guestAuthModalOpen = false;
+let guestStartCountdownId = 0;
+let guestStartCountdownActive = false;
 let animationId = null;
 let idleAnimationId = null;
 let idleVisualTime = 0;
@@ -1339,7 +1344,7 @@ function setAuthMode(mode) {
   authSubmitButton.textContent = isSignup ? "가입 완료" : "로그인";
   signupButton.hidden = isSignup;
   loginModeButton.hidden = !isSignup;
-  guestButton.hidden = isSignup;
+  guestButton.hidden = isSignup || guestAuthModalOpen;
   authForm.reset();
   if (!isSignup) {
     fillRememberedLogin();
@@ -1348,7 +1353,56 @@ function setAuthMode(mode) {
   usernameInput.focus();
 }
 
+function resetGuestAuthModal() {
+  guestAuthModalOpen = false;
+  authPanel.classList.remove("guest-auth-modal");
+  authPanel.removeAttribute("role");
+  authPanel.removeAttribute("aria-modal");
+  authPanel.removeAttribute("aria-labelledby");
+  authModalBackdrop.hidden = true;
+  authModalCloseButton.hidden = true;
+}
+
+function closeGuestAuthModal() {
+  if (!guestAuthModalOpen) {
+    return;
+  }
+
+  resetGuestAuthModal();
+  authPanel.hidden = true;
+  setMessage("");
+}
+
+function openGuestAuthModal(message = "") {
+  if (!guestMode) {
+    return;
+  }
+
+  if (guestStartCountdownActive) {
+    cancelGuestStartCountdown();
+    if (lastFinishedScore === null) {
+      showGameOverlay("게임 시작");
+    } else {
+      showGameOverlay("다시하기", `${lastFinishedScore}점 · 로그인하면 랭킹에 등록돼요`, "result");
+    }
+  }
+
+  guestAuthModalOpen = true;
+  authPanel.classList.add("guest-auth-modal");
+  authPanel.setAttribute("role", "dialog");
+  authPanel.setAttribute("aria-modal", "true");
+  authPanel.setAttribute("aria-labelledby", "authTitle");
+  authModalBackdrop.hidden = false;
+  authModalCloseButton.hidden = false;
+  authPanel.hidden = false;
+  setAuthMode("login");
+  if (message) {
+    setMessage(message, true);
+  }
+}
+
 function showGameFor(user, options = {}) {
+  resetGuestAuthModal();
   guestMode = Boolean(options.guest);
   currentUser = user;
   game = createGameState(`${currentGameMode}-preview`, currentGameMode, currentUser.loadout);
@@ -1384,6 +1438,7 @@ function showGameFor(user, options = {}) {
 }
 
 function showAuth(message = "") {
+  resetGuestAuthModal();
   guestMode = false;
   currentUser = null;
   cancelIdleAnimation();
@@ -1415,7 +1470,6 @@ function enterGuestMode() {
   lastFinishedShareUrls = null;
   lastFinishedSessionId = null;
   showGameFor(createGuestUser(), { guest: true });
-  showGameOverlay("게임 시작", "게스트 플레이 · 랭킹과 코인 저장은 로그인 후 가능해요");
 }
 
 function showLoginForGuestScore() {
@@ -1424,7 +1478,7 @@ function showLoginForGuestScore() {
     ? `방금 플레이한 ${pendingGame.score}점은 로그인하거나 가입하면 자동으로 등록됩니다.`
     : "랭킹 등록과 코인 적립은 로그인이 필요합니다.";
 
-  showAuth(message);
+  openGuestAuthModal(message);
 }
 
 async function claimPendingGuestScore(pendingGame) {
@@ -2579,13 +2633,62 @@ async function resetRankings(gameMode) {
   }
 }
 
+function cancelGuestStartCountdown() {
+  guestStartCountdownId += 1;
+  guestStartCountdownActive = false;
+  startButton.disabled = false;
+  pauseRestartButton.disabled = false;
+  updateGameModeUI();
+}
+
+async function runGuestStartCountdown() {
+  const countdownId = ++guestStartCountdownId;
+  guestStartCountdownActive = true;
+  gameModeButtons.forEach((button) => {
+    button.disabled = true;
+  });
+
+  for (let remaining = 3; remaining > 0; remaining -= 1) {
+    if (countdownId !== guestStartCountdownId || !guestMode || guestAuthModalOpen) {
+      return false;
+    }
+
+    showGameOverlay(
+      "게임 시작",
+      `로그인 전에는 랭킹과 코인이 저장되지 않아요 · ${remaining}초`,
+    );
+    startButton.disabled = true;
+    await new Promise((resolve) => window.setTimeout(resolve, 1000));
+  }
+
+  if (countdownId !== guestStartCountdownId || !guestMode || guestAuthModalOpen) {
+    return false;
+  }
+
+  guestStartCountdownActive = false;
+  overlayResult.textContent = "";
+  overlayResult.hidden = true;
+  updateGameModeUI();
+  return true;
+}
+
 async function startGame() {
   if (!currentUser) {
     return;
   }
 
+  if (guestAuthModalOpen || guestStartCountdownActive) {
+    return;
+  }
+
   startButton.disabled = true;
   pauseRestartButton.disabled = true;
+
+  if (guestMode && !await runGuestStartCountdown()) {
+    startButton.disabled = false;
+    pauseRestartButton.disabled = false;
+    return;
+  }
 
   let gameSession;
 
@@ -5048,6 +5151,7 @@ function isButtonTarget(target) {
 function canUseGameHotkey(target) {
   return currentUser
     && !gamePanel.hidden
+    && authPanel.hidden
     && accountModal.hidden
     && shopModal.hidden
     && playerHistoryModal.hidden
@@ -5192,6 +5296,8 @@ window.addEventListener("keyup", (event) => {
 });
 
 authForm.addEventListener("submit", handleAuthSubmit);
+authModalCloseButton.addEventListener("click", closeGuestAuthModal);
+authModalBackdrop.addEventListener("click", closeGuestAuthModal);
 signupButton.addEventListener("click", () => setAuthMode("signup"));
 loginModeButton.addEventListener("click", () => setAuthMode("login"));
 guestButton.addEventListener("click", enterGuestMode);
@@ -5285,6 +5391,12 @@ window.addEventListener("keydown", (event) => {
   }
 
   closeGuideTooltips();
+
+  if (guestAuthModalOpen) {
+    event.preventDefault();
+    closeGuestAuthModal();
+    return;
+  }
 
   if (gachaDrawing && !shopModal.hidden) {
     event.preventDefault();
