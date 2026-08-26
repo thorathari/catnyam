@@ -37,6 +37,10 @@ const CATALOG = {
   background: {
     village: { name: "시골동네", price: 0, col: 0, row: 0 },
     small_room: { name: "작은 방구석", price: 10, atlas: "extra", col: 0, row: 0 },
+    lakeside: { name: "호숫가", price: 30, atlas: "season", col: 0, row: 0 },
+    flower_field: { name: "꽃밭", price: 50, atlas: "season", col: 1, row: 0 },
+    maple_forest: { name: "단풍 숲길", price: 50, atlas: "season", col: 0, row: 1 },
+    winter_night: { name: "눈 내리는 겨울밤", price: 50, atlas: "season", col: 1, row: 1 },
     promenade: { name: "고급산책로", price: 50, col: 1, row: 0 },
     beach: { name: "해변가", price: 50, col: 0, row: 1 },
     mountain: { name: "산동네", price: 30, col: 1, row: 1 },

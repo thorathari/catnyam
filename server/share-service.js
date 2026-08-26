@@ -12,7 +12,7 @@ const {
 const SHARE_ORIGIN = "https://catnyam.vercel.app";
 const LEGACY_SHARE_TOKEN_VERSION = 1;
 const SHORT_SHARE_TOKEN_VERSION = 2;
-const SHARE_IMAGE_REVISION = 6;
+const SHARE_IMAGE_REVISION = 7;
 const MAX_SHARE_TOKEN_LENGTH = 4096;
 const MAX_SCORE = 500000;
 
@@ -503,9 +503,13 @@ function getShareCharacterAtlas(item) {
 }
 
 function getShareBackgroundAtlas(item) {
-  return item?.atlas === "extra"
-    ? { file: "background-extra-atlas.png", columns: 2, rows: 1 }
-    : { file: "background-atlas.png", columns: 2, rows: 3 };
+  if (item?.atlas === "extra") {
+    return { file: "background-extra-atlas.png", columns: 2, rows: 1 };
+  }
+  if (item?.atlas === "season") {
+    return { file: "background-season-atlas.png", columns: 2, rows: 2 };
+  }
+  return { file: "background-atlas.png", columns: 2, rows: 3 };
 }
 
 function getShareCompanionLayout(payload) {

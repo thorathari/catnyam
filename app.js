@@ -139,6 +139,10 @@ const SHOP_CATALOG = {
   background: {
     village: { name: "시골동네", price: 0, col: 0, row: 0 },
     small_room: { name: "작은 방구석", price: 10, atlas: "extra", col: 0, row: 0 },
+    lakeside: { name: "호숫가", price: 30, atlas: "season", col: 0, row: 0 },
+    flower_field: { name: "꽃밭", price: 50, atlas: "season", col: 1, row: 0 },
+    maple_forest: { name: "단풍 숲길", price: 50, atlas: "season", col: 0, row: 1 },
+    winter_night: { name: "눈 내리는 겨울밤", price: 50, atlas: "season", col: 1, row: 1 },
     promenade: { name: "고급산책로", price: 50, col: 1, row: 0 },
     beach: { name: "해변가", price: 50, col: 0, row: 1 },
     mountain: { name: "산동네", price: 30, col: 1, row: 1 },
@@ -157,6 +161,7 @@ const ART_ASSETS = {
   companion: Object.assign(new Image(), { src: "./assets/companion-atlas.png" }),
   background: Object.assign(new Image(), { src: "./assets/background-atlas.png" }),
   backgroundExtra: Object.assign(new Image(), { src: "./assets/background-extra-atlas.png" }),
+  backgroundSeason: Object.assign(new Image(), { src: "./assets/background-season-atlas.png" }),
   boxPaw: Object.assign(new Image(), { src: "./assets/box-paw-atlas.png" }),
   boxPawExtra: Object.assign(new Image(), { src: "./assets/box-paw-extra-atlas.png" }),
   boxClosed: Object.assign(new Image(), { src: "./assets/box-closed-atlas.png" }),
@@ -184,6 +189,7 @@ const CHARACTER_ATLASES = {
 const BACKGROUND_ATLASES = {
   main: { image: ART_ASSETS.background, columns: 2, rows: 3, url: "./assets/background-atlas.png" },
   extra: { image: ART_ASSETS.backgroundExtra, columns: 2, rows: 1, url: "./assets/background-extra-atlas.png" },
+  season: { image: ART_ASSETS.backgroundSeason, columns: 2, rows: 2, url: "./assets/background-season-atlas.png" },
 };
 
 function getCharacterAtlas(item) {
@@ -191,7 +197,7 @@ function getCharacterAtlas(item) {
 }
 
 function getBackgroundAtlas(item) {
-  return item?.atlas === "extra" ? BACKGROUND_ATLASES.extra : BACKGROUND_ATLASES.main;
+  return BACKGROUND_ATLASES[item?.atlas] || BACKGROUND_ATLASES.main;
 }
 
 const CHARACTER_FRAME_ARTWORK = {
