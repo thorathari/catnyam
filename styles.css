@@ -2116,17 +2116,6 @@ button:disabled {
   box-shadow: 4px 4px 0 #ff6334;
 }
 
-.shop-card.is-gacha-locked {
-  background: #f8f3e9;
-}
-
-.shop-card-actions .shop-gacha-only-button:disabled {
-  color: #716960;
-  background: #e8e1d5;
-  box-shadow: none;
-  cursor: default;
-}
-
 .shop-message {
   display: flex;
   flex: 0 0 38px;

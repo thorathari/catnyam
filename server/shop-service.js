@@ -59,10 +59,6 @@ async function processShopAction(user, body = {}) {
       return { user: sanitizeUser(user), message: "이미 보유한 상품입니다." };
     }
 
-    if (type === "character") {
-      throw shopError("캐릭터는 가챠 뽑기로만 획득할 수 있습니다.");
-    }
-
     const coins = Math.max(0, Number(user.coins) || 0);
     if (coins < item.price) {
       throw shopError("코인이 부족합니다.");

@@ -134,29 +134,29 @@ const ctx = canvas.getContext("2d");
 
 const SHOP_CATALOG = {
   character: {
-    gray_scottish: { name: "회색 스코티시 폴드", price: 20, kind: "cat", fur: "#aeb4bd", accent: "#858d99", col: 0, row: 0 },
-    white_munchkin: { name: "흰색 먼치킨", price: 20, kind: "cat", fur: "#fffdf7", accent: "#e8e2d8", col: 1, row: 0 },
-    siamese: { name: "샴 고양이", price: 20, kind: "cat", fur: "#ead6b0", accent: "#705449", col: 2, row: 0 },
-    norwegian_forest: { name: "노르웨이숲", price: 20, kind: "cat", fur: "#9a806c", accent: "#f1e2cf", col: 3, row: 0 },
-    cheese: { name: "치즈냥이", price: 20, kind: "cat", fur: "#f6b85f", accent: "#d98535", col: 0, row: 1 },
+    gray_scottish: { name: "회색 스코티시 폴드", price: 100, kind: "cat", fur: "#aeb4bd", accent: "#858d99", col: 0, row: 0 },
+    white_munchkin: { name: "흰색 먼치킨", price: 100, kind: "cat", fur: "#fffdf7", accent: "#e8e2d8", col: 1, row: 0 },
+    siamese: { name: "샴 고양이", price: 100, kind: "cat", fur: "#ead6b0", accent: "#705449", col: 2, row: 0 },
+    norwegian_forest: { name: "노르웨이숲", price: 100, kind: "cat", fur: "#9a806c", accent: "#f1e2cf", col: 3, row: 0 },
+    cheese: { name: "치즈냥이", price: 100, kind: "cat", fur: "#f6b85f", accent: "#d98535", col: 0, row: 1 },
     calico: { name: "얼룩냥이", price: 0, kind: "cat", fur: "#ffcf8a", accent: "#69544a", col: 1, row: 1 },
-    tuxedo: { name: "턱시도냥이", price: 20, kind: "cat", fur: "#30343b", accent: "#fffaf2", col: 2, row: 1 },
-    black: { name: "깜냥이", price: 20, kind: "cat", fur: "#29282d", accent: "#55525d", col: 3, row: 1 },
-    abyssinian: { name: "아비시니안", price: 20, kind: "cat", fur: "#b86d2d", accent: "#6d3a22", atlas: "extra", col: 0, row: 0 },
-    bengal: { name: "뱅갈", price: 20, kind: "cat", fur: "#d9933c", accent: "#57351f", atlas: "extra", col: 1, row: 0 },
-    ragdoll: { name: "렉돌", price: 20, kind: "cat", fur: "#f7eee2", accent: "#665047", atlas: "extra", col: 2, row: 0 },
-    maltese: { name: "말티즈", price: 20, kind: "dog", fur: "#fffdf5", accent: "#ddd8cc", col: 0, row: 2 },
-    poodle: { name: "푸들", price: 20, kind: "dog", fur: "#a86e47", accent: "#7d4d32", col: 1, row: 2 },
-    shih_tzu: { name: "시츄", price: 20, kind: "dog", fur: "#f0dfc6", accent: "#76584b", col: 2, row: 2 },
-    pomeranian: { name: "포메라니안", price: 20, kind: "dog", fur: "#e7a858", accent: "#fff0d2", col: 3, row: 2 },
-    bichon: { name: "비숑", price: 20, kind: "dog", fur: "#fffdf8", accent: "#e5e1d9", col: 0, row: 3 },
-    beagle: { name: "비글", price: 20, kind: "dog", fur: "#e6a25e", accent: "#5b443a", col: 1, row: 3 },
-    jindo: { name: "진돗개", price: 20, kind: "dog", fur: "#fff9e9", accent: "#e8d7bc", atlas: "extra", col: 0, row: 1 },
-    pug: { name: "퍼그", price: 20, kind: "dog", fur: "#e5c69a", accent: "#473b35", atlas: "extra", col: 1, row: 1 },
-    pompitz: { name: "폼피츠", price: 20, kind: "dog", fur: "#fffdf7", accent: "#e9e1d5", atlas: "extra", col: 2, row: 1 },
-    chihuahua: { name: "치와와", price: 20, kind: "dog", fur: "#e8b26f", accent: "#fff5df", atlas: "extra", col: 0, row: 2 },
-    welsh_corgi: { name: "웰시코기", price: 20, kind: "dog", fur: "#e99536", accent: "#fff8e8", atlas: "extra", col: 1, row: 2 },
-    husky: { name: "허스키", price: 20, kind: "dog", fur: "#69717a", accent: "#f4f5f3", atlas: "extra", col: 2, row: 2 },
+    tuxedo: { name: "턱시도냥이", price: 100, kind: "cat", fur: "#30343b", accent: "#fffaf2", col: 2, row: 1 },
+    black: { name: "깜냥이", price: 100, kind: "cat", fur: "#29282d", accent: "#55525d", col: 3, row: 1 },
+    abyssinian: { name: "아비시니안", price: 100, kind: "cat", fur: "#b86d2d", accent: "#6d3a22", atlas: "extra", col: 0, row: 0 },
+    bengal: { name: "뱅갈", price: 100, kind: "cat", fur: "#d9933c", accent: "#57351f", atlas: "extra", col: 1, row: 0 },
+    ragdoll: { name: "렉돌", price: 100, kind: "cat", fur: "#f7eee2", accent: "#665047", atlas: "extra", col: 2, row: 0 },
+    maltese: { name: "말티즈", price: 100, kind: "dog", fur: "#fffdf5", accent: "#ddd8cc", col: 0, row: 2 },
+    poodle: { name: "푸들", price: 100, kind: "dog", fur: "#a86e47", accent: "#7d4d32", col: 1, row: 2 },
+    shih_tzu: { name: "시츄", price: 100, kind: "dog", fur: "#f0dfc6", accent: "#76584b", col: 2, row: 2 },
+    pomeranian: { name: "포메라니안", price: 100, kind: "dog", fur: "#e7a858", accent: "#fff0d2", col: 3, row: 2 },
+    bichon: { name: "비숑", price: 100, kind: "dog", fur: "#fffdf8", accent: "#e5e1d9", col: 0, row: 3 },
+    beagle: { name: "비글", price: 100, kind: "dog", fur: "#e6a25e", accent: "#5b443a", col: 1, row: 3 },
+    jindo: { name: "진돗개", price: 100, kind: "dog", fur: "#fff9e9", accent: "#e8d7bc", atlas: "extra", col: 0, row: 1 },
+    pug: { name: "퍼그", price: 100, kind: "dog", fur: "#e5c69a", accent: "#473b35", atlas: "extra", col: 1, row: 1 },
+    pompitz: { name: "폼피츠", price: 100, kind: "dog", fur: "#fffdf7", accent: "#e9e1d5", atlas: "extra", col: 2, row: 1 },
+    chihuahua: { name: "치와와", price: 100, kind: "dog", fur: "#e8b26f", accent: "#fff5df", atlas: "extra", col: 0, row: 2 },
+    welsh_corgi: { name: "웰시코기", price: 100, kind: "dog", fur: "#e99536", accent: "#fff8e8", atlas: "extra", col: 1, row: 2 },
+    husky: { name: "허스키", price: 100, kind: "dog", fur: "#69717a", accent: "#f4f5f3", atlas: "extra", col: 2, row: 2 },
   },
   companion: {
     hamster: { name: "햄스터", price: 50, buff: "좋은 아이템 획득 범위 +30%", col: 0, row: 0 },
@@ -1155,7 +1155,7 @@ function renderShop() {
   shopCoinText.textContent = currentUser.coins || 0;
   renderGachaPanel();
   shopHelp.textContent = shopTab === "character"
-    ? "보유한 주인공을 골라보세요. 새로운 캐릭터는 가챠에서만 만날 수 있어요."
+    ? "새 캐릭터는 가챠로 뽑거나 100코인으로 바로 구매할 수 있어요."
     : shopTab === "companion"
       ? "좋은 아이템만 먹는 동료를 왼쪽과 오른쪽에 최대 두 마리 배치할 수 있어요."
       : "게임 화면의 풍경을 바꿔보세요.";
@@ -1171,7 +1171,6 @@ function renderShop() {
 
   catalogEntries.forEach(([itemId, item]) => {
     const owned = ownedItems.includes(itemId);
-    const gachaLocked = shopTab === "character" && !owned;
     const card = document.createElement("article");
     const preview = document.createElement("div");
     const copy = document.createElement("div");
@@ -1184,7 +1183,7 @@ function renderShop() {
       ? isShopItemEquipped(shopTab, itemId, "left") || isShopItemEquipped(shopTab, itemId, "right")
       : isShopItemEquipped(shopTab, itemId);
 
-    card.className = `shop-card shop-card-${shopTab}${equipped ? " is-equipped" : ""}${gachaLocked ? " is-gacha-locked" : ""}`;
+    card.className = `shop-card shop-card-${shopTab}${equipped ? " is-equipped" : ""}`;
     preview.className = `shop-preview ${shopTab}`;
     preview.dataset.shopItem = itemId;
     preview.style.cssText = getShopPreviewStyle(shopTab, item);
@@ -1202,13 +1201,13 @@ function renderShop() {
       ? "사용 중"
       : owned
         ? "보유"
-        : shopTab === "companion" ? "동료" : shopTab === "background" ? "배경" : "미보유";
+        : "미보유";
     preview.append(badge);
 
     copy.className = "shop-card-copy";
     title.textContent = item.name;
     meta.textContent = shopTab === "character"
-      ? item.price > 0 ? "" : "기본"
+      ? item.price > 0 && !owned ? `${item.price}코인` : item.price > 0 ? "" : "기본"
       : item.price > 0 ? `● ${item.price}` : "기본";
     description.textContent = shopTab === "companion" ? item.buff : "";
     copy.append(title);
@@ -1220,17 +1219,7 @@ function renderShop() {
     }
     actions.className = "shop-card-actions";
 
-    if (gachaLocked) {
-      const lockedButton = createShopActionButton(
-        "가챠 전용",
-        "ghost-button wide",
-        "gacha-only",
-        shopTab,
-        itemId,
-      );
-      lockedButton.disabled = true;
-      actions.append(lockedButton);
-    } else if (!owned) {
+    if (!owned) {
       actions.append(createShopActionButton(
         "구매하기",
         "secondary-button wide",
@@ -1559,12 +1548,15 @@ async function claimPendingGuestScore(pendingGame) {
 
 async function enterAuthenticatedUser(user) {
   const pendingGame = getPendingGuestGame();
-  showGameFor(user, { deferAttendance: Boolean(pendingGame) });
+  showGameFor(user, { deferAttendance: true });
 
   if (pendingGame) {
     await claimPendingGuestScore(pendingGame);
-    scheduleAttendancePrompt();
   }
+
+  updateProfileName();
+  renderShop();
+  scheduleAttendancePrompt();
 }
 
 async function handleAuthSubmit(event) {
