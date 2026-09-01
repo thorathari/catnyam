@@ -2644,6 +2644,127 @@ button:disabled {
   margin-bottom: 14px;
 }
 
+.admin-attendance {
+  margin-bottom: 16px;
+  border-block: 1px solid var(--line);
+  padding: 14px 0;
+}
+
+.admin-attendance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.admin-attendance-header > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.admin-attendance-header h3 {
+  margin: 0;
+  font-size: 0.98rem;
+}
+
+.admin-attendance-header span {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.admin-attendance-header > strong {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 4px 9px;
+  color: #246e58;
+  background: rgba(119, 216, 186, 0.22);
+  font-size: 0.78rem;
+}
+
+.admin-attendance-list {
+  display: grid;
+  gap: 6px;
+  max-height: 210px;
+  margin: 0;
+  overflow-y: auto;
+  padding: 0 3px 0 0;
+  list-style: none;
+  scrollbar-color: #aaa095 transparent;
+  scrollbar-width: thin;
+}
+
+.admin-attendance-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 7px 9px;
+  border: 1px solid rgba(37, 33, 29, 0.09);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.admin-attendance-player {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-attendance-player strong,
+.admin-attendance-player small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-attendance-player strong {
+  font-size: 0.84rem;
+}
+
+.admin-attendance-player small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.admin-attendance-details {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.admin-attendance-details b {
+  border-radius: 999px;
+  padding: 3px 7px;
+  color: #9b6100;
+  background: #fff0bd;
+  font-size: 0.7rem;
+}
+
+.admin-attendance-details time {
+  min-width: 72px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.admin-attendance-empty {
+  padding: 12px 8px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
 .admin-reset-rank-button {
   width: 100%;
 }

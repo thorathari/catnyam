@@ -42,6 +42,9 @@ alter table public.users
   add column if not exists attendance_last_date date;
 
 alter table public.users
+  add column if not exists attendance_claimed_at timestamptz;
+
+alter table public.users
   add column if not exists owned_characters jsonb not null default '["calico"]'::jsonb;
 
 alter table public.users

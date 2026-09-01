@@ -8,6 +8,7 @@ const {
   sendJson,
   supabaseRequest,
 } = require("../../server/db");
+const { buildTodayAttendance } = require("../../server/admin-attendance");
 
 const MAX_SCORE_ROWS = 100000;
 
@@ -99,8 +100,13 @@ module.exports = async function handler(req, res) {
       scoreStats: cloneScoreStats(statsByUser.get(user.id)),
       createdAt: user.created_at,
     }));
+    const attendance = buildTodayAttendance(rows);
 
-    sendJson(res, 200, { users });
+    sendJson(res, 200, {
+      users,
+      attendanceDate: attendance.date,
+      todayAttendance: attendance.entries,
+    });
   } catch (error) {
     sendJson(res, 500, { message: error.message });
   }

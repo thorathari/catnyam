@@ -15,6 +15,11 @@ function rewardError(message, statusCode = 400) {
   return error;
 }
 
+function isMissingAttendanceClaimedAtColumn(error) {
+  return /attendance_claimed_at/i.test(error?.message || "")
+    && /column|schema cache/i.test(error?.message || "");
+}
+
 function getGachaCharacterIds() {
   return Object.entries(CATALOG.character)
     .filter(([, item]) => Number(item.price) > 0)
@@ -160,16 +165,31 @@ async function processAttendanceClaim(user, now = new Date()) {
   const reward = getAttendanceReward(status.nextDay);
   const coins = Math.max(0, Number(user.coins) || 0);
   const tickets = Math.max(0, Number(user.gacha_tickets) || 0);
-  const updated = await updateRewardUser(user.id, {
+  const attendancePatch = {
     coins: coins + reward.coins,
     gacha_tickets: tickets + reward.tickets,
     attendance_streak: reward.day,
     attendance_last_date: status.today,
-  }, {
+    attendance_claimed_at: now.toISOString(),
+  };
+  const expected = {
     coins,
     tickets,
     attendanceLastDate: status.lastDate,
-  });
+  };
+  let updated;
+
+  try {
+    updated = await updateRewardUser(user.id, attendancePatch, expected);
+  } catch (error) {
+    if (!isMissingAttendanceClaimedAtColumn(error)) {
+      throw error;
+    }
+
+    const legacyPatch = { ...attendancePatch };
+    delete legacyPatch.attendance_claimed_at;
+    updated = await updateRewardUser(user.id, legacyPatch, expected);
+  }
 
   return {
     user: sanitizeUser(updated),

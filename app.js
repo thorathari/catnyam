@@ -82,6 +82,9 @@ const nicknameMessage = document.querySelector("#nicknameMessage");
 const passwordMessage = document.querySelector("#passwordMessage");
 const adminList = document.querySelector("#adminList");
 const adminMessage = document.querySelector("#adminMessage");
+const adminAttendanceDate = document.querySelector("#adminAttendanceDate");
+const adminAttendanceCount = document.querySelector("#adminAttendanceCount");
+const adminAttendanceList = document.querySelector("#adminAttendanceList");
 const resetRankingButton = document.querySelector("#resetRankingButton");
 const resetBombRankingButton = document.querySelector("#resetBombRankingButton");
 const resetMyScoreButton = document.querySelector("#resetMyScoreButton");
@@ -2321,15 +2324,20 @@ async function deletePlayerHistoryRecord(play, button) {
 async function renderAdminList() {
   if (!isAdmin(currentUser)) {
     adminList.innerHTML = "";
+    adminAttendanceList.innerHTML = "";
     return;
   }
 
   adminList.innerHTML = "";
+  adminAttendanceDate.textContent = "불러오는 중";
+  adminAttendanceCount.textContent = "-명";
+  adminAttendanceList.innerHTML = '<li class="admin-attendance-empty">출석 목록을 불러오는 중입니다.</li>';
   setAdminMessage("");
 
   try {
     const data = await requestApi("/api/admin/users");
     const accounts = data.users || [];
+    renderAdminAttendance(data.todayAttendance || [], data.attendanceDate);
 
     if (accounts.length === 0) {
       const empty = document.createElement("p");
@@ -2341,8 +2349,70 @@ async function renderAdminList() {
 
     accounts.forEach(renderAdminAccount);
   } catch (error) {
+    adminAttendanceDate.textContent = "";
+    adminAttendanceCount.textContent = "0명";
+    adminAttendanceList.innerHTML = '<li class="admin-attendance-empty">출석 목록을 불러오지 못했습니다.</li>';
     setAdminMessage(error.message);
   }
+}
+
+function formatAdminAttendanceDate(value) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+  return match ? `${Number(match[2])}월 ${Number(match[3])}일` : "오늘";
+}
+
+function formatAdminAttendanceTime(value) {
+  const date = new Date(value);
+
+  if (!value || Number.isNaN(date.getTime())) {
+    return "시간 기록 없음";
+  }
+
+  return new Intl.DateTimeFormat("ko-KR", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function renderAdminAttendance(attendanceEntries, attendanceDate) {
+  const entries = Array.isArray(attendanceEntries) ? attendanceEntries : [];
+  adminAttendanceDate.textContent = formatAdminAttendanceDate(attendanceDate);
+  adminAttendanceCount.textContent = `${entries.length}명`;
+  adminAttendanceList.innerHTML = "";
+
+  if (entries.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "admin-attendance-empty";
+    empty.textContent = "아직 오늘 출석한 사용자가 없습니다.";
+    adminAttendanceList.append(empty);
+    return;
+  }
+
+  entries.forEach((entry) => {
+    const item = document.createElement("li");
+    const player = document.createElement("span");
+    const nickname = document.createElement("strong");
+    const username = document.createElement("small");
+    const details = document.createElement("span");
+    const day = document.createElement("b");
+    const time = document.createElement("time");
+    const displayName = entry.nickname || entry.username || "사용자";
+
+    item.className = "admin-attendance-item";
+    player.className = "admin-attendance-player";
+    details.className = "admin-attendance-details";
+    day.textContent = `${Math.max(1, Math.min(7, Number(entry.day) || 1))}일차`;
+    nickname.textContent = displayName;
+    username.textContent = entry.username ? `(${entry.username})` : "";
+    time.textContent = formatAdminAttendanceTime(entry.claimedAt);
+    time.dateTime = entry.claimedAt || "";
+    player.append(nickname, username);
+    details.append(day, time);
+    item.append(player, details);
+    adminAttendanceList.append(item);
+  });
 }
 
 function renderAdminAccount(account) {
